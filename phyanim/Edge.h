@@ -1,6 +1,8 @@
 #ifndef __PHYANIM_EDGE__
 #define __PHYANIM_EDGE__
 
+#include <unordered_set>
+
 #include <Node.h>
 
 
@@ -9,6 +11,19 @@ namespace phyanim{
 class Edge;
 
 typedef std::vector<Edge*> Edges;
+
+struct EdgePointerHash { 
+  public:
+    size_t operator()(const Edge* edge_) const;
+};
+
+
+struct EdgePointerEqual { 
+  public:
+    bool operator()(const Edge* edge0_, const Edge* edge1_) const;
+}; 
+
+typedef std::unordered_set<Edge*, EdgePointerHash, EdgePointerEqual> UniqueEdges;
 
 class Edge {
 
@@ -20,20 +35,22 @@ class Edge {
 
     Node* node0(void);
 
+    Node* node0(void) const;
+
     Node* node1(void);
 
-    Vec3 direction(void);
+    Node* node1(void) const;
     
-    float length(void);
+    double restLength(void);
 
-    float lengthOffset(void);
+    bool operator==(const Edge& edge_) const;
     
   private:
 
     Node* _n0;
     Node* _n1;
 
-    float _initLength;
+    double _initLength;
    
 };
 

@@ -15,6 +15,8 @@ class MassSpringSystem : public AnimSystem {
 
     void step(float dt_);
 
+    void addMesh(Mesh* mesh_);
+
 };
 
 }

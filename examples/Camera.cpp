@@ -4,10 +4,10 @@
 
 namespace examples{
 
-const float pi = 2.0f*acos(0.0f);
-const float degrees2radians = pi/180.0f;
+const double pi = 2.0 * acos(0.0);
+const double degrees2radians = pi/180.0;
 
-Camera::Camera(phyanim::Vec3 position_, float fov_, float ratio_)
+Camera::Camera(phyanim::Vec3 position_, double fov_, double ratio_)
         : _position(position_)
         , _ratio(ratio_)
         , _fov(fov_*degrees2radians*0.5f) {
@@ -15,9 +15,9 @@ Camera::Camera(phyanim::Vec3 position_, float fov_, float ratio_)
     _makeProjectionMat();
 }
 
-Camera::~Camera(void){}
+Camera::~Camera() {}
 
-phyanim::Vec3 Camera::position(void) const {
+phyanim::Vec3 Camera::position() const {
     return _position;
 } 
 
@@ -26,49 +26,49 @@ void Camera::position(phyanim::Vec3 position_) {
     _makeViewMat();
 }
 
-void Camera::fov(float fov_) {
+void Camera::fov(double fov_) {
     _fov = fov_*degrees2radians*0.5f;
     _makeProjectionMat();
 }
 
-void Camera::ratio(float ratio_) {
+void Camera::ratio(double ratio_) {
     _ratio = ratio_;
     _makeProjectionMat();
 }
 
-phyanim::Mat4 Camera::viewMatrix(void) const {
+phyanim::Mat4 Camera::viewMatrix() const {
     return _viewMat;
 }
 
-phyanim::Mat4 Camera::projectionMatrix(void) const {
+phyanim::Mat4 Camera::projectionMatrix() const {
     return _projectionMat;
 }
 
-phyanim::Mat4 Camera::projectionViewMatrix(void) const {
+phyanim::Mat4 Camera::projectionViewMatrix() const {
     return _projectionMat*_viewMat;
 }
 
-void Camera::_makeViewMat(void) {
+void Camera::_makeViewMat() {
 
     _viewMat <<
-            1.0f, .0f, .0f, -_position.x( ),
-            .0f, 1.0f, .0f, -_position.y( ),
-            .0f, .0f, 1.0f, -_position.z( ),
-            0.0f, .0f, .0f, 1.0f;
+            1.0, .0, .0, -_position.x( ),
+            .0, 1.0, .0, -_position.y( ),
+            .0, .0, 1.0, -_position.z( ),
+            0.0, .0, .0, 1.0;
 }
 
 
-void Camera::_makeProjectionMat(void) {
-    float nearPlane = 0.0001f;
-    float farPlane = 1000.0f;
-    float nf = 1.0f/(nearPlane-farPlane);
-    float f = 1.0f/tan(_fov);
+void Camera::_makeProjectionMat() {
+    double nearPlane = 0.0001;
+    double farPlane = 1000.0;
+    double nf = 1.0/(nearPlane-farPlane);
+    double f = 1.0/tan(_fov);
 
     _projectionMat <<
-            f/_ratio, 0.0f, 0.0f, 0.0f,
-            0.0f, f, 0.0f, 0.0f,
-            0.0f, 0.0f, (farPlane+nearPlane)*nf, 2.0f*farPlane*nearPlane*nf,
-            0.0f, 0.0f, -1.0f, 0.0f;
+            f/_ratio, 0.0, 0.0, 0.0,
+            0.0, f, 0.0, 0.0,
+            0.0, 0.0, (farPlane+nearPlane)*nf, 2.0*farPlane*nearPlane*nf,
+            0.0, 0.0, -1.0, 0.0;
 }
 
 }

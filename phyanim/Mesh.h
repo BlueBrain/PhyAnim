@@ -13,7 +13,8 @@ class Mesh {
 
   public:
 
-    Mesh(float stiffness_ = 10.0f);
+    Mesh(double stiffness_ = 1000.0, double density_ = 1.0,
+         double damping_ = 1.0, double poissonRatio_ = 0.499);
 
     virtual ~Mesh(void);
 
@@ -27,10 +28,24 @@ class Mesh {
 
     Triangles& triangles(void);
 
-    float stiffness(void);
+    double stiffness(void);
 
-    void stiffness(float stiffness_);
+    void stiffness(double stiffness_);
 
+    double density(void);
+
+    void density(double density_);
+
+    double damping(void);
+
+    void damping(double damping_);
+
+    double poissonRatio(void);
+
+    void poissonRatio(double poissonRatio_);
+    
+    void trianglesToEdges(void);
+    
     void tetsToNodes(void);
 
     void tetsToEdges(void);
@@ -47,7 +62,10 @@ class Mesh {
     Triangles _surfaceTriangles;
     Triangles _triangles;
 
-    float _stiffness;
+    double _stiffness;
+    double _damping;
+    double _poissonRatio;
+    double _density;
 };
 
 }

@@ -9,7 +9,8 @@ class DrawableMesh: public Mesh {
 
   public:
 
-    DrawableMesh(void);
+    DrawableMesh(double stiffness_ = 1000.0, double density_ = 10.0,
+                 double damping_ = 1.0, double poissonRatio_ = 0.499);
 
     virtual ~DrawableMesh(void);
 

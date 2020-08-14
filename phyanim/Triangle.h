@@ -1,33 +1,36 @@
 #ifndef __PHYANIM_TRIANGLE__
 #define __PHYANIM_TRIANGLE__
 
-#include "Node.h"
+#include "Edge.h"
 
-namespace phyanim{
+namespace phyanim {
 
-  class Triangle;
+class Triangle;
 
-  typedef std::vector<Triangle*> Triangles;
+typedef std::vector<Triangle*> Triangles;
 
-  class Triangle{
+class Triangle {
 
   public:
 
-    Triangle( Node* n0_, Node* n1_, Node* n2_ );
+    Triangle(Node* n0_, Node* n1_, Node* n2_);
 
-    virtual ~Triangle( void );
+    virtual ~Triangle(void);
 
-    Node* node0( void );
+    Node* node0(void);
 
-    void node0( Node* node_ );
+    void node0(Node* node_);
 
-    Node* node1( void );
+    Node* node1(void);
 
-    void node1( Node* node_ );
+    void node1(Node* node_);
 
-    Node* node2( void );
+    Node* node2(void);
 
-    void node2( Node* node_ );
+    void node2(Node* node_);
+
+    Edges edges(void);
+      
 
   private:
 
@@ -35,7 +38,7 @@ namespace phyanim{
     Node* _n1;
     Node* _n2;
 
-  };
+};
 
 }
 

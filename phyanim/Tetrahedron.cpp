@@ -4,6 +4,19 @@ namespace phyanim{
 
 Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     : _n0(n0_), _n1(n1_), _n2(n2_), _n3(n3_) {
+    Vec3 x0 = _n0->position();
+    Vec3 x1 = _n1->position();
+    Vec3 x2 = _n2->position();
+    Vec3 x3 = _n3->position();
+
+    _normal0 = (x3-x1).cross(x2-x1).normalized();
+    _normal1 = (x2-x0).cross(x3-x0).normalized();
+    _normal2 = (x3-x0).cross(x1-x0).normalized();
+    _normal3 = (x1-x0).cross(x2-x0).normalized();
+
+    _basis << x1-x0, x2-x0, x3-x0;
+    _volume = std::abs(_basis.determinant()/6.0);
+    _basis = _basis.inverse().eval();
 }
 
 Tetrahedron::~Tetrahedron(void) {}
@@ -38,6 +51,30 @@ Node* Tetrahedron::node3(void) {
 
 void Tetrahedron::node3(Node* node_) {
     _n3 = node_;
+}
+
+Mat3 Tetrahedron::basis() const {
+    return _basis;
+}
+
+Vec3 Tetrahedron::normal0() const {
+    return _normal0;
+}
+
+Vec3 Tetrahedron::normal1() const {
+    return _normal1;
+}
+
+Vec3 Tetrahedron::normal2() const {
+    return _normal2;
+}
+
+Vec3 Tetrahedron::normal3() const {
+    return _normal3;
+}
+
+double Tetrahedron::volume() const {
+    return _volume;
 }
 
 Edges Tetrahedron::edges(void) {

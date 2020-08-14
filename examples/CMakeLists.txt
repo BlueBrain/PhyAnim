@@ -1,6 +1,7 @@
-add_executable(test0 test.cpp Scene.cpp Camera.cpp)
+if(GLFW3_FOUND AND LIBIGL_FOUND)
+  add_executable(testAnim testAnim.cpp Scene.cpp Camera.cpp)
 
-target_include_directories (test0 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-  ${OPENGL_INCLUDE_DIR} ${GLUT_INCLUDE_DIR} ${GLEW_INCLUDE_DIR})
-target_link_libraries(test0 ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES}
-  ${GLEW_LIBRARIES} phyamin)
+  target_include_directories(testAnim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    				 	${GLFW3_INCLUDE_DIR})
+  target_link_libraries(testAnim PUBLIC ${GLFW3_LIBRARY} igl::core igl::tetgen phyanim)
+endif()

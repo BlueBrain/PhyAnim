@@ -1,6 +1,9 @@
 #include <iostream>
 
 #include <GL/glew.h>
+#include <igl/copyleft/tetgen/tetrahedralize.h>
+#include <igl/readPLY.h>
+#include <igl/readOFF.h>
 
 #include "Scene.h"
 
@@ -51,53 +54,18 @@ const std::string fshaderSource(
     "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-Scene::Scene(Camera* camera_, float dt_, float meshStiffness_)
+Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
+             double meshStiffness_,  double meshDensity_, double meshDamping_,
+             double meshPoissonRatio_ )
     : _camera(camera_), _dt(dt_), _meshStiffness(meshStiffness_)
-    , _program(0), _uProjViewModel(-1), _uViewModel(-1) {
-    _init();
-}
+    , _meshDensity(meshDensity_), _meshDamping(meshDamping_)
+    , _meshPoissonRatio(meshPoissonRatio_)
+    , _program(0), _uProjViewModel(-1), _uViewModel(-1), _numRenderMode(2)
+    , _renderMode(0), _anim(false) {
 
-Scene::~Scene() {
-    if (_camera) {
-        delete _camera;
-    }
-}
-
-float Scene::dt() {
-    return _dt;
-}
-
-void Scene::dt(float dt_) {
-    _dt = dt_;
-}       
-
-void Scene::render() {
-    _animSys->step(_dt);
-    _mesh->loadNodes();
-    glUseProgram(_program);
-    glUniformMatrix4fv(_uProjViewModel, 1, GL_FALSE,
-                       _camera->projectionViewMatrix().data());
-    glUniformMatrix4fv(_uViewModel, 1, GL_FALSE,
-                       _camera->viewMatrix().data());
-    _mesh->renderSurface();
-}
-
-void Scene::restart() {
-    _mesh->nodesToInitPos();
-    _mesh->loadNodes();
-}
-
-void Scene::gravity() {
-    _animSys->gravity(!_animSys->gravity());
-}
-
-void Scene::floorCollision() {
-    _animSys->floorCollision(!_animSys->floorCollision());
-}
-
-void Scene::_init() {
-
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glEnable(GL_DEPTH_TEST);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     _program = glCreateProgram();
     auto vshader = _compileShader(vshaderSource, GL_VERTEX_SHADER);
@@ -115,34 +83,157 @@ void Scene::_init() {
     _uProjViewModel = glGetUniformLocation(_program, "projViewModel");
     _uViewModel = glGetUniformLocation(_program, "viewModel");
 
-    float h = 5.0f;
-    float lt = 2.0f;
-    float ht = lt * 0.8165;
-    float hte = lt * 0.866025404;
-    phyanim::Node* n0 = new phyanim::Node(phyanim::Vec3(.0f, h+ht, .0f), 0, true);
-    phyanim::Node* n1 = new phyanim::Node(phyanim::Vec3(.0f, h, hte*0.66f),
-                                          1, true);
-    phyanim::Node* n2 = new phyanim::Node(phyanim::Vec3(.5f*lt, h, hte*-0.33f),
-                                          2, true);
-    phyanim::Node* n3 = new phyanim::Node(phyanim::Vec3(-.5f*lt, h, hte*-0.33f),
-                                          3, true);
+    switch(simSystem_) {
+    case MASSSPRING:
+        std::cout << "Mass-spring simulation with:\n\tdt " << dt_ <<
+                "\n\tstiffness " << meshStiffness_ <<
+                "\n\tdensity " << meshDensity_ << "\n\tdamping " <<
+                meshDamping_ << std::endl;
+                _animSys = new phyanim::MassSpringSystem();
+        break;
+    case FEM:
+        std::cout << "FEM simulation with:\n\tdt " << dt_ <<
+                "\n\tstiffness " << meshStiffness_ <<
+                "\n\tdensity " << meshDensity_ << "\n\tdamping " <<
+                meshDamping_ << "\n\tpoisson ratio " << meshPoissonRatio_ <<
+                std::endl;
+        _animSys = new phyanim::FEMSystem(); 
+        break;
+    }
+}
 
-    phyanim::Tetrahedron* tet = new phyanim::Tetrahedron(n0, n1, n2, n3);
-    
-    _mesh = new phyanim::DrawableMesh();
+Scene::~Scene() {
+    if (_camera) {
+        delete _camera;
+    }
+}
 
-    _mesh->tetrahedra().push_back(tet);
+double Scene::dt() {
+    return _dt;
+}
 
-    _mesh->tetsToNodes();
+void Scene::dt(float dt_) {
+    _dt = dt_;
+}       
+
+void Scene::render() {
+    if (_anim) {
+        _animSys->step(_dt);
+        _mesh->loadNodes();
+    }
+    glUseProgram(_program);
+    Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
+    Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();
+    glUniformMatrix4fv(_uProjViewModel, 1, GL_FALSE, projView.data());
+    glUniformMatrix4fv(_uViewModel, 1, GL_FALSE, view.data());
+    _mesh->render();
+    // _mesh->renderSurface();
+}
+
+void Scene::loadMesh(const std::string& file_) {
+    if (file_.empty()) {
+        std::cerr << "Empty mesh file error" << std::endl;
+        return;
+    }
+    Eigen::MatrixXd sVertices;
+    Eigen::MatrixXi sFacets;
+        
+    Eigen::MatrixXd vertices;
+    Eigen::MatrixXi tets;
+    Eigen::MatrixXi facets;
+
+    if (file_.find(".off") != std::string::npos) {
+        igl::readOFF(file_.c_str(), sVertices, sFacets);
+    } else if (file_.find(".ply") != std::string::npos) {
+        igl::readPLY(file_.c_str(), sVertices, sFacets);
+    } else {
+        return;
+    }
+
+    // std::cout << vertices << std::endl;
+    // std::cout << facets << std::endl;        
+    igl::copyleft::tetgen::tetrahedralize(sVertices,sFacets,"pq1.414Y",
+                                          vertices, tets, facets);
+
+    // vertices = sVertices;
+    // facets = sFacets;
+        
+    size_t nVertices = vertices.rows();
+    phyanim::Nodes rawNodes(nVertices);
+    for (size_t i = 0; i < nVertices; ++i) {
+        rawNodes[i] = new phyanim::Node(vertices.row(i), i);
+    }
+
+    size_t nTets = tets.rows();
+    phyanim::Tetrahedra rawTets(nTets);
+    for (size_t i = 0; i < nTets; ++i) {
+        auto tet = new phyanim::Tetrahedron(
+            rawNodes[tets(i,2)], rawNodes[tets(i,0)], rawNodes[tets(i,3)],
+            rawNodes[tets(i,1)]);
+        rawTets[i] = tet;
+    }
+        
+    size_t nTriangles = facets.rows();
+    phyanim::Triangles rawTriangles(nTriangles);
+    for (size_t i = 0; i < nTriangles; ++i) {
+        auto triangle = new phyanim::Triangle(
+            rawNodes[facets(i,0)], rawNodes[facets(i,2)],
+            rawNodes[facets(i,1)]); 
+        rawTriangles[i] = triangle;
+    }
+    _mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
+                                      _meshDamping, _meshPoissonRatio);
+    _mesh->nodes() = rawNodes;
+    _mesh->tetrahedra() = rawTets;
+    _mesh->surfaceTriangles() = rawTriangles;
     _mesh->tetsToEdges();
     _mesh->tetsToTriangles();
-    _mesh->load();
-    _mesh->stiffness(_meshStiffness);
-
-    _animSys = new phyanim::MassSpringSystem();
     
+    std::cout << "Mesh loaded with: " << _mesh->nodes().size() <<
+            " nodes, " << _mesh->edges().size() << " edges, " <<
+            _mesh->tetrahedra().size() << " tetrahedra and "<<
+            _mesh->surfaceTriangles().size() << " triangles" <<
+            std::endl;
+
+    _mesh->load();
     _animSys->addMesh(_mesh);
 }
+
+void Scene::restart() {
+    _mesh->nodesToInitPos();
+    _mesh->loadNodes();
+}
+
+void Scene::gravity() {
+    _animSys->gravity(!_animSys->gravity());
+}
+
+void Scene::floorCollision() {
+    _animSys->floorCollision(!_animSys->floorCollision());
+}
+
+void Scene::changeRenderMode() {
+    ++_renderMode;
+    _renderMode %= _numRenderMode;
+
+    switch (_renderMode) {
+    case 0:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        break;
+    case 1:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        break;
+    }
+}
+
+bool Scene::anim() {
+    return _anim;
+}
+
+void Scene::anim(bool anim_) {
+    _anim = anim_;
+}
+        
 
 unsigned int Scene::_compileShader(const std::string& source_,
                                    int type_) {

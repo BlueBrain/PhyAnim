@@ -9,18 +9,18 @@ class Camera{
 
   public:
 
-    Camera(phyanim::Vec3 position_ = phyanim::Vec3(),
-           float fov_ = 90.0f,
-           float ratio_ = 1.0f);
+    Camera(phyanim::Vec3 position_ = phyanim::Vec3::Zero(),
+           double fov_ = 90.0,
+           double ratio_ = 1.0);
 
     ~Camera(void);
 
     phyanim::Vec3 position(void) const;
     void position(phyanim::Vec3 position_);
 
-    void fov( float fov_ );
+    void fov(double fov_);
 
-    void ratio( float ratio_ );
+    void ratio(double ratio_);
 
     phyanim::Mat4 viewMatrix(void) const;
 
@@ -35,8 +35,8 @@ class Camera{
     void _makeProjectionMat(void);
 
     phyanim::Vec3 _position;
-    float _fov;
-    float _ratio;
+    double _fov;
+    double _ratio;
 
     phyanim::Mat4 _viewMat;
     phyanim::Mat4 _projectionMat;

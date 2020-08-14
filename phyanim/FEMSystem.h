@@ -14,6 +14,12 @@ class FEMSystem : public AnimSystem {
     virtual ~FEMSystem(void);
 
     void step(float dt_);
+
+    void addMesh(Mesh* mesh_);
+
+  private:
+
+    void _polar(const Mat3& f_, Mat3& q_) const;    
     
 };
 

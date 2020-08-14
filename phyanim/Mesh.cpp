@@ -2,42 +2,75 @@
 
 namespace phyanim {
 
-Mesh::Mesh(float stiffness_)
-    : _stiffness(stiffness_){
+Mesh::Mesh(double stiffness_, double density_,
+           double damping_, double poissonRatio_)
+    : _stiffness(stiffness_), _density(density_)
+    , _damping(damping_), _poissonRatio(poissonRatio_) {
     
 }
 
 Mesh::~Mesh(void) {}
 
-Nodes& Mesh::nodes(void) {
+Nodes& Mesh::nodes() {
     return _nodes;
 }
 
-Edges& Mesh::edges(void) {
+Edges& Mesh::edges() {
     return _edges;
 }
 
-Tetrahedra& Mesh::tetrahedra(void) {
+Tetrahedra& Mesh::tetrahedra() {
     return _tetrahedra;
 }
 
-Triangles& Mesh::surfaceTriangles(void) {
+Triangles& Mesh::surfaceTriangles() {
     return _surfaceTriangles;
 }
 
-Triangles& Mesh::triangles(void) {
+Triangles& Mesh::triangles() {
     return _triangles;
 }
 
-float Mesh::stiffness(void) {
+double Mesh::stiffness() {
     return _stiffness;
 }
 
-void Mesh::stiffness(float stiffness_) {
+void Mesh::stiffness(double stiffness_) {
     _stiffness = stiffness_;
 }
 
-void Mesh::tetsToNodes(void) {
+double Mesh::density() {
+    return _density;
+}
+
+void Mesh::density(double density_) {
+    _density = density_;
+}
+
+double Mesh::damping() {
+    return _damping;
+}
+
+void Mesh::damping(double damping_) {
+    _damping = damping_; 
+}
+
+double Mesh::poissonRatio() {
+    return _poissonRatio;
+}
+
+void Mesh::poissonRatio(double poissonRatio_) {
+    _poissonRatio = poissonRatio_;
+}
+
+void Mesh::trianglesToEdges() {
+    for (auto tri: _triangles) {
+        auto edges = tri->edges();
+        _edges.insert(_edges.end(), edges.begin(), edges.end());
+    }
+}
+
+void Mesh::tetsToNodes() {
     for (auto tet: _tetrahedra) {
         _nodes.push_back(tet->node0());
         _nodes.push_back(tet->node1());
@@ -46,14 +79,18 @@ void Mesh::tetsToNodes(void) {
     }
 }
 
-void Mesh::tetsToEdges(void) {
+void Mesh::tetsToEdges() {
+    UniqueEdges uniqueEdges;
     for (auto tet: _tetrahedra) {
-        auto edges = tet->edges();
-        _edges.insert(_edges.end(), edges.begin(), edges.end());
+        for (auto edge: tet->edges()) {
+            uniqueEdges.insert(edge);
+        }
     }
+    _edges.insert(_edges.end(), uniqueEdges.begin(), uniqueEdges.end());
+            
 }
 
-void Mesh::tetsToTriangles(void) {
+void Mesh::tetsToTriangles() {
     for (auto tet: _tetrahedra) {
         //TODO delete duplicated triangles
         auto triangles = tet->triangles();
@@ -68,9 +105,10 @@ void Mesh::tetsToTriangles(void) {
     }
 }
 
-void Mesh::nodesToInitPos(void) {
+void Mesh::nodesToInitPos() {
     for (auto node: _nodes) {
         node->position(node->initPosition());
+        node->velocity(Vec3::Zero());
     }        
 }
 

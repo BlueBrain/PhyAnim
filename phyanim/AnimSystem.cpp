@@ -3,13 +3,13 @@
 namespace phyanim {
 
 AnimSystem::AnimSystem()
-    : _gravity(false), _floor(true) {
+    : _gravity(true), _floor(true), _floorHeight(-5.0f) {
     
 }
 
 AnimSystem::~AnimSystem() {}
 
-void AnimSystem::addMesh(phyanim::Mesh *mesh_) {
+void AnimSystem::addMesh(Mesh* mesh_) {
     _meshes.push_back( mesh_ );
 }
 

@@ -2,10 +2,11 @@
 
 namespace phyanim{
 
-Node::Node(Vec3 position_, unsigned int id_, bool surface_,
-            Vec3 v0_, Vec3 a0_)
-    : _position(position_), _initPosition(position_), _id(id_)
-    , _surface(surface_), _v0(v0_), _a0(a0_) {
+Node::Node(Vec3 position_, unsigned int id_, Vec3 velocity_, Vec3 force_,
+           double mass_, bool surface_)                                                          
+    : _initPosition(position_), _position(position_), _id(id_)
+    , _velocity(velocity_), _force(force_), _mass(mass_)
+    , _surface(surface_) {
 
 }
 
@@ -25,25 +26,29 @@ Vec3 Node::initPosition() const {
     return _initPosition;
 }
 
-void Node::initPosition(Vec3 initPosition_) {
-    _initPosition = initPosition_;
+
+Vec3 Node::velocity() const {
+    return _velocity;
 }
 
-
-Vec3 Node::v0() const {
-    return _v0;
+void Node::velocity(Vec3 velocity_) {
+    _velocity = velocity_;
 }
 
-void Node::v0(Vec3 v0_) {
-    _v0 = v0_;
+Vec3 Node::force() const {
+    return _force;
 }
 
-Vec3 Node::a0() const {
-    return _a0;
+void Node::force(Vec3 force_) {
+    _force = force_;
 }
 
-void Node::a0(Vec3 a0_) {
-    _a0 = a0_;
+double Node::mass() const {
+    return _mass;
+}
+
+void Node::mass(double mass_) {
+    _mass = mass_;
 }
 
 unsigned int Node::id() const{

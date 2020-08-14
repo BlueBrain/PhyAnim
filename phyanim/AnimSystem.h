@@ -15,7 +15,7 @@ class AnimSystem {
 
     virtual void step(float dt_) = 0;
 
-    void addMesh(Mesh* mesh_);
+    virtual void addMesh(Mesh* mesh_);
 
     void gravity(bool gravity_);
 
@@ -30,6 +30,7 @@ class AnimSystem {
     bool _gravity;
 
     bool _floor;
+    float _floorHeight;
 
     Meshes _meshes;
 

@@ -6,45 +6,48 @@
 
 namespace phyanim {
 
-DrawableMesh::DrawableMesh( void )
-    : Mesh() {
+DrawableMesh::DrawableMesh(double stiffness_, double density_,
+                           double damping_, double poissonRatio_)
+    : Mesh( stiffness_, density_, damping_, poissonRatio_) {
     
 }
 
-DrawableMesh::~DrawableMesh(void) {}
+DrawableMesh::~DrawableMesh() {}
 
-void DrawableMesh::render(void) {
+void DrawableMesh::render() {
     glBindVertexArray(_vao[0]);
     glDrawElements(GL_TRIANGLES, _indicesSize, GL_UNSIGNED_INT, 0);
 }
 
-void DrawableMesh::renderSurface(void) {
+void DrawableMesh::renderSurface() {
     glBindVertexArray(_vao[1]);
     glDrawElements(GL_TRIANGLES, _surfaceIndicesSize, GL_UNSIGNED_INT, 0);
 }
 
-void DrawableMesh::load(void) {
+void DrawableMesh::load() {
     glGenVertexArrays(2, _vao);
     unsigned int vbos[3];
     glGenBuffers(3, vbos);
     _posVbo = vbos[0];
+    
     size_t nodesSize = _nodes.size();
-    float posBuffer[nodesSize*3];
+    double posBuffer[nodesSize*3];
     for (size_t i = 0; i < nodesSize; ++i) {
         auto pos = _nodes[i]->position();
         posBuffer[i*3] = pos.x();
         posBuffer[i*3+1] = pos.y();
         posBuffer[i*3+2] = pos.z();
-    } 
+    }
+    
     glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*nodesSize*3,
+    glBufferData(GL_ARRAY_BUFFER, sizeof(double)*nodesSize*3,
                  &posBuffer, GL_STATIC_DRAW);
  
 
     glBindVertexArray(_vao[0]);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
+    glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
 
     size_t trianglesSize = _triangles.size();
@@ -62,8 +65,8 @@ void DrawableMesh::load(void) {
 
     glBindVertexArray(_vao[1]);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
+    glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     
     trianglesSize = _surfaceTriangles.size();
@@ -86,7 +89,7 @@ void DrawableMesh::load(void) {
 void DrawableMesh::loadNodes() {
     
     size_t nodesSize = _nodes.size();
-    float posBuffer[nodesSize*3];
+    double posBuffer[nodesSize*3];
     for (size_t i = 0; i < nodesSize; ++i) {
         auto pos = _nodes[i]->position();
         posBuffer[i*3] = pos.x();
@@ -94,7 +97,7 @@ void DrawableMesh::loadNodes() {
         posBuffer[i*3+2] = pos.z();
     } 
     glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*nodesSize*3,
+    glBufferData(GL_ARRAY_BUFFER, sizeof(double)*nodesSize*3,
                  &posBuffer, GL_STATIC_DRAW);
 }
 

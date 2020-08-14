@@ -7,10 +7,15 @@ set (CMAKE_CXX_STANDARD 11)
 
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake)
 
+
 find_package(OpenGL REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(GLUT REQUIRED)
+find_package(GLUT)
+find_package(GLFW3)
+
+option(LIBIGL_WITH_TETGEN "Use Tetgen" ON)
+find_package(LIBIGL QUIET)
 
 add_subdirectory(phyanim)
 add_subdirectory(examples)

@@ -34,6 +34,18 @@ class Tetrahedron{
 
     void node3(Node* node_);
 
+    Mat3 basis(void) const;
+
+    Vec3 normal0(void) const;
+
+    Vec3 normal1(void) const;
+
+    Vec3 normal2(void) const;
+
+    Vec3 normal3(void) const;
+
+    double volume(void) const;
+
     Edges edges(void);
       
     Triangles triangles(void);
@@ -44,6 +56,15 @@ class Tetrahedron{
     Node* _n1;
     Node* _n2;
     Node* _n3;
+
+    Mat3 _basis;
+    Vec3 _normal0;
+    Vec3 _normal1;
+    Vec3 _normal2;
+    Vec3 _normal3;
+    double _volume;
+    
+
 };
 
 }
