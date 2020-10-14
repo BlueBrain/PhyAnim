@@ -17,32 +17,26 @@ class Tetrahedron{
     Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_);
     
     virtual ~Tetrahedron(void);
-    
-    Node* node0(void);
 
-    void node0(Node* node_);
+    Node* node0;
 
-    Node* node1(void);
+    Node* node1;
 
-    void node1(Node* node_);
+    Node* node2;
 
-    Node* node2(void);
+    Node* node3;
 
-    void node2(Node* node_);
+    Mat3 basis;
 
-    Node* node3(void);
+    Vec3 normal0;
 
-    void node3(Node* node_);
+    Vec3 normal1;
 
-    Mat3 basis(void) const;
+    Vec3 normal2;
 
-    Vec3 normal0(void) const;
+    Vec3 normal3;
 
-    Vec3 normal1(void) const;
-
-    Vec3 normal2(void) const;
-
-    Vec3 normal3(void) const;
+    double initVolume;
 
     double volume(void) const;
 
@@ -52,16 +46,6 @@ class Tetrahedron{
 
   private:
 
-    Node* _n0;
-    Node* _n1;
-    Node* _n2;
-    Node* _n3;
-
-    Mat3 _basis;
-    Vec3 _normal0;
-    Vec3 _normal1;
-    Vec3 _normal2;
-    Vec3 _normal3;
     double _volume;
     
 

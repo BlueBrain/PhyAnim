@@ -29,43 +29,21 @@ class Node
 
     virtual ~Node(void);
 
-    Vec3 position(void) const;
+    Vec3 initPosition;
 
-    void position(Vec3 position_);
+    Vec3 position;
 
-    Vec3 initPosition(void) const;
+    Vec3 initVelocity;
 
-    Vec3 velocity(void) const;
+    Vec3 velocity;
 
-    void velocity(Vec3 velocity_);
+    Vec3 force;
 
-    Vec3 force(void) const;
+    double mass;
 
-    void force(Vec3 acceleration_);
+    unsigned int id;
 
-    double mass(void) const;
-
-    void mass(double mass_);
-    
-    unsigned int id(void) const;
-
-    void id(unsigned int id_);
-
-    bool surface(void);
-
-    void surface(bool surface_);
-
-  private:
-
-    Vec3 _initPosition;
-    Vec3 _position;
-    Vec3 _velocity;
-    Vec3 _force;
-
-    double _mass;
-
-    unsigned int _id;
-    bool _surface;
+    bool surface;
 
 };
 

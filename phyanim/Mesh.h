@@ -2,6 +2,7 @@
 #define __PHYANIM_MESH__
 
 #include <Tetrahedron.h>
+#include <BoundingVolume.h>
 
 namespace phyanim {
 
@@ -18,32 +19,30 @@ class Mesh {
 
     virtual ~Mesh(void);
 
-    Nodes& nodes(void);
+    Nodes nodes;
 
-    Edges& edges(void);
+    Edges edges;
 
-    Tetrahedra& tetrahedra(void);
+    Tetrahedra tetrahedra;
 
-    Triangles& surfaceTriangles(void);
+    Triangles surfaceTriangles;
 
-    Triangles& triangles(void);
+    Triangles triangles;
 
-    double stiffness(void);
-
-    void stiffness(double stiffness_);
-
-    double density(void);
-
-    void density(double density_);
-
-    double damping(void);
-
-    void damping(double damping_);
-
-    double poissonRatio(void);
-
-    void poissonRatio(double poissonRatio_);
+    double initVolume;
     
+    double volume(void);
+
+    double stiffness;
+
+    double density;
+
+    double damping;
+
+    double poissonRatio;
+
+    BoundingVolume* boundingVolume;
+
     void trianglesToEdges(void);
     
     void tetsToNodes(void);
@@ -54,18 +53,6 @@ class Mesh {
 
     void nodesToInitPos(void);
 
-  protected:
-
-    Nodes _nodes;
-    Edges _edges;
-    Tetrahedra _tetrahedra;
-    Triangles _surfaceTriangles;
-    Triangles _triangles;
-
-    double _stiffness;
-    double _damping;
-    double _poissonRatio;
-    double _density;
 };
 
 }

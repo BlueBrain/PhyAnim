@@ -9,6 +9,20 @@ class Triangle;
 
 typedef std::vector<Triangle*> Triangles;
 
+struct TrianglePointerHash { 
+  public:
+    size_t operator()(const Triangle* triangle_) const;
+};
+
+struct TrianglePointerEqual { 
+  public:
+    bool operator()(const Triangle* triangle0_, const Triangle* triangle_) const;
+}; 
+
+typedef std::unordered_set<Triangle*, TrianglePointerHash,
+                           TrianglePointerEqual> UniqueTriangles;
+
+
 class Triangle {
 
   public:
@@ -17,27 +31,16 @@ class Triangle {
 
     virtual ~Triangle(void);
 
-    Node* node0(void);
+    Node* node0;
 
-    void node0(Node* node_);
+    Node* node1;
 
-    Node* node1(void);
-
-    void node1(Node* node_);
-
-    Node* node2(void);
-
-    void node2(Node* node_);
+    Node* node2;
 
     Edges edges(void);
+
+    void sortedIds(unsigned int& id0_, unsigned int& id1_, unsigned int& id2_) const;
       
-
-  private:
-
-    Node* _n0;
-    Node* _n1;
-    Node* _n2;
-
 };
 
 }

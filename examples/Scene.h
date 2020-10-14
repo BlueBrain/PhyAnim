@@ -3,24 +3,25 @@
 
 #include <Camera.h>
 #include <DrawableMesh.h>
-#include <MassSpringSystem.h>
-#include <FEMSystem.h>
+#include <AnimSystem.h>
 
 namespace examples{
 
 typedef enum{
-    MASSSPRING = 0,
-    FEM
+    EXPLICITMASSSPRING = 0,
+    IMPLICITMASSSPRING,
+    EXPLICITFEM,
+    IMPLICITFEM
 } SimSystem;
 
 class Scene{
   
   public:
   
-    Scene(Camera* camera_, SimSystem simSystem_ = MASSSPRING,
+    Scene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
           double dt_ = 0.01, double meshStiffness_ = 1000.0,
           double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
-          double meshPoissonRatio_ = 0.499);
+          double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
 
     virtual ~Scene(void);
 
@@ -31,6 +32,8 @@ class Scene{
     void render(void);
 
     void loadMesh(const std::string& file_);
+
+    void clear(void);
     
     void restart(void);
     
@@ -49,13 +52,15 @@ class Scene{
     unsigned int _compileShader(const std::string& source_, int type_);
 
     Camera* _camera;
-    phyanim::DrawableMesh* _mesh;
+    std::vector<phyanim::DrawableMesh*> _meshes;
     phyanim::AnimSystem* _animSys;
+    phyanim::CollisionDetection* _collDetect;
     double _dt;
     double _meshStiffness;
     double _meshDamping;
     double _meshPoissonRatio;
     double _meshDensity;
+    double _collisionStiffness;
     
     unsigned int _program;
     int _uProjViewModel;
@@ -64,6 +69,8 @@ class Scene{
     unsigned int _numRenderMode;
     unsigned int _renderMode;
     bool _anim;
+
+    double _meshVolume;
 };
 
 }

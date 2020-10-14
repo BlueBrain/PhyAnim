@@ -9,6 +9,8 @@
 
 examples::Camera* camera;
 examples::Scene* scene;
+std::string inFile;
+
 
 void render(void);
 
@@ -37,9 +39,9 @@ int main(int argc, char* argv[]){
     double damping = 0.1;
     double density = 10.0;
     double poissonRatio = 0.3;
+    double collisionStiffness = 1000.0;
     double dt = 0.01;
-    examples::SimSystem simSystem = examples::MASSSPRING;
-    std::string inFile;
+    examples::SimSystem simSystem = examples::EXPLICITMASSSPRING;
     if (argc < 2) {
         std::cerr << "Usage error:\n" << usage << std::endl;
         return -1;
@@ -62,14 +64,21 @@ int main(int argc, char* argv[]){
             } else if (option.compare("-kp") == 0) {
                 poissonRatio = std::atof(argv[i+1]);
                 ++i;
+            } else if (option.compare("-kc") == 0) {
+                collisionStiffness = std::atof(argv[i+1]);
+                ++i;
             } else if (option.compare("--help") == 0) {
                 std::cout << usage << std::endl;
                 return 0;
-            } else if (option.compare("-massspring") == 0) {
-                simSystem = examples::MASSSPRING;
-            } else if (option.compare("-fem") == 0) {
-                simSystem = examples::FEM;
-            } 
+            } else if (option.compare("-exmass") == 0) {
+                simSystem = examples::EXPLICITMASSSPRING;
+            } else if (option.compare("-immass") == 0) {
+                simSystem = examples::IMPLICITMASSSPRING;
+            } else if (option.compare("-exfem") == 0) {
+                simSystem = examples::EXPLICITFEM;
+            } else if (option.compare("-imfem") == 0) {
+                simSystem = examples::IMPLICITFEM;
+            }  
             else {
                 inFile = std::string(argv[i]);
             }
@@ -112,9 +121,8 @@ int main(int argc, char* argv[]){
     
     camera = new examples::Camera(phyanim::Vec3(0.0, 0.0, 7.0));
     scene = new examples::Scene(camera, simSystem, dt, stiffness, density,
-                                damping, poissonRatio);
+                                damping, poissonRatio, collisionStiffness);
     scene->loadMesh(inFile);
-
     
     while(!glfwWindowShouldClose(window)) {
         render();
@@ -164,13 +172,16 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
             scene->floorCollision();
             break;
         case 'C':
-            scene->restart();
+            scene->clear();
             break;
         case 'V':
             scene->changeRenderMode();
             break;
         case 'B':
             scene->anim(!scene->anim());
+            break;
+        case 'T':
+            scene->loadMesh(inFile);
             break;
         }
     }

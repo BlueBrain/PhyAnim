@@ -30,10 +30,10 @@ void DrawableMesh::load() {
     glGenBuffers(3, vbos);
     _posVbo = vbos[0];
     
-    size_t nodesSize = _nodes.size();
+    size_t nodesSize = nodes.size();
     double posBuffer[nodesSize*3];
     for (size_t i = 0; i < nodesSize; ++i) {
-        auto pos = _nodes[i]->position();
+        auto pos = nodes[i]->position;
         posBuffer[i*3] = pos.x();
         posBuffer[i*3+1] = pos.y();
         posBuffer[i*3+2] = pos.z();
@@ -50,14 +50,14 @@ void DrawableMesh::load() {
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
 
-    size_t trianglesSize = _triangles.size();
+    size_t trianglesSize = triangles.size();
     _indicesSize = trianglesSize*3;
     unsigned int indices[_indicesSize];
     for (size_t i = 0; i < trianglesSize; ++i) {
-        auto triangle = _triangles[i];
-        indices[i*3] = triangle->node0()->id();
-        indices[i*3+1] = triangle->node1()->id();
-        indices[i*3+2] = triangle->node2()->id();
+        auto triangle = triangles[i];
+        indices[i*3] = triangle->node0->id;
+        indices[i*3+1] = triangle->node1->id;
+        indices[i*3+2] = triangle->node2->id;
     }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_indicesSize,
@@ -69,14 +69,14 @@ void DrawableMesh::load() {
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     
-    trianglesSize = _surfaceTriangles.size();
+    trianglesSize = surfaceTriangles.size();
     _surfaceIndicesSize = trianglesSize*3;
     unsigned int surfaceIndices[_surfaceIndicesSize];
     for (size_t i = 0; i < trianglesSize; ++i) {
-        auto triangle = _surfaceTriangles[i];
-        surfaceIndices[i*3] = triangle->node0()->id();
-        surfaceIndices[i*3+1] = triangle->node1()->id();
-        surfaceIndices[i*3+2] = triangle->node2()->id();
+        auto triangle = surfaceTriangles[i];
+        surfaceIndices[i*3] = triangle->node0->id;
+        surfaceIndices[i*3+1] = triangle->node1->id;
+        surfaceIndices[i*3+2] = triangle->node2->id;
     }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[2]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
@@ -88,10 +88,10 @@ void DrawableMesh::load() {
 
 void DrawableMesh::loadNodes() {
     
-    size_t nodesSize = _nodes.size();
+    size_t nodesSize = nodes.size();
     double posBuffer[nodesSize*3];
     for (size_t i = 0; i < nodesSize; ++i) {
-        auto pos = _nodes[i]->position();
+        auto pos = nodes[i]->position;
         posBuffer[i*3] = pos.x();
         posBuffer[i*3+1] = pos.y();
         posBuffer[i*3+2] = pos.z();

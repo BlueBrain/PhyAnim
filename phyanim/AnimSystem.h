@@ -1,7 +1,7 @@
 #ifndef __PHYANIM_ANIMSYSTEM__
 #define __PHYANIM_ANIMSYSTEM__
 
-#include <Mesh.h>
+#include <CollisionDetection.h>
 
 namespace phyanim {
 
@@ -9,30 +9,27 @@ class AnimSystem {
 
   public:
 
-    AnimSystem(void);
+    AnimSystem(CollisionDetection* collDetector_ = nullptr);
 
     virtual ~AnimSystem(void);
 
-    virtual void step(float dt_) = 0;
+    virtual void step(float dt_);
 
     virtual void addMesh(Mesh* mesh_);
 
-    void gravity(bool gravity_);
+    void clear(void);
 
-    bool gravity(void);
+    bool gravity;
 
-    void floorCollision(bool floorCollision_);
-
-    bool floorCollision(void);
-
+    bool limitsCollision;
+    
   protected:
 
-    bool _gravity;
-
-    bool _floor;
-    float _floorHeight;
+    void _checkLimitsCollision(void);
 
     Meshes _meshes;
+
+    CollisionDetection* _collisionDetector;
 
 };
 

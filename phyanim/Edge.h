@@ -33,24 +33,13 @@ class Edge {
 
     virtual ~Edge(void);
 
-    Node* node0(void);
-
-    Node* node0(void) const;
-
-    Node* node1(void);
-
-    Node* node1(void) const;
-    
-    double restLength(void);
-
     bool operator==(const Edge& edge_) const;
-    
-  private:
 
-    Node* _n0;
-    Node* _n1;
+    Node* node0;
 
-    double _initLength;
+    Node* node1;
+
+    double resLength;
    
 };
 

@@ -1,4 +1,6 @@
 #include <iostream>
+#include <cstdlib>   
+#include <ctime>
 
 #include <GL/glew.h>
 #include <igl/copyleft/tetgen/tetrahedralize.h>
@@ -6,6 +8,12 @@
 #include <igl/readOFF.h>
 
 #include "Scene.h"
+#include <ExplicitMassSpringSystem.h>
+#include <ImplicitMassSpringSystem.h>
+#include <ExplicitFEMSystem.h>
+#include <ImplicitFEMSystem.h>
+
+
 
 namespace examples {
 
@@ -56,12 +64,13 @@ const std::string fshaderSource(
 
 Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
              double meshStiffness_,  double meshDensity_, double meshDamping_,
-             double meshPoissonRatio_ )
+             double meshPoissonRatio_, double collisionStiffness_ )
     : _camera(camera_), _dt(dt_), _meshStiffness(meshStiffness_)
     , _meshDensity(meshDensity_), _meshDamping(meshDamping_)
     , _meshPoissonRatio(meshPoissonRatio_)
+    , _collisionStiffness(collisionStiffness_)
     , _program(0), _uProjViewModel(-1), _uViewModel(-1), _numRenderMode(2)
-    , _renderMode(0), _anim(false) {
+    , _renderMode(0), _anim(false), _meshVolume(0.0) {
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
@@ -83,23 +92,48 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
     _uProjViewModel = glGetUniformLocation(_program, "projViewModel");
     _uViewModel = glGetUniformLocation(_program, "viewModel");
 
+    _collDetect = new phyanim::CollisionDetection(_collisionStiffness);
+    _collDetect->lowerLimit = phyanim::Vec3(-5.0, -5.0, -5.0);
+    _collDetect->upperLimit = phyanim::Vec3(5.0, 10.0, 5.0);
     switch(simSystem_) {
-    case MASSSPRING:
-        std::cout << "Mass-spring simulation with:\n\tdt " << dt_ <<
-                "\n\tstiffness " << meshStiffness_ <<
-                "\n\tdensity " << meshDensity_ << "\n\tdamping " <<
-                meshDamping_ << std::endl;
-                _animSys = new phyanim::MassSpringSystem();
-        break;
-    case FEM:
-        std::cout << "FEM simulation with:\n\tdt " << dt_ <<
-                "\n\tstiffness " << meshStiffness_ <<
-                "\n\tdensity " << meshDensity_ << "\n\tdamping " <<
-                meshDamping_ << "\n\tpoisson ratio " << meshPoissonRatio_ <<
+    case EXPLICITMASSSPRING:
+        std::cout << "Explicit mass-spring simulation with:\n\tdt " << _dt <<
+                "\n\tstiffness " << _meshStiffness <<
+                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
+                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
+                "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::FEMSystem(); 
+        _animSys = new phyanim::ExplicitMassSpringSystem(_collDetect);
+        break;
+    case IMPLICITMASSSPRING:
+        std::cout << "Implicit mass-spring simulation with:\n\tdt " << _dt <<
+                "\n\tstiffness " << _meshStiffness <<
+                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
+                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
+                "\n\tcollision stiffness " << _collisionStiffness <<
+                std::endl;
+        _animSys = new phyanim::ImplicitMassSpringSystem(_collDetect);
+        break;
+    case EXPLICITFEM:
+        std::cout << "Explicit FEM simulation with:\n\tdt " << _dt <<
+                "\n\tstiffness " << _meshStiffness <<
+                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
+                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
+                "\n\tcollision stiffness " << _collisionStiffness <<
+                std::endl;
+        _animSys = new phyanim::ExplicitFEMSystem(_collDetect); 
+        break;
+    case IMPLICITFEM:
+        std::cout << "Implicit FEM simulation with:\n\tdt " << _dt <<
+                "\n\tstiffness " << _meshStiffness <<
+                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
+                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
+                "\n\tcollision stiffness " << _collisionStiffness <<
+                std::endl;
+        _animSys = new phyanim::ImplicitFEMSystem(_collDetect); 
         break;
     }
+    std::srand(std::time(0));
 }
 
 Scene::~Scene() {
@@ -119,14 +153,22 @@ void Scene::dt(float dt_) {
 void Scene::render() {
     if (_anim) {
         _animSys->step(_dt);
-        _mesh->loadNodes();
+        for (size_t i = 0; i < _meshes.size(); i++) {
+            auto mesh = _meshes[i];
+            mesh->loadNodes();
+            std::cout << "Mesh original volume: " << mesh->initVolume <<
+                    " volume difference: " <<
+                    mesh->volume() - mesh->initVolume << std::endl;
+        }
     }
     glUseProgram(_program);
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();
     glUniformMatrix4fv(_uProjViewModel, 1, GL_FALSE, projView.data());
     glUniformMatrix4fv(_uViewModel, 1, GL_FALSE, view.data());
-    _mesh->render();
+    for (auto mesh: _meshes) {
+        mesh->renderSurface();
+    }
     // _mesh->renderSurface();
 }
 
@@ -135,81 +177,100 @@ void Scene::loadMesh(const std::string& file_) {
         std::cerr << "Empty mesh file error" << std::endl;
         return;
     }
-    Eigen::MatrixXd sVertices;
-    Eigen::MatrixXi sFacets;
-        
     Eigen::MatrixXd vertices;
-    Eigen::MatrixXi tets;
     Eigen::MatrixXi facets;
+        
+    // Eigen::MatrixXd vertices;
+    // Eigen::MatrixXi tets;
+    // Eigen::MatrixXi facets;
 
     if (file_.find(".off") != std::string::npos) {
-        igl::readOFF(file_.c_str(), sVertices, sFacets);
-    } else if (file_.find(".ply") != std::string::npos) {
-        igl::readPLY(file_.c_str(), sVertices, sFacets);
+        igl::readOFF(file_.c_str(), vertices, facets);
+    // } else if (file_.find(".ply") != std::string::npos) {
+    //     igl::readPLY(file_.c_str(), sVertices, sFacets);
     } else {
         return;
     }
 
     // std::cout << vertices << std::endl;
     // std::cout << facets << std::endl;        
-    igl::copyleft::tetgen::tetrahedralize(sVertices,sFacets,"pq1.414Y",
-                                          vertices, tets, facets);
+    // igl::copyleft::tetgen::tetrahedralize(sVertices,sFacets,"pq1.414Y",
+    //                                       vertices, tets, facets);
 
     // vertices = sVertices;
     // facets = sFacets;
         
     size_t nVertices = vertices.rows();
     phyanim::Nodes rawNodes(nVertices);
+
+    double randNorm = 1.0 / RAND_MAX;
+
+    phyanim::Vec3 randVelocity(std::rand()*randNorm*2.0-1.0,
+                               std::rand()*randNorm*2.0-1.0,
+                               std::rand()*randNorm*2.0-1.0);
+    std::cout << randVelocity << std::endl;
     for (size_t i = 0; i < nVertices; ++i) {
-        rawNodes[i] = new phyanim::Node(vertices.row(i), i);
+        rawNodes[i] = new phyanim::Node(vertices.row(i), i, randVelocity);
     }
 
-    size_t nTets = tets.rows();
+    size_t nTets = facets.rows();
     phyanim::Tetrahedra rawTets(nTets);
     for (size_t i = 0; i < nTets; ++i) {
         auto tet = new phyanim::Tetrahedron(
-            rawNodes[tets(i,2)], rawNodes[tets(i,0)], rawNodes[tets(i,3)],
-            rawNodes[tets(i,1)]);
+            rawNodes[facets(i,0)], rawNodes[facets(i,1)], rawNodes[facets(i,2)],
+            rawNodes[facets(i,3)]);
         rawTets[i] = tet;
     }
         
-    size_t nTriangles = facets.rows();
-    phyanim::Triangles rawTriangles(nTriangles);
-    for (size_t i = 0; i < nTriangles; ++i) {
-        auto triangle = new phyanim::Triangle(
-            rawNodes[facets(i,0)], rawNodes[facets(i,2)],
-            rawNodes[facets(i,1)]); 
-        rawTriangles[i] = triangle;
-    }
-    _mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
+    // size_t nTriangles = facets.rows();
+    // phyanim::Triangles rawTriangles(nTriangles);
+    // for (size_t i = 0; i < nTriangles; ++i) {
+    //     auto triangle = new phyanim::Triangle(
+    //         rawNodes[facets(i,0)], rawNodes[facets(i,2)],
+    //         rawNodes[facets(i,1)]); 
+    //     rawTriangles[i] = triangle;
+    // }
+    auto mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
                                       _meshDamping, _meshPoissonRatio);
-    _mesh->nodes() = rawNodes;
-    _mesh->tetrahedra() = rawTets;
-    _mesh->surfaceTriangles() = rawTriangles;
-    _mesh->tetsToEdges();
-    _mesh->tetsToTriangles();
+    mesh->nodes = rawNodes;
+    mesh->tetrahedra = rawTets;
+    // mesh->surfaceTriangles() = rawTriangles;
+    mesh->tetsToEdges();
+    mesh->tetsToTriangles();
     
-    std::cout << "Mesh loaded with: " << _mesh->nodes().size() <<
-            " nodes, " << _mesh->edges().size() << " edges, " <<
-            _mesh->tetrahedra().size() << " tetrahedra and "<<
-            _mesh->surfaceTriangles().size() << " triangles" <<
+    std::cout << "Mesh loaded with: " << mesh->nodes.size() <<
+            " nodes, " << mesh->edges.size() << " edges, " <<
+            mesh->tetrahedra.size() << " tetrahedra and "<<
+            mesh->surfaceTriangles.size() << " triangles" <<
             std::endl;
 
-    _mesh->load();
-    _animSys->addMesh(_mesh);
+    _animSys->addMesh(mesh);
+    mesh->load();
+    mesh->initVolume = mesh->volume();
+    _meshes.push_back(mesh);
+}
+
+void Scene::clear() {
+    _animSys->clear();
+    for (auto mesh: _meshes) {
+        delete mesh;
+    }
+    _meshes.clear();
 }
 
 void Scene::restart() {
-    _mesh->nodesToInitPos();
-    _mesh->loadNodes();
+    for (auto mesh: _meshes) {
+        mesh->nodesToInitPos();
+        mesh->loadNodes();
+    }
 }
 
 void Scene::gravity() {
-    _animSys->gravity(!_animSys->gravity());
+    _animSys->gravity = !_animSys->gravity;
 }
 
 void Scene::floorCollision() {
-    _animSys->floorCollision(!_animSys->floorCollision());
+    _animSys->limitsCollision = !_animSys->limitsCollision;
 }
 
 void Scene::changeRenderMode() {
