@@ -13,9 +13,7 @@ ExplicitMassSpringSystem::~ExplicitMassSpringSystem() {
     
 }
 
-void ExplicitMassSpringSystem::step(float dt_) {
-    AnimSystem::step(dt_);
-  
+void ExplicitMassSpringSystem::_step(double dt_) {
     for (auto mesh: _meshes) {
         auto ks = mesh->stiffness;
         auto kd = 1000.0 * mesh->damping;
@@ -41,7 +39,6 @@ void ExplicitMassSpringSystem::step(float dt_) {
             node->position = x;
         }
     }
-    _checkLimitsCollision();
 }
 
 }

@@ -5,7 +5,7 @@
 namespace phyanim {
 
 CollisionDetection::CollisionDetection(double stiffness_)
-    : lowerLimit(-5.0, -5.0, -5.0), upperLimit(5.0, 5.0, 5.0),
+    : lowerLimit(-100.0, -100.0, -100.0), upperLimit(100.0, 100.0, 100.0),
       stiffness(stiffness_) {
        
 }

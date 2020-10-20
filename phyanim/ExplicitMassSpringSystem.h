@@ -13,7 +13,9 @@ class ExplicitMassSpringSystem : public AnimSystem {
 
     virtual ~ExplicitMassSpringSystem(void);
 
-    void step(float dt_);
+  protected:
+
+    void _step(double dt_);
 
 };
 

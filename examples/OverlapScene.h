@@ -1,5 +1,5 @@
-#ifndef __EXAMPLES_SCENE__
-#define __EXAMPLES_SCENE__
+#ifndef __EXAMPLES_OVERLAPSCENE__
+#define __EXAMPLES_OVErLAPSCENE__
 
 #include <chrono>
 
@@ -7,25 +7,20 @@
 #include <DrawableMesh.h>
 #include <AnimSystem.h>
 
+#include "Scene.h"
+
 namespace examples{
 
-typedef enum{
-    EXPLICITMASSSPRING = 0,
-    IMPLICITMASSSPRING,
-    EXPLICITFEM,
-    IMPLICITFEM
-} SimSystem;
-
-class Scene{
+class OverlapScene{
   
   public:
   
-    Scene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
-          double dt_ = 0.01, double meshStiffness_ = 1000.0,
-          double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
-          double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
+    OverlapScene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
+                 double dt_ = 0.01, double meshStiffness_ = 1000.0,
+                 double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
+                 double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
 
-    virtual ~Scene(void);
+    virtual ~OverlapScene(void);
 
     double dt(void);
 
@@ -33,7 +28,7 @@ class Scene{
     
     void render(void);
 
-    void loadMesh(const std::string& file_);
+    void loadMesh(const std::string& file_, phyanim::Vec3 translation_ = phyanim::Vec3::Zero());
 
     void clear(void);
     
@@ -72,14 +67,8 @@ class Scene{
     unsigned int _renderMode;
     bool _anim;
 
-    double _meshVolume;
 
-    std::chrono::time_point<std::chrono::steady_clock> _previousTime;
-
-    bool _collision;
-    unsigned int _framesCount;
-    double _simulationTime;
-    double _meshUpdateTime;
+    std::chrono::time_point<std::chrono::steady_clock> _startTime;
 };
 
 }

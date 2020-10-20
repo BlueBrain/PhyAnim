@@ -6,8 +6,9 @@
 #include <igl/copyleft/tetgen/tetrahedralize.h>
 #include <igl/readPLY.h>
 #include <igl/readOFF.h>
+#include <igl/readOBJ.h>
 
-#include "Scene.h"
+#include "OverlapScene.h"
 #include <ExplicitMassSpringSystem.h>
 #include <ImplicitMassSpringSystem.h>
 #include <ExplicitFEMSystem.h>
@@ -62,7 +63,7 @@ const std::string fshaderSource(
     "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
+OverlapScene::OverlapScene(Camera* camera_, SimSystem simSystem_, double dt_,
              double meshStiffness_,  double meshDensity_, double meshDamping_,
              double meshPoissonRatio_, double collisionStiffness_ )
     : _camera(camera_), _dt(dt_), _meshStiffness(meshStiffness_)
@@ -70,14 +71,11 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
     , _meshPoissonRatio(meshPoissonRatio_)
     , _collisionStiffness(collisionStiffness_)
     , _program(0), _uProjViewModel(-1), _uViewModel(-1), _numRenderMode(2)
-    , _renderMode(0), _anim(false), _meshVolume(0.0)
-    , _collision(false), _framesCount(0), _simulationTime(0.0)
-    , _meshUpdateTime(0.0) {
+    , _renderMode(0), _anim(true) {
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 
     _program = glCreateProgram();
     auto vshader = _compileShader(vshaderSource, GL_VERTEX_SHADER);
@@ -91,6 +89,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
     glAttachShader(_program, gshader);
     glAttachShader(_program, fshader);
     glLinkProgram(_program);
+
     _uProjViewModel = glGetUniformLocation(_program, "projViewModel");
     _uViewModel = glGetUniformLocation(_program, "viewModel");
 
@@ -132,73 +131,51 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ImplicitFEMSystem(_collDetect); 
+        _animSys = new phyanim::ImplicitFEMSystem(_collDetect);
         break;
     }
-    std::srand(std::time(0));
-    _previousTime = std::chrono::steady_clock::now();
+    
+    _animSys->gravity = false;
+    _startTime = std::chrono::steady_clock::now();
 }
 
-Scene::~Scene() {
+OverlapScene::~OverlapScene() {
     if (_camera) {
         delete _camera;
     }
 }
 
-double Scene::dt() {
+double OverlapScene::dt() {
     return _dt;
 }
 
-void Scene::dt(float dt_) {
+void OverlapScene::dt(float dt_) {
     _dt = dt_;
 }       
 
-void Scene::render() {
+void OverlapScene::render() {
     if (_anim) {
-        ++_framesCount;
-
-        auto startTime = std::chrono::steady_clock::now();
         bool collision = _animSys->step(_dt);
-        _collision = _collision || collision;
-        auto endTime = std::chrono::steady_clock::now();
-        std::chrono::duration<double> elapsedTime = endTime-startTime; 
-        _simulationTime += elapsedTime.count();
-
-        startTime = std::chrono::steady_clock::now();
         for (size_t i = 0; i < _meshes.size(); i++) {
             auto mesh = _meshes[i];
             mesh->loadNodes();
         }
-        endTime = std::chrono::steady_clock::now();
-        elapsedTime = endTime-startTime; 
-        _meshUpdateTime+= elapsedTime.count();
 
-        elapsedTime = endTime-_previousTime;
-        if (elapsedTime.count() >= 1.0) {
-            std::cout << "FPS: " << _framesCount << std::endl;
-            if (_collision) {
-                std::cout << "Collision detected" << std::endl;
-            }
-            std::cout << "Simulation average time per frame: " <<
-                    _simulationTime / _framesCount <<
-                    " seconds." << std::endl;
-        
-            std::cout << "Mesh update average time per frame: " <<
-                    _meshUpdateTime / _framesCount << " seconds." << std::endl;
+        if (!collision)
+        {
+            _anim = false;
+            auto endTime = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsedTime = endTime-_startTime;
+            std::cout << "Overlap solved in: " << elapsedTime.count() << "seconds" << std::endl;
             for (auto mesh: _meshes) {
                 std::cout << "Mesh original volume: " << mesh->initVolume <<
-                        " volume difference: " <<
+                        ". Volume difference: " <<
                         (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
-                        std::endl;
+                        std::endl;   
             }
-            _collision = false;
-            _previousTime = endTime;
-            _framesCount = 0;
-            _simulationTime = 0.0;
-            _meshUpdateTime = 0.0;
         }
     }
-    
+
     glUseProgram(_program);
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();
@@ -210,44 +187,30 @@ void Scene::render() {
     // _mesh->renderSurface();
 }
 
-void Scene::loadMesh(const std::string& file_) {
+void OverlapScene::loadMesh(const std::string& file_, phyanim::Vec3 translation_ ) {
     if (file_.empty()) {
         std::cerr << "Empty mesh file error" << std::endl;
         return;
     }
     Eigen::MatrixXd vertices;
     Eigen::MatrixXi facets;
-        
-    // Eigen::MatrixXd vertices;
-    // Eigen::MatrixXi tets;
-    // Eigen::MatrixXi facets;
-
+    
     if (file_.find(".off") != std::string::npos) {
         igl::readOFF(file_.c_str(), vertices, facets);
-    // } else if (file_.find(".ply") != std::string::npos) {
-    //     igl::readPLY(file_.c_str(), sVertices, sFacets);
+    } else if (file_.find(".ply") != std::string::npos) {
+        igl::readPLY(file_.c_str(), vertices, facets);
+    } else if (file_.find(".obj") != std::string::npos) {
+        igl::readOBJ(file_.c_str(), vertices, facets);
     } else {
         return;
     }
-
-    // std::cout << vertices << std::endl;
-    // std::cout << facets << std::endl;        
-    // igl::copyleft::tetgen::tetrahedralize(sVertices,sFacets,"pq1.414Y",
-    //                                       vertices, tets, facets);
-
-    // vertices = sVertices;
-    // facets = sFacets;
         
     size_t nVertices = vertices.rows();
     phyanim::Nodes rawNodes(nVertices);
 
-    double randNorm = 1.0 / RAND_MAX;
-
-    phyanim::Vec3 randVelocity(std::rand()*randNorm*2.0-1.0,
-                               std::rand()*randNorm*-1.0,
-                               std::rand()*randNorm*2.0-1.0);
     for (size_t i = 0; i < nVertices; ++i) {
-        rawNodes[i] = new phyanim::Node(vertices.row(i), i, randVelocity);
+        phyanim::Vec3 pos(vertices.row(i));
+        rawNodes[i] = new phyanim::Node( pos+translation_, i);
     }
 
     size_t nTets = facets.rows();
@@ -287,7 +250,7 @@ void Scene::loadMesh(const std::string& file_) {
     _meshes.push_back(mesh);
 }
 
-void Scene::clear() {
+void OverlapScene::clear() {
     _animSys->clear();
     for (auto mesh: _meshes) {
         delete mesh;
@@ -295,22 +258,22 @@ void Scene::clear() {
     _meshes.clear();
 }
 
-void Scene::restart() {
+void OverlapScene::restart() {
     for (auto mesh: _meshes) {
         mesh->nodesToInitPos();
         mesh->loadNodes();
     }
 }
 
-void Scene::gravity() {
+void OverlapScene::gravity() {
     _animSys->gravity = !_animSys->gravity;
 }
 
-void Scene::floorCollision() {
+void OverlapScene::floorCollision() {
     _animSys->limitsCollision = !_animSys->limitsCollision;
 }
 
-void Scene::changeRenderMode() {
+void OverlapScene::changeRenderMode() {
     ++_renderMode;
     _renderMode %= _numRenderMode;
 
@@ -324,16 +287,16 @@ void Scene::changeRenderMode() {
     }
 }
 
-bool Scene::anim() {
+bool OverlapScene::anim() {
     return _anim;
 }
 
-void Scene::anim(bool anim_) {
+void OverlapScene::anim(bool anim_) {
     _anim = anim_;
 }
         
 
-unsigned int Scene::_compileShader(const std::string& source_,
+unsigned int OverlapScene::_compileShader(const std::string& source_,
                                    int type_) {
     unsigned int shader;
     shader = glCreateShader(type_);

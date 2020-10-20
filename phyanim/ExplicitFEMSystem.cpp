@@ -12,9 +12,7 @@ ExplicitFEMSystem::ExplicitFEMSystem(CollisionDetection* collDetector_)
 
 ExplicitFEMSystem::~ExplicitFEMSystem(void) {}
 
-void ExplicitFEMSystem::step(float dt_) {
-    AnimSystem::step(dt_);
-
+void ExplicitFEMSystem::_step(double dt_) {
     for (auto mesh: _meshes) {
         double kYoung = mesh->stiffness;
         double kPoisson = mesh->poissonRatio;
@@ -65,7 +63,6 @@ void ExplicitFEMSystem::step(float dt_) {
             node->position = x;
         }
     }
-    _checkLimitsCollision();
 }
     
 void ExplicitFEMSystem::_polar(const Mat3& f_, Mat3& q_) const {

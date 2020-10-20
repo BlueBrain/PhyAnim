@@ -5,6 +5,7 @@
 #include <igl/copyleft/tetgen/tetrahedralize.h>
 #include <igl/readPLY.h>
 #include <igl/readOFF.h>
+#include <igl/readOBJ.h>
 #include <igl/writeOFF.h>
 
 int main(int argc, char* argv[])
@@ -23,7 +24,7 @@ int main(int argc, char* argv[])
     
     if (inFile.empty()) {
         std::cerr << "Error Usage: " << argv[0] <<
-                " mesh[.off|ply] [-out out_file]" << std::endl;
+                " mesh[.off|.ply|.obj] [-out out_file]" << std::endl;
         return 0;
     }
     
@@ -38,6 +39,8 @@ int main(int argc, char* argv[])
         igl::readOFF(inFile.c_str(), sVertices, sFacets);
     } else if (inFile.find(".ply") != std::string::npos) {
         igl::readPLY(inFile.c_str(), sVertices, sFacets);
+    } else if (inFile.find(".obj") != std::string::npos) {
+        igl::readOBJ(inFile.c_str(), sVertices, sFacets);
     } else {
         return 0;
     }
@@ -56,8 +59,8 @@ int main(int argc, char* argv[])
         Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols,
                         " ", "\n", "", "", "", "\n"));
     for (size_t i=0; i<tets.rows(); i++ ) {
-        os << "4 " << tets(i,2) << " " << tets(i,0) << " " << tets(i,3) << " "
-           << tets(i,1) << "\n"; 
+        os << "4 " << tets(i,0) << " " << tets(i,1) << " " << tets(i,2) << " "
+           << tets(i,3) << "\n"; 
     }
     
     std::cout << "Mesh tetrahedalized with: " << vertices.rows() <<

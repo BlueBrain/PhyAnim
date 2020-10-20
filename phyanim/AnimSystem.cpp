@@ -13,7 +13,8 @@ AnimSystem::AnimSystem(CollisionDetection* collDetector_)
 
 AnimSystem::~AnimSystem() {}
 
-void AnimSystem::step(float dt_) {
+bool AnimSystem::step(double dt_) {
+    bool collision = false;
     Vec3 g = Vec3::Zero();
     if (gravity) {
         g.y() = -9.8f;
@@ -23,10 +24,13 @@ void AnimSystem::step(float dt_) {
             node->force = g*node->mass;
         }
     }
-    if (_collisionDetector->update())
-    {
-        std::cout << "Collision detected" << std::endl;
-    }
+    collision = _collisionDetector->update();
+
+    _step(dt_);
+
+    _checkLimitsCollision();
+
+    return collision;
 }
 
 void AnimSystem::addMesh(Mesh* mesh_) {

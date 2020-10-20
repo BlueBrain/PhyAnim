@@ -11,9 +11,7 @@ ImplicitMassSpringSystem::ImplicitMassSpringSystem(
 
 ImplicitMassSpringSystem::~ImplicitMassSpringSystem() {}
 
-void ImplicitMassSpringSystem::step(float dt_) {
-    AnimSystem::step(dt_);
-    
+void ImplicitMassSpringSystem::_step(double dt_) {
     double dt2 = dt_*dt_;
     for (unsigned int i = 0; i < _meshes.size(); ++i) {
         auto mesh = _meshes[i];
@@ -22,7 +20,6 @@ void ImplicitMassSpringSystem::step(float dt_) {
         
         auto& nodes = mesh->nodes;
         unsigned int n = nodes.size();
-        
         Eigen::MatrixXd A(n*3,n*3);
         for (unsigned int mI=0; mI < n*3; ++mI) {
             for (unsigned int mJ=0; mJ < n*3; ++mJ) {
@@ -147,7 +144,6 @@ void ImplicitMassSpringSystem::step(float dt_) {
         //     _checkFloorCollision(node);
         // }
     }
-    _checkLimitsCollision();
 }
 
 Tds ImplicitMassSpringSystem::_mat3ToTd(

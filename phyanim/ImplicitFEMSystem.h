@@ -13,9 +13,9 @@ class ImplicitFEMSystem : public AnimSystem {
 
     virtual ~ImplicitFEMSystem(void);
 
-    void step(float dt_);
-
   private:
+    
+    void _step(double dt_);
 
     void _polar(const Mat3& f_, Mat3& q_) const;    
     

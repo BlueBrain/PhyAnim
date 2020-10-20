@@ -18,9 +18,9 @@ class ImplicitMassSpringSystem : public AnimSystem {
 
     virtual ~ImplicitMassSpringSystem(void);
 
-    void step(float dt_);
-
   private:
+
+    void _step(double dt_);
 
     Tds _mat3ToTd(Mat3& mat_, unsigned int i_, unsigned int j_);
 

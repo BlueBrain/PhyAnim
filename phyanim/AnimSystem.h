@@ -13,7 +13,7 @@ class AnimSystem {
 
     virtual ~AnimSystem(void);
 
-    virtual void step(float dt_);
+    bool step(double dt_);
 
     virtual void addMesh(Mesh* mesh_);
 
@@ -24,6 +24,8 @@ class AnimSystem {
     bool limitsCollision;
     
   protected:
+
+    virtual void _step(double dt_)=0;
 
     void _checkLimitsCollision(void);
 
