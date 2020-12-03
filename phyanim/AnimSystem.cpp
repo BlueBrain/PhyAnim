@@ -5,7 +5,7 @@
 namespace phyanim {
 
 AnimSystem::AnimSystem(CollisionDetection* collDetector_)
-    : gravity(true), limitsCollision(true), _collisionDetector(collDetector_) {
+    : gravity(true), collisions(true), _collisionDetector(collDetector_) {
     if (!_collisionDetector) {
         _collisionDetector = new CollisionDetection();
     }
@@ -24,12 +24,16 @@ bool AnimSystem::step(double dt_) {
             node->force = g*node->mass;
         }
     }
-    collision = _collisionDetector->update();
+
+    if (collisions) {
+        collision = _collisionDetector->update();
+    }
 
     _step(dt_);
 
-    _checkLimitsCollision();
-
+    if (collisions) {
+        _collisionDetector->checkLimitsCollision();
+    }
     return collision;
 }
 
@@ -52,12 +56,6 @@ void AnimSystem::addMesh(Mesh* mesh_) {
 void AnimSystem::clear() {
     _collisionDetector->clear();    
     _meshes.clear();
-}
-
-void AnimSystem::_checkLimitsCollision() {
-    if (limitsCollision) {
-        _collisionDetector->checkLimitsCollision();
-    }
 }
 
 }

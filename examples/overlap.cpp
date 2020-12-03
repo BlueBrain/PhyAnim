@@ -127,14 +127,16 @@ int main(int argc, char* argv[]){
     
     std::srand(std::time(0));
     double scale = 5.0;
-    for (auto file: inFiles) {
-    // for (unsigned int i=0; i<20; ++i) {
-    //         double randNorm = 1.0 / RAND_MAX;
+    // for (auto file: inFiles) {
+    for (unsigned int i=0; i<inFiles.size(); ++i) {
+             // double randNorm = 1.0 / RAND_MAX; 
+             
     //         phyanim::Vec3 translation((std::rand()*randNorm-0.5)*scale,
     //                                   (std::rand()*randNorm-0.5)*scale,
     //                                   (std::rand()*randNorm-0.5)*scale);
     //         scene->loadMesh(file,translation);
     //     }
+        auto file = inFiles[i];
         scene->loadMesh(file);
     }
     while(!glfwWindowShouldClose(window)) {

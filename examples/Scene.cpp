@@ -93,10 +93,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
     glLinkProgram(_program);
     _uProjViewModel = glGetUniformLocation(_program, "projViewModel");
     _uViewModel = glGetUniformLocation(_program, "viewModel");
-
     _collDetect = new phyanim::CollisionDetection(_collisionStiffness);
-    _collDetect->lowerLimit = phyanim::Vec3(-100.0, -100.0, -100.0);
-    _collDetect->upperLimit = phyanim::Vec3(100.0, 100.0, 100.0);
     switch(simSystem_) {
     case EXPLICITMASSSPRING:
         std::cout << "Explicit mass-spring simulation with:\n\tdt " << _dt <<
@@ -285,6 +282,13 @@ void Scene::loadMesh(const std::string& file_) {
     mesh->load();
     mesh->initVolume = mesh->volume();
     _meshes.push_back(mesh);
+
+    phyanim::AABB limits= mesh->aabb->root->aabb;
+    _collDetect->aabb = limits;
+    std::cout << limits.lowerLimit << std::endl;
+    std::cout << limits.upperLimit << std::endl;
+    
+    
 }
 
 void Scene::clear() {
@@ -306,8 +310,8 @@ void Scene::gravity() {
     _animSys->gravity = !_animSys->gravity;
 }
 
-void Scene::floorCollision() {
-    _animSys->limitsCollision = !_animSys->limitsCollision;
+void Scene::collisions() {
+    _animSys->collisions = !_animSys->collisions;
 }
 
 void Scene::changeRenderMode() {

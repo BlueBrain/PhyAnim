@@ -11,7 +11,7 @@ class BoundingSphere: public BoundingVolume {
     
     BoundingSphere(void);
 
-    ~BoundingSphere(void);
+    virtual ~BoundingSphere(void);
 
     void update(Nodes& nodes_);
 

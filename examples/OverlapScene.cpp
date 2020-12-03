@@ -7,6 +7,7 @@
 #include <igl/readPLY.h>
 #include <igl/readOFF.h>
 #include <igl/readOBJ.h>
+#include <igl/writeOFF.h>
 
 #include "OverlapScene.h"
 #include <ExplicitMassSpringSystem.h>
@@ -94,8 +95,9 @@ OverlapScene::OverlapScene(Camera* camera_, SimSystem simSystem_, double dt_,
     _uViewModel = glGetUniformLocation(_program, "viewModel");
 
     _collDetect = new phyanim::CollisionDetection(_collisionStiffness);
-    _collDetect->lowerLimit = phyanim::Vec3(-100.0, -100.0, -100.0);
-    _collDetect->upperLimit = phyanim::Vec3(100.0, 100.0, 100.0);
+    _collDetect->aabb = phyanim::AABB(phyanim::Vec3(-100.0, -100.0, -100.0),
+                                      phyanim::Vec3(100.0, 100.0, 100.0));
+    
     switch(simSystem_) {
     case EXPLICITMASSSPRING:
         std::cout << "Explicit mass-spring simulation with:\n\tdt " << _dt <<
@@ -167,11 +169,15 @@ void OverlapScene::render() {
             auto endTime = std::chrono::steady_clock::now();
             std::chrono::duration<double> elapsedTime = endTime-_startTime;
             std::cout << "Overlap solved in: " << elapsedTime.count() << "seconds" << std::endl;
-            for (auto mesh: _meshes) {
+
+            for (unsigned int i = 0; i < _meshes.size(); i++) {
+                auto mesh = _meshes[i];
                 std::cout << "Mesh original volume: " << mesh->initVolume <<
                         ". Volume difference: " <<
                         (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
-                        std::endl;   
+                        std::endl;
+                std::string file("mesh" + std::to_string(i) + "solution.off");
+                writeMesh(file, mesh);
             }
         }
     }
@@ -248,6 +254,32 @@ void OverlapScene::loadMesh(const std::string& file_, phyanim::Vec3 translation_
     mesh->load();
     mesh->initVolume = mesh->volume();
     _meshes.push_back(mesh);
+    
+    std::string outName(file_ + "inFile.off");
+    writeMesh(outName, mesh);
+}
+
+void OverlapScene::writeMesh(const std::string& file_, phyanim::Mesh* mesh_) {
+
+    auto nodes = mesh_->nodes;
+    auto triangles = mesh_->surfaceTriangles;
+    unsigned int nVertices = nodes.size();
+    unsigned int nFacets = triangles.size();
+    Eigen::MatrixXd vertices(nVertices,3);
+    Eigen::MatrixXi facets(nFacets,3);
+
+    for (unsigned int i=0; i < nVertices; i++) {
+        nodes[i]->id = i;
+        vertices.row(i) = nodes[i]->position;
+    }
+    for (unsigned int i=0; i < nFacets; i++) {
+        Eigen::MatrixXi facet(1,3);
+        facet << triangles[i]->node0->id, triangles[i]->node1->id,
+                triangles[i]->node2->id; 
+        facets.row(i) = facet;
+    }
+
+    igl::writeOFF(file_.c_str(), vertices, facets);
 }
 
 void OverlapScene::clear() {
@@ -269,8 +301,8 @@ void OverlapScene::gravity() {
     _animSys->gravity = !_animSys->gravity;
 }
 
-void OverlapScene::floorCollision() {
-    _animSys->limitsCollision = !_animSys->limitsCollision;
+void OverlapScene::collisions() {
+    _animSys->collisions = !_animSys->collisions;
 }
 
 void OverlapScene::changeRenderMode() {

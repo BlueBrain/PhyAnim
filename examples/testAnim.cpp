@@ -168,8 +168,8 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
             scene->gravity();
             break;
         case 'X':
-            std::cout << "Floor collision changed" << std::endl;
-            scene->floorCollision();
+            std::cout << "Collision changed" << std::endl;
+            scene->collisions();
             break;
         case 'C':
             scene->clear();

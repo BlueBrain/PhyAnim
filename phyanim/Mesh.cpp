@@ -7,7 +7,7 @@ Mesh::Mesh(double stiffness_, double density_,
            double damping_, double poissonRatio_)
     : initVolume(0.0), stiffness(stiffness_), density(density_)
     , damping(damping_), poissonRatio(poissonRatio_) {
-    boundingVolume = new BoundingSphere();
+    aabb = new AxisAlignedBoundingBox();
 }
 
 Mesh::~Mesh(void) {}

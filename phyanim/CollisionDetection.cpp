@@ -5,7 +5,7 @@
 namespace phyanim {
 
 CollisionDetection::CollisionDetection(double stiffness_)
-    : lowerLimit(-100.0, -100.0, -100.0), upperLimit(100.0, 100.0, 100.0),
+    : aabb(Vec3(-100.0, -100.0, -100.0), Vec3(100.0, 100.0, 100.0)),
       stiffness(stiffness_) {
        
 }
@@ -16,6 +16,8 @@ CollisionDetection::~CollisionDetection() {
 
 void CollisionDetection::addMesh(Mesh *mesh_) {
     _meshes.push_back(mesh_);
+    mesh_->aabb->generate(mesh_->nodes, mesh_->surfaceTriangles,
+                          mesh_->tetrahedra);
 }
 
 void CollisionDetection::clear() {
@@ -24,7 +26,7 @@ void CollisionDetection::clear() {
 
 bool CollisionDetection::update() {
     for (auto mesh: _meshes) {
-        mesh->boundingVolume->update(mesh->nodes);
+        mesh->aabb->update();
     }
     unsigned int size = _meshes.size();
     bool detectedCollision = false;
@@ -40,36 +42,36 @@ bool CollisionDetection::update() {
 
 void CollisionDetection::checkLimitsCollision(void) {
     for (auto mesh: _meshes) {
-        if (mesh->boundingVolume->checkLimitsCollision(lowerLimit, upperLimit)) {
-            for (auto node: mesh->nodes) {
-                bool collision = false;
-                Vec3 pos = node->position;
-                if (pos.x() <= lowerLimit.x()) {
-                    pos.x() = lowerLimit.x();
-                    collision = true;
-                 } else if (pos.x() >= upperLimit.x()) {
-                    pos.x() = upperLimit.x();
-                    collision = true;
-                }
-                if (pos.y() <= lowerLimit.y()) {
-                    pos.y() = lowerLimit.y();
-                    collision = true;
-                 } else if (pos.y() >= upperLimit.y()) {
-                    pos.y() = upperLimit.y();
-                    collision = true;
-                }
-                if (pos.z() <= lowerLimit.z()) {
-                    pos.z() = lowerLimit.z();
-                    collision = true;
-                 } else if (pos.z() >= upperLimit.z()) {
-                    pos.z() = upperLimit.z();
-                    collision = true;
-                }
 
-                if (collision) {
-                    node->position = pos;
-                    node->velocity = Vec3::Zero();
-                }
+        auto nodes = mesh->aabb->outterNodes(aabb);
+        for (auto node: nodes) {
+            bool collision = false;
+            Vec3 pos = node->position;
+            if (pos.x() <= aabb.lowerLimit.x()) {
+                pos.x() = aabb.lowerLimit.x();
+                collision = true;
+            } else if (pos.x() >= aabb.upperLimit.x()) {
+                pos.x() = aabb.upperLimit.x();
+                collision = true;
+            }
+            if (pos.y() <= aabb.lowerLimit.y()) {
+                pos.y() = aabb.lowerLimit.y();
+                collision = true;
+            } else if (pos.y() >= aabb.upperLimit.y()) {
+                    pos.y() = aabb.upperLimit.y();
+                    collision = true;
+            }
+            if (pos.z() <= aabb.lowerLimit.z()) {
+                pos.z() = aabb.lowerLimit.z();
+                collision = true;
+                 } else if (pos.z() >= aabb.upperLimit.z()) {
+                pos.z() = aabb.upperLimit.z();
+                collision = true;
+            }
+            
+            if (collision) {
+                node->position = pos;
+                node->velocity = Vec3::Zero();
             }
         }
     }
@@ -77,12 +79,12 @@ void CollisionDetection::checkLimitsCollision(void) {
 
 bool CollisionDetection::_checkMeshesCollision(Mesh* m0_, Mesh* m1_) {
     bool detectedCollision = false;
-    if (m0_->boundingVolume->checkCollision(m1_->boundingVolume)) {
-        for (auto t0: m0_->surfaceTriangles) {
-            for (auto t1: m1_->surfaceTriangles) {
-                detectedCollision |= _checkTrianglesCollision(t0, t1);
-            }
-        }
+    auto aabb0 = m0_->aabb;
+    auto aabb1 = m1_->aabb;
+    auto trianglePairs = aabb0->trianglePairs(aabb1);
+
+    for (auto tPair: trianglePairs) {
+        detectedCollision |= _checkTrianglesCollision(tPair.first, tPair.second);   
     }
     return detectedCollision;
 }

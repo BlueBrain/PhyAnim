@@ -21,10 +21,8 @@ class CollisionDetection {
 
     void checkLimitsCollision(void);
 
-    Vec3 lowerLimit;
-
-    Vec3 upperLimit;
-
+    AABB aabb;
+    
     double stiffness;
 
   protected:

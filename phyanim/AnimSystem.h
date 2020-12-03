@@ -21,13 +21,11 @@ class AnimSystem {
 
     bool gravity;
 
-    bool limitsCollision;
+    bool collisions;
     
   protected:
 
     virtual void _step(double dt_)=0;
-
-    void _checkLimitsCollision(void);
 
     Meshes _meshes;
 

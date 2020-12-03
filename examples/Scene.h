@@ -41,7 +41,7 @@ class Scene{
     
     void gravity(void);
 
-    void floorCollision(void);
+    void collisions(void);
 
     void changeRenderMode(void);
 

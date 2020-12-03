@@ -30,13 +30,15 @@ class OverlapScene{
 
     void loadMesh(const std::string& file_, phyanim::Vec3 translation_ = phyanim::Vec3::Zero());
 
+    void writeMesh(const std::string& file_, phyanim::Mesh* mesh_);
+    
     void clear(void);
     
     void restart(void);
     
     void gravity(void);
 
-    void floorCollision(void);
+    void collisions(void);
 
     void changeRenderMode(void);
 

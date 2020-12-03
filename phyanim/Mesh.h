@@ -2,7 +2,7 @@
 #define __PHYANIM_MESH__
 
 #include <Tetrahedron.h>
-#include <BoundingVolume.h>
+#include <AxisAlignedBoundingBox.h>
 
 namespace phyanim {
 
@@ -41,7 +41,7 @@ class Mesh {
 
     double poissonRatio;
 
-    BoundingVolume* boundingVolume;
+    AxisAlignedBoundingBox* aabb;
 
     void trianglesToEdges(void);
     
