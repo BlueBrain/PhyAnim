@@ -19,7 +19,12 @@ void ExplicitFEMSystem::_step(double dt_) {
         double lambda = (kPoisson*kYoung) /((1 + kPoisson)*(1 - 2*kPoisson));
         double mu = kYoung / (2*(1 + kPoisson));
         double damp = mesh->damping;
-        for (auto tet:mesh->tetrahedra) {
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i=0; i<mesh->tetrahedra.size(); i++) {
+            auto tet = mesh->tetrahedra[i];
             Mat3 x, f, q, fTilde, strain, stress;
             
             Mat3 xdot, fdot, fdotTilde, strainrate, stressrate;
@@ -55,7 +60,13 @@ void ExplicitFEMSystem::_step(double dt_) {
             tet->node2->force += q*(stress+stressrate) * tet->normal2 / 0.6;
             tet->node3->force += q*(stress+stressrate) * tet->normal3 / 0.6;
         }
-        for (auto node: mesh->nodes) { 
+        
+        
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i=0; i<mesh->nodes.size(); i++) {
+            auto node = mesh->nodes[i];
             Vec3 a = node->force / node->mass;
             Vec3 v = node->velocity + a * dt_;
             Vec3 x = node->position + v * dt_;

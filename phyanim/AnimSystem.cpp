@@ -20,7 +20,11 @@ bool AnimSystem::step(double dt_) {
         g.y() = -9.8f;
     }
     for (auto mesh: _meshes) {
-        for (auto node: mesh->nodes) {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i = 0; i<mesh->nodes.size(); i++) {
+            auto node = mesh->nodes[i];
             node->force = g*node->mass;
         }
     }
@@ -41,10 +45,20 @@ void AnimSystem::addMesh(Mesh* mesh_) {
     _meshes.push_back( mesh_ );
     _collisionDetector->addMesh(mesh_);
     double density = mesh_->density;
-    for (auto node: mesh_->nodes) {
+
+    unsigned int i=0;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i=0; i<mesh_->nodes.size(); i++) {
+        auto node = mesh_->nodes[i];
         node->mass = 0.0;
-    }
-    for (auto tet: mesh_->tetrahedra) {
+     }
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i=0; i<mesh_->tetrahedra.size(); i++) {
+        auto tet = mesh_->tetrahedra[i];
         double massPerNode = tet->initVolume * density * 0.25;
         tet->node0->mass +=  massPerNode;
         tet->node1->mass +=  massPerNode;

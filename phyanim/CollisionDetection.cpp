@@ -42,9 +42,12 @@ bool CollisionDetection::update() {
 
 void CollisionDetection::checkLimitsCollision(void) {
     for (auto mesh: _meshes) {
-
         auto nodes = mesh->aabb->outterNodes(aabb);
-        for (auto node: nodes) {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i=0; i<nodes.size(); i++) {
+            auto node = nodes[i];
             bool collision = false;
             Vec3 pos = node->position;
             if (pos.x() <= aabb.lowerLimit.x()) {
@@ -82,8 +85,11 @@ bool CollisionDetection::_checkMeshesCollision(Mesh* m0_, Mesh* m1_) {
     auto aabb0 = m0_->aabb;
     auto aabb1 = m1_->aabb;
     auto trianglePairs = aabb0->trianglePairs(aabb1);
-
-    for (auto tPair: trianglePairs) {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i=0; i<trianglePairs.size(); i++) {
+        auto tPair = trianglePairs[i];
         detectedCollision |= _checkTrianglesCollision(tPair.first, tPair.second);   
     }
     return detectedCollision;
