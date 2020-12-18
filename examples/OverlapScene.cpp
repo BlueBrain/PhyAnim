@@ -64,15 +64,17 @@ const std::string fshaderSource(
     "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-OverlapScene::OverlapScene(Camera* camera_, SimSystem simSystem_, double dt_,
-             double meshStiffness_,  double meshDensity_, double meshDamping_,
-             double meshPoissonRatio_, double collisionStiffness_ )
-    : _camera(camera_), _dt(dt_), _meshStiffness(meshStiffness_)
+OverlapScene::OverlapScene(const std::vector<std::string>& files_,
+                           Camera* camera_, SimSystem simSystem_, double dt_,
+                           double meshStiffness_,  double meshDensity_,
+                           double meshDamping_, double meshPoissonRatio_,
+                           double collisionStiffness_ )
+    : _files(files_), _camera(camera_), _dt(dt_), _meshStiffness(meshStiffness_)
     , _meshDensity(meshDensity_), _meshDamping(meshDamping_)
     , _meshPoissonRatio(meshPoissonRatio_)
-    , _collisionStiffness(collisionStiffness_)
+    , _collisionStiffness(collisionStiffness_), _solved(false)
     , _program(0), _uProjViewModel(-1), _uViewModel(-1), _numRenderMode(2)
-    , _renderMode(0), _anim(true) {
+    , _renderMode(0) {
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
@@ -99,33 +101,6 @@ OverlapScene::OverlapScene(Camera* camera_, SimSystem simSystem_, double dt_,
                                       phyanim::Vec3(100.0, 100.0, 100.0));
     
     switch(simSystem_) {
-    case EXPLICITMASSSPRING:
-        std::cout << "Explicit mass-spring simulation with:\n\tdt " << _dt <<
-                "\n\tstiffness " << _meshStiffness <<
-                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
-                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
-                "\n\tcollision stiffness " << _collisionStiffness <<
-                std::endl;
-        _animSys = new phyanim::ExplicitMassSpringSystem(_collDetect);
-        break;
-    case IMPLICITMASSSPRING:
-        std::cout << "Implicit mass-spring simulation with:\n\tdt " << _dt <<
-                "\n\tstiffness " << _meshStiffness <<
-                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
-                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
-                "\n\tcollision stiffness " << _collisionStiffness <<
-                std::endl;
-        _animSys = new phyanim::ImplicitMassSpringSystem(_collDetect);
-        break;
-    case EXPLICITFEM:
-        std::cout << "Explicit FEM simulation with:\n\tdt " << _dt <<
-                "\n\tstiffness " << _meshStiffness <<
-                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
-                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
-                "\n\tcollision stiffness " << _collisionStiffness <<
-                std::endl;
-        _animSys = new phyanim::ExplicitFEMSystem(_collDetect); 
-        break;
     case IMPLICITFEM:
         std::cout << "Implicit FEM simulation with:\n\tdt " << _dt <<
                 "\n\tstiffness " << _meshStiffness <<
@@ -135,10 +110,21 @@ OverlapScene::OverlapScene(Camera* camera_, SimSystem simSystem_, double dt_,
                 std::endl;
         _animSys = new phyanim::ImplicitFEMSystem(_collDetect);
         break;
+        
+    default:
+        std::cout << "Explicit FEM simulation with:\n\tdt " << _dt <<
+                "\n\tstiffness " << _meshStiffness <<
+                "\n\tdensity " << _meshDensity << "\n\tdamping " <<
+                _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
+                "\n\tcollision stiffness " << _collisionStiffness <<
+                std::endl;
+        _animSys = new phyanim::ExplicitFEMSystem(_collDetect); 
+        break;
     }
-    
     _animSys->gravity = false;
     _startTime = std::chrono::steady_clock::now();
+    _mesh = nullptr;
+  
 }
 
 OverlapScene::~OverlapScene() {
@@ -147,119 +133,64 @@ OverlapScene::~OverlapScene() {
     }
 }
 
-double OverlapScene::dt() {
-    return _dt;
-}
-
-void OverlapScene::dt(float dt_) {
-    _dt = dt_;
-}       
 
 void OverlapScene::render() {
-    if (_anim) {
-        bool collision = _animSys->step(_dt);
-        for (size_t i = 0; i < _meshes.size(); i++) {
-            auto mesh = _meshes[i];
-            mesh->loadNodes();
-        }
-
-        if (!collision)
-        {
-            _anim = false;
-            auto endTime = std::chrono::steady_clock::now();
-            std::chrono::duration<double> elapsedTime = endTime-_startTime;
-            std::cout << "Overlap solved in: " << elapsedTime.count() << "seconds" << std::endl;
-
-            for (unsigned int i = 0; i < _meshes.size(); i++) {
-                auto mesh = _meshes[i];
-                std::cout << "Mesh original volume: " << mesh->initVolume <<
-                        ". Volume difference: " <<
-                        (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
+    if (!_solved){
+        if(_mesh) {
+            bool collision = _animSys->step(_dt);
+            phyanim::DrawableMesh* drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
+            drawableMesh->loadNodes();
+            
+            if (!collision)
+            {
+                std::cout << "Mesh " + _file + " original volume: " <<
+                        _mesh->initVolume << ". Volume difference: " <<
+                        (_mesh->initVolume/_mesh->volume()-1.0)*100.0 << "%" <<
                         std::endl;
-                std::string file("mesh" + std::to_string(i) + "solution.off");
-                writeMesh(file, mesh);
+                std::string file( _file + "solution.off");
+                writeMesh(_mesh, file);
+                _meshes.push_back(_mesh);
+                _mesh = nullptr;
+            }
+        } else {
+            if (!_files.empty()){
+                _file = _files[0];
+                _files.erase(_files.begin());
+                _mesh = _loadMesh(_file);
+                phyanim::Meshes dMesh;
+                dMesh.push_back(_mesh);
+                
+                _animSys->clear();
+                _animSys->addMesh(_mesh);
+                _collDetect->dynamicMeshes(dMesh);
+                _collDetect->staticMeshes(_meshes);
+            } else {
+                auto endTime = std::chrono::steady_clock::now();
+                std::chrono::duration<double> elapsedTime = endTime-_startTime;
+                std::cout << "Overlap solved in: " << elapsedTime.count() <<
+                        "seconds" << std::endl;
+                _solved = true;
             }
         }
     }
-
     glUseProgram(_program);
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();
     glUniformMatrix4fv(_uProjViewModel, 1, GL_FALSE, projView.data());
     glUniformMatrix4fv(_uViewModel, 1, GL_FALSE, view.data());
-    for (auto mesh: _meshes) {
-        mesh->renderSurface();
+    for(auto mesh: _meshes) {
+        auto drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(mesh);
+        drawableMesh->renderSurface();
     }
-    // _mesh->renderSurface();
+
+    if (_mesh) {
+        auto drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
+        drawableMesh->renderSurface();
+    }
 }
 
-void OverlapScene::loadMesh(const std::string& file_, phyanim::Vec3 translation_ ) {
-    if (file_.empty()) {
-        std::cerr << "Empty mesh file error" << std::endl;
-        return;
-    }
-    Eigen::MatrixXd vertices;
-    Eigen::MatrixXi facets;
-    
-    if (file_.find(".off") != std::string::npos) {
-        igl::readOFF(file_.c_str(), vertices, facets);
-    } else if (file_.find(".ply") != std::string::npos) {
-        igl::readPLY(file_.c_str(), vertices, facets);
-    } else if (file_.find(".obj") != std::string::npos) {
-        igl::readOBJ(file_.c_str(), vertices, facets);
-    } else {
-        return;
-    }
-        
-    size_t nVertices = vertices.rows();
-    phyanim::Nodes rawNodes(nVertices);
 
-    for (size_t i = 0; i < nVertices; ++i) {
-        phyanim::Vec3 pos(vertices.row(i));
-        rawNodes[i] = new phyanim::Node( pos+translation_, i);
-    }
-
-    size_t nTets = facets.rows();
-    phyanim::Tetrahedra rawTets(nTets);
-    for (size_t i = 0; i < nTets; ++i) {
-        auto tet = new phyanim::Tetrahedron(
-            rawNodes[facets(i,0)], rawNodes[facets(i,1)], rawNodes[facets(i,3)],
-            rawNodes[facets(i,2)]);
-        rawTets[i] = tet;
-    }
-        
-    // size_t nTriangles = facets.rows();
-    // phyanim::Triangles rawTriangles(nTriangles);
-    // for (size_t i = 0; i < nTriangles; ++i) {
-    //     auto triangle = new phyanim::Triangle(
-    //         rawNodes[facets(i,0)], rawNodes[facets(i,2)],
-    //         rawNodes[facets(i,1)]); 
-    //     rawTriangles[i] = triangle;
-    // }
-    auto mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
-                                      _meshDamping, _meshPoissonRatio);
-    mesh->nodes = rawNodes;
-    mesh->tetrahedra = rawTets;
-    // mesh->surfaceTriangles() = rawTriangles;
-    mesh->tetsToEdges();
-    mesh->tetsToTriangles();
-    
-    std::cout << "Mesh loaded with: " << mesh->nodes.size() <<
-            " nodes, " << mesh->edges.size() << " edges, " <<
-            mesh->tetrahedra.size() << " tetrahedra and "<<
-            mesh->surfaceTriangles.size() << " triangles" <<
-            std::endl;
-
-    _animSys->addMesh(mesh);
-    mesh->load();
-    mesh->initVolume = mesh->volume();
-    _meshes.push_back(mesh);
-    
-    std::string outName(file_ + "inFile.off");
-    writeMesh(outName, mesh);
-}
-
-void OverlapScene::writeMesh(const std::string& file_, phyanim::Mesh* mesh_) {
+void OverlapScene::writeMesh(phyanim::Mesh* mesh_, const std::string& file_) {
 
     auto nodes = mesh_->nodes;
     auto triangles = mesh_->surfaceTriangles;
@@ -278,31 +209,6 @@ void OverlapScene::writeMesh(const std::string& file_, phyanim::Mesh* mesh_) {
                 triangles[i]->node2->id; 
         facets.row(i) = facet;
     }
-
-    igl::writeOFF(file_.c_str(), vertices, facets);
-}
-
-void OverlapScene::clear() {
-    _animSys->clear();
-    for (auto mesh: _meshes) {
-        delete mesh;
-    }
-    _meshes.clear();
-}
-
-void OverlapScene::restart() {
-    for (auto mesh: _meshes) {
-        mesh->nodesToInitPos();
-        mesh->loadNodes();
-    }
-}
-
-void OverlapScene::gravity() {
-    _animSys->gravity = !_animSys->gravity;
-}
-
-void OverlapScene::collisions() {
-    _animSys->collisions = !_animSys->collisions;
 }
 
 void OverlapScene::changeRenderMode() {
@@ -317,14 +223,6 @@ void OverlapScene::changeRenderMode() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         break;
     }
-}
-
-bool OverlapScene::anim() {
-    return _anim;
-}
-
-void OverlapScene::anim(bool anim_) {
-    _anim = anim_;
 }
         
 
@@ -350,5 +248,55 @@ unsigned int OverlapScene::_compileShader(const std::string& source_,
     }
     return shader;
   }
+
+
+phyanim::DrawableMesh* OverlapScene::_loadMesh(const std::string& file_) {
+    phyanim::DrawableMesh* mesh = nullptr;
+    if (file_.empty()) {
+        std::cerr << "Empty mesh file error" << std::endl;
+        return mesh;
+    }
+    Eigen::MatrixXd vertices;
+    Eigen::MatrixXi facets;
+    
+    if (file_.find(".off") != std::string::npos) {
+        igl::readOFF(file_.c_str(), vertices, facets);
+    } else if (file_.find(".ply") != std::string::npos) {
+        igl::readPLY(file_.c_str(), vertices, facets);
+    } else if (file_.find(".obj") != std::string::npos) {
+        igl::readOBJ(file_.c_str(), vertices, facets);
+    } else {
+        return mesh;
+    }
+        
+    size_t nVertices = vertices.rows();
+    phyanim::Nodes rawNodes(nVertices);
+
+    for (size_t i = 0; i < nVertices; ++i) {
+        phyanim::Vec3 pos(vertices.row(i));
+        rawNodes[i] = new phyanim::Node( pos, i);
+    }
+
+    size_t nTets = facets.rows();
+    phyanim::Tetrahedra rawTets(nTets);
+    for (size_t i = 0; i < nTets; ++i) {
+        auto tet = new phyanim::Tetrahedron(
+            rawNodes[facets(i,0)], rawNodes[facets(i,1)], rawNodes[facets(i,3)],
+            rawNodes[facets(i,2)]);
+        rawTets[i] = tet;
+    }
+        
+    mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
+                                     _meshDamping, _meshPoissonRatio);
+    mesh->nodes = rawNodes;
+    mesh->tetrahedra = rawTets;
+    mesh->tetsToTriangles();
+    mesh->load();
+    mesh->initVolume = mesh->volume();
+    mesh->aabb->generate(mesh->nodes, mesh->surfaceTriangles,
+                         mesh->tetrahedra);
+
+    return mesh;
+}
 
 }

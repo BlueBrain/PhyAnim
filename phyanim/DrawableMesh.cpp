@@ -9,7 +9,7 @@ namespace phyanim {
 DrawableMesh::DrawableMesh(double stiffness_, double density_,
                            double damping_, double poissonRatio_)
     : Mesh( stiffness_, density_, damping_, poissonRatio_) {
-    
+    _vao.resize(2);
 }
 
 DrawableMesh::~DrawableMesh() {}
@@ -25,7 +25,7 @@ void DrawableMesh::renderSurface() {
 }
 
 void DrawableMesh::load() {
-    glGenVertexArrays(2, _vao);
+    glGenVertexArrays(2, _vao.data());
     unsigned int vbos[3];
     glGenBuffers(3, vbos);
     _posVbo = vbos[0];

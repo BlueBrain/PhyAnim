@@ -13,7 +13,9 @@ class CollisionDetection {
 
     virtual ~CollisionDetection(void);
 
-    void addMesh(Mesh* mesh_);
+    void dynamicMeshes(Meshes meshes_);
+
+    void staticMeshes(Meshes meshes_);
 
     void clear(void);
 
@@ -33,8 +35,8 @@ class CollisionDetection {
     
     void _checkAndSetForce(Node* node_, Vec3 normal_, double dist_ );
 
-    Meshes _meshes;
-
+    Meshes _dynamicMeshes;
+    Meshes _staticMeshes;
 
 };
 

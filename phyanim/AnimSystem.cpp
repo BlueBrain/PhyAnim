@@ -43,7 +43,6 @@ bool AnimSystem::step(double dt_) {
 
 void AnimSystem::addMesh(Mesh* mesh_) {
     _meshes.push_back( mesh_ );
-    _collisionDetector->addMesh(mesh_);
     double density = mesh_->density;
 
     unsigned int i=0;
@@ -68,7 +67,6 @@ void AnimSystem::addMesh(Mesh* mesh_) {
 }
 
 void AnimSystem::clear() {
-    _collisionDetector->clear();    
     _meshes.clear();
 }
 

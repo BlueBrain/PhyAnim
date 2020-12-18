@@ -14,26 +14,37 @@ CollisionDetection::~CollisionDetection() {
     
 }
 
-void CollisionDetection::addMesh(Mesh *mesh_) {
-    _meshes.push_back(mesh_);
-    mesh_->aabb->generate(mesh_->nodes, mesh_->surfaceTriangles,
-                          mesh_->tetrahedra);
+void CollisionDetection::dynamicMeshes(Meshes meshes_) {
+    _dynamicMeshes = meshes_;
+}
+
+void CollisionDetection::staticMeshes(Meshes meshes_) {
+    _staticMeshes = meshes_;
 }
 
 void CollisionDetection::clear() {
-    _meshes.clear();
+    _dynamicMeshes.clear();
+    _staticMeshes.clear();
 }
 
 bool CollisionDetection::update() {
-    for (auto mesh: _meshes) {
+    unsigned int size = _dynamicMeshes.size();
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i=0; i<size; i++) {
+        auto mesh = _dynamicMeshes[i];
         mesh->aabb->update();
     }
-    unsigned int size = _meshes.size();
     bool detectedCollision = false;
     for (unsigned int i=0; i<size; ++i) {
+        auto mesh0 = _dynamicMeshes[i];
         for (unsigned int j=i+1; j<size; ++j) {
-            auto mesh0 = _meshes[i];
-            auto mesh1 = _meshes[j];
+            auto mesh1 = _dynamicMeshes[j];
+            detectedCollision |= _checkMeshesCollision(mesh0, mesh1);
+        }
+        for (unsigned int j=0; j<_staticMeshes.size(); j++) {
+            auto mesh1 = _staticMeshes[j];
             detectedCollision |= _checkMeshesCollision(mesh0, mesh1);
         }
     }
@@ -41,7 +52,7 @@ bool CollisionDetection::update() {
 }
 
 void CollisionDetection::checkLimitsCollision(void) {
-    for (auto mesh: _meshes) {
+    for (auto mesh:_dynamicMeshes) {
         auto nodes = mesh->aabb->outterNodes(aabb);
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for

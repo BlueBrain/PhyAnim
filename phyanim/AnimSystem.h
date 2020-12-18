@@ -15,7 +15,7 @@ class AnimSystem {
 
     bool step(double dt_);
 
-    virtual void addMesh(Mesh* mesh_);
+    void addMesh(Mesh* mesh_);
 
     void clear(void);
 

@@ -15,24 +15,18 @@ class OverlapScene{
   
   public:
   
-    OverlapScene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
+    OverlapScene(const std::vector<std::string>& files_, Camera* camera_,
+                 SimSystem simSystem_ = EXPLICITMASSSPRING,
                  double dt_ = 0.01, double meshStiffness_ = 1000.0,
                  double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
-                 double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
+                 double meshPoissonRatio_ = 0.499,
+                 double collisionStiffness_ = 1000.0);
 
     virtual ~OverlapScene(void);
-
-    double dt(void);
-
-    void dt(float dt_);
     
     void render(void);
 
-    void loadMeshes(const std::vector<std::string>& files_);
-    
-    void loadMesh(const std::string& file_, phyanim::Vec3 translation_ = phyanim::Vec3::Zero());
-
-    void writeMesh(const std::string& file_, phyanim::Mesh* mesh_);
+    void writeMesh( phyanim::Mesh* mesh_, const std::string& file_);
     
     void changeRenderMode(void);
     
@@ -40,9 +34,12 @@ class OverlapScene{
 
     unsigned int _compileShader(const std::string& source_, int type_);
 
+    phyanim::DrawableMesh* _loadMesh(const std::string& file_);
     Camera* _camera;
-    phyanim::DrawableMesh* _mesh;
-    std::vector<phyanim::DrawableMesh*> _meshes;
+    std::string _file;
+    phyanim::Mesh* _mesh;
+    std::vector<std::string> _files;
+    phyanim::Meshes _meshes;
     phyanim::AnimSystem* _animSys;
     phyanim::CollisionDetection* _collDetect;
     double _dt;
@@ -51,6 +48,8 @@ class OverlapScene{
     double _meshPoissonRatio;
     double _meshDensity;
     double _collisionStiffness;
+
+    bool _solved;
     
     unsigned int _program;
     int _uProjViewModel;

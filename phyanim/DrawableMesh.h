@@ -24,7 +24,7 @@ class DrawableMesh: public Mesh {
 
   private:
 
-    unsigned int _vao[2];
+    std::vector<unsigned int> _vao;
     unsigned int _posVbo;
     size_t _indicesSize;
     size_t _surfaceIndicesSize;
