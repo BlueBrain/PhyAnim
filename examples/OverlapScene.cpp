@@ -3,11 +3,6 @@
 #include <ctime>
 
 #include <GL/glew.h>
-#include <igl/copyleft/tetgen/tetrahedralize.h>
-#include <igl/readPLY.h>
-#include <igl/readOFF.h>
-#include <igl/readOBJ.h>
-#include <igl/writeOFF.h>
 
 #include "OverlapScene.h"
 #include <ExplicitMassSpringSystem.h>
@@ -97,8 +92,6 @@ OverlapScene::OverlapScene(const std::vector<std::string>& files_,
     _uViewModel = glGetUniformLocation(_program, "viewModel");
 
     _collDetect = new phyanim::CollisionDetection(_collisionStiffness);
-    _collDetect->aabb = phyanim::AABB(phyanim::Vec3(-100.0, -100.0, -100.0),
-                                      phyanim::Vec3(100.0, 100.0, 100.0));
     
     switch(simSystem_) {
     case IMPLICITFEM:
@@ -139,7 +132,7 @@ void OverlapScene::render() {
         if(_mesh) {
             bool collision = _animSys->step(_dt);
             phyanim::DrawableMesh* drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-            drawableMesh->loadNodes();
+            drawableMesh->uploadNodes();
             
             if (!collision)
             {
@@ -148,7 +141,7 @@ void OverlapScene::render() {
                         (_mesh->initVolume/_mesh->volume()-1.0)*100.0 << "%" <<
                         std::endl;
                 std::string file( _file + "solution.off");
-                writeMesh(_mesh, file);
+                _mesh->write(file);
                 _meshes.push_back(_mesh);
                 _mesh = nullptr;
             }
@@ -186,28 +179,6 @@ void OverlapScene::render() {
     if (_mesh) {
         auto drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
         drawableMesh->renderSurface();
-    }
-}
-
-
-void OverlapScene::writeMesh(phyanim::Mesh* mesh_, const std::string& file_) {
-
-    auto nodes = mesh_->nodes;
-    auto triangles = mesh_->surfaceTriangles;
-    unsigned int nVertices = nodes.size();
-    unsigned int nFacets = triangles.size();
-    Eigen::MatrixXd vertices(nVertices,3);
-    Eigen::MatrixXi facets(nFacets,3);
-
-    for (unsigned int i=0; i < nVertices; i++) {
-        nodes[i]->id = i;
-        vertices.row(i) = nodes[i]->position;
-    }
-    for (unsigned int i=0; i < nFacets; i++) {
-        Eigen::MatrixXi facet(1,3);
-        facet << triangles[i]->node0->id, triangles[i]->node1->id,
-                triangles[i]->node2->id; 
-        facets.row(i) = facet;
     }
 }
 
@@ -251,51 +222,21 @@ unsigned int OverlapScene::_compileShader(const std::string& source_,
 
 
 phyanim::DrawableMesh* OverlapScene::_loadMesh(const std::string& file_) {
-    phyanim::DrawableMesh* mesh = nullptr;
-    if (file_.empty()) {
-        std::cerr << "Empty mesh file error" << std::endl;
-        return mesh;
-    }
-    Eigen::MatrixXd vertices;
-    Eigen::MatrixXi facets;
+    phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh(
+        _meshStiffness, _meshDensity, _meshDamping, _meshPoissonRatio);
+    mesh->load(file_);
+    mesh->upload();
+
+    phyanim::AABB limits = mesh->aabb->root->aabb;
+
+    phyanim::Vec3 center = limits.center(); 
+    phyanim::Vec3 axis0 = (limits.lowerLimit-center);
+    limits.lowerLimit = center+axis0;
+    limits.upperLimit = center-axis0;
+    _collDetect->aabb = limits;
+    center.z() = limits.upperLimit.z()+limits.upperLimit.x()-center.x();
+    _camera->position(center);    
     
-    if (file_.find(".off") != std::string::npos) {
-        igl::readOFF(file_.c_str(), vertices, facets);
-    } else if (file_.find(".ply") != std::string::npos) {
-        igl::readPLY(file_.c_str(), vertices, facets);
-    } else if (file_.find(".obj") != std::string::npos) {
-        igl::readOBJ(file_.c_str(), vertices, facets);
-    } else {
-        return mesh;
-    }
-        
-    size_t nVertices = vertices.rows();
-    phyanim::Nodes rawNodes(nVertices);
-
-    for (size_t i = 0; i < nVertices; ++i) {
-        phyanim::Vec3 pos(vertices.row(i));
-        rawNodes[i] = new phyanim::Node( pos, i);
-    }
-
-    size_t nTets = facets.rows();
-    phyanim::Tetrahedra rawTets(nTets);
-    for (size_t i = 0; i < nTets; ++i) {
-        auto tet = new phyanim::Tetrahedron(
-            rawNodes[facets(i,0)], rawNodes[facets(i,1)], rawNodes[facets(i,3)],
-            rawNodes[facets(i,2)]);
-        rawTets[i] = tet;
-    }
-        
-    mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
-                                     _meshDamping, _meshPoissonRatio);
-    mesh->nodes = rawNodes;
-    mesh->tetrahedra = rawTets;
-    mesh->tetsToTriangles();
-    mesh->load();
-    mesh->initVolume = mesh->volume();
-    mesh->aabb->generate(mesh->nodes, mesh->surfaceTriangles,
-                         mesh->tetrahedra);
-
     return mesh;
 }
 

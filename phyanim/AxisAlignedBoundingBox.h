@@ -33,6 +33,8 @@ class AABB {
     void update(const AABB& other_);
 
     void update(const Vec3& pos_);
+
+    Vec3 center(void);
     
     Vec3 lowerLimit;
     
@@ -96,7 +98,7 @@ class AxisAlignedBoundingBox{
     Nodes outterNodes(const AABB& aabb_);
 
     TrianglePairs trianglePairs(AxisAlignedBoundingBox* other_);
-
+    
     AABBNode* root;
 };
 

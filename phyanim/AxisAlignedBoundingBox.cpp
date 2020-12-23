@@ -71,6 +71,10 @@ void AABB::update(const AABB& other_) {
     upperLimit.z() = std::max(upperLimit.z(),other_.upperLimit.z());
 }
 
+Vec3 AABB::center() {
+    return (lowerLimit+upperLimit)*0.5;
+}
+
 AABBNode::AABBNode()
     : aabb(), child0(nullptr), child1(nullptr) {
 }
@@ -255,8 +259,6 @@ TrianglePairs AxisAlignedBoundingBox::trianglePairs(
     root->trianglePairs(trianglePairs, root, other_->root);
     return trianglePairs;
 }
-
-
 
 }
 

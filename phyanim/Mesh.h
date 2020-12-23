@@ -19,29 +19,15 @@ class Mesh {
 
     virtual ~Mesh(void);
 
-    Nodes nodes;
+    virtual void load(const std::string& file_);
 
-    Edges edges;
-
-    Tetrahedra tetrahedra;
-
-    Triangles surfaceTriangles;
-
-    Triangles triangles;
-
-    double initVolume;
+    void write(const std::string& file_);
     
     double volume(void);
 
-    double stiffness;
+    double area(void);
 
-    double density;
-
-    double damping;
-
-    double poissonRatio;
-
-    AxisAlignedBoundingBox* aabb;
+    void trianglesToNodes(void);
 
     void trianglesToEdges(void);
     
@@ -53,6 +39,46 @@ class Mesh {
 
     void nodesToInitPos(void);
 
+    Nodes nodes;
+
+    Edges edges;
+
+    Tetrahedra tetrahedra;
+    
+    Triangles surfaceTriangles;
+
+    Triangles triangles;
+
+    double initArea;
+    
+    double initVolume;
+    
+    double stiffness;
+
+    double density;
+
+    double damping;
+
+    double poissonRatio;
+
+    AxisAlignedBoundingBox* aabb;
+
+  private:
+
+    void _split(const std::string& string_, std::vector<std::string>& strings_, char delim_ = ' ');
+
+    void _loadOBJ(const std::string& file_);
+
+    void _loadOFF(const std::string& file_);
+
+    void _loadPLY(const std::string& file_);
+
+    void _loadTET(const std::string& file_);
+
+    void _writeOFF(const std::string& file_);
+
+    void _writeTET(const std::string& file_);
+    
 };
 
 }

@@ -1,5 +1,5 @@
 #ifndef __EXAMPLES_OVERLAPSCENE__
-#define __EXAMPLES_OVErLAPSCENE__
+#define __EXAMPLES_OVERLAPSCENE__
 
 #include <chrono>
 

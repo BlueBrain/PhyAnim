@@ -118,12 +118,14 @@ int main(int argc, char* argv[]){
     std::cout << "Lopaded OpenGL " << version << " version" << std::endl;
 
     glfwMakeContextCurrent(window);
+
     
-    camera = new examples::Camera(phyanim::Vec3(0.0, 0.0, 7.0));
+    camera = new examples::Camera();
     scene = new examples::Scene(camera, simSystem, dt, stiffness, density,
                                 damping, poissonRatio, collisionStiffness);
     scene->loadMesh(inFile);
-    
+
+
     while(!glfwWindowShouldClose(window)) {
         render();
         glfwSwapBuffers(window);

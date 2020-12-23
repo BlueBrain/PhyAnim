@@ -10,7 +10,7 @@
 
 int main(int argc, char* argv[])
 {
-    std::string outFile("out_file.off");
+    std::string outFile("out_file.tet");
     std::string inFile;
     for (int i = 1; i < argc; ++i) {
         std::string option(argv[i]);
@@ -54,12 +54,12 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    os << "OFF\n" << vertices.rows() << " " << tets.rows() << " 0\n";
+    os << "tet " << vertices.rows() << " " << tets.rows() << "\n";
     os << vertices.format(
         Eigen::IOFormat(Eigen::FullPrecision, Eigen::DontAlignCols,
                         " ", "\n", "", "", "", "\n"));
     for (size_t i=0; i<tets.rows(); i++ ) {
-        os << "4 " << tets(i,0) << " " << tets(i,1) << " " << tets(i,2) << " "
+        os << tets(i,0) << " " << tets(i,1) << " " << tets(i,2) << " "
            << tets(i,3) << "\n"; 
     }
     

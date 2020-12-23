@@ -93,6 +93,9 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
     glLinkProgram(_program);
     _uProjViewModel = glGetUniformLocation(_program, "projViewModel");
     _uViewModel = glGetUniformLocation(_program, "viewModel");
+
+
+
     _collDetect = new phyanim::CollisionDetection(_collisionStiffness);
     switch(simSystem_) {
     case EXPLICITMASSSPRING:
@@ -154,6 +157,7 @@ void Scene::render() {
     if (_anim) {
         ++_framesCount;
 
+        _collDetect->dynamicMeshes(_meshes);
         auto startTime = std::chrono::steady_clock::now();
         bool collision = _animSys->step(_dt);
         _collision = _collision || collision;
@@ -163,8 +167,8 @@ void Scene::render() {
 
         startTime = std::chrono::steady_clock::now();
         for (size_t i = 0; i < _meshes.size(); i++) {
-            auto mesh = _meshes[i];
-            mesh->loadNodes();
+            auto mesh = dynamic_cast<phyanim::DrawableMesh*>(_meshes[i]);
+            mesh->uploadNodes();
         }
         endTime = std::chrono::steady_clock::now();
         elapsedTime = endTime-startTime; 
@@ -183,10 +187,16 @@ void Scene::render() {
             std::cout << "Mesh update average time per frame: " <<
                     _meshUpdateTime / _framesCount << " seconds." << std::endl;
             for (auto mesh: _meshes) {
-                std::cout << "Mesh original volume: " << mesh->initVolume <<
-                        " volume difference: " <<
-                        (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
+                std::cout << "Mesh original area: " << mesh->initArea <<
+                        ". Area difference: " <<
+                        (mesh->initArea/mesh->area()-1.0)*100.0 << "%" <<
                         std::endl;
+                if (mesh->tetrahedra.size()>0) {
+                    std::cout << "Mesh original volume: " << mesh->initVolume <<
+                            ". Volume difference: " <<
+                            (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
+                            std::endl;
+                }
             }
             _collision = false;
             _previousTime = endTime;
@@ -202,93 +212,34 @@ void Scene::render() {
     glUniformMatrix4fv(_uProjViewModel, 1, GL_FALSE, projView.data());
     glUniformMatrix4fv(_uViewModel, 1, GL_FALSE, view.data());
     for (auto mesh: _meshes) {
-        mesh->renderSurface();
+        dynamic_cast<phyanim::DrawableMesh*>(mesh)->renderSurface();
     }
     // _mesh->renderSurface();
 }
 
 void Scene::loadMesh(const std::string& file_) {
-    if (file_.empty()) {
-        std::cerr << "Empty mesh file error" << std::endl;
-        return;
-    }
-    Eigen::MatrixXd vertices;
-    Eigen::MatrixXi facets;
-        
-    // Eigen::MatrixXd vertices;
-    // Eigen::MatrixXi tets;
-    // Eigen::MatrixXi facets;
-
-    if (file_.find(".off") != std::string::npos) {
-        igl::readOFF(file_.c_str(), vertices, facets);
-    // } else if (file_.find(".ply") != std::string::npos) {
-    //     igl::readPLY(file_.c_str(), sVertices, sFacets);
-    } else {
-        return;
-    }
-
-    // std::cout << vertices << std::endl;
-    // std::cout << facets << std::endl;        
-    // igl::copyleft::tetgen::tetrahedralize(sVertices,sFacets,"pq1.414Y",
-    //                                       vertices, tets, facets);
-
-    // vertices = sVertices;
-    // facets = sFacets;
-        
-    size_t nVertices = vertices.rows();
-    phyanim::Nodes rawNodes(nVertices);
-
-    double randNorm = 1.0 / RAND_MAX;
-
-    phyanim::Vec3 randVelocity(std::rand()*randNorm*2.0-1.0,
-                               std::rand()*randNorm*-1.0,
-                               std::rand()*randNorm*2.0-1.0);
-    for (size_t i = 0; i < nVertices; ++i) {
-        rawNodes[i] = new phyanim::Node(vertices.row(i), i, randVelocity);
-    }
-
-    size_t nTets = facets.rows();
-    phyanim::Tetrahedra rawTets(nTets);
-    for (size_t i = 0; i < nTets; ++i) {
-        auto tet = new phyanim::Tetrahedron(
-            rawNodes[facets(i,0)], rawNodes[facets(i,1)], rawNodes[facets(i,3)],
-            rawNodes[facets(i,2)]);
-        rawTets[i] = tet;
-    }
-        
-    // size_t nTriangles = facets.rows();
-    // phyanim::Triangles rawTriangles(nTriangles);
-    // for (size_t i = 0; i < nTriangles; ++i) {
-    //     auto triangle = new phyanim::Triangle(
-    //         rawNodes[facets(i,0)], rawNodes[facets(i,2)],
-    //         rawNodes[facets(i,1)]); 
-    //     rawTriangles[i] = triangle;
-    // }
     auto mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
-                                      _meshDamping, _meshPoissonRatio);
-    mesh->nodes = rawNodes;
-    mesh->tetrahedra = rawTets;
-    // mesh->surfaceTriangles() = rawTriangles;
-    mesh->tetsToEdges();
-    mesh->tetsToTriangles();
+                                          _meshDamping, _meshPoissonRatio);
     
+    mesh->load(file_);
+    _animSys->addMesh(mesh);
+    mesh->upload();
+    _meshes.push_back(mesh);
     std::cout << "Mesh loaded with: " << mesh->nodes.size() <<
             " nodes, " << mesh->edges.size() << " edges, " <<
             mesh->tetrahedra.size() << " tetrahedra and "<<
             mesh->surfaceTriangles.size() << " triangles" <<
             std::endl;
+  
+    phyanim::AABB limits = mesh->aabb->root->aabb;
 
-    _animSys->addMesh(mesh);
-    mesh->load();
-    mesh->initVolume = mesh->volume();
-    _meshes.push_back(mesh);
-
-    phyanim::AABB limits= mesh->aabb->root->aabb;
+    phyanim::Vec3 center = limits.center(); 
+    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*2.0;
+    limits.lowerLimit = center+axis0;
+    limits.upperLimit = center-axis0;
     _collDetect->aabb = limits;
-    std::cout << limits.lowerLimit << std::endl;
-    std::cout << limits.upperLimit << std::endl;
-    
-    
+    center.z() = limits.upperLimit.z()+limits.upperLimit.x()-center.x();
+    _camera->position(center);    
 }
 
 void Scene::clear() {
@@ -300,9 +251,10 @@ void Scene::clear() {
 }
 
 void Scene::restart() {
-    for (auto mesh: _meshes) {
+    for (auto baseMesh: _meshes) {
+        auto mesh = dynamic_cast<phyanim::DrawableMesh*>(baseMesh);
         mesh->nodesToInitPos();
-        mesh->loadNodes();
+        mesh->uploadNodes();
     }
 }
 

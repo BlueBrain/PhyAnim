@@ -18,9 +18,9 @@ class DrawableMesh: public Mesh {
 
     void renderSurface(void);
 
-    void load(void);
-
-    void loadNodes(void);
+    void upload(void);
+    
+    void uploadNodes(void);
 
   private:
 

@@ -24,7 +24,7 @@ void DrawableMesh::renderSurface() {
     glDrawElements(GL_TRIANGLES, _surfaceIndicesSize, GL_UNSIGNED_INT, 0);
 }
 
-void DrawableMesh::load() {
+void DrawableMesh::upload() {
     glGenVertexArrays(2, _vao.data());
     unsigned int vbos[3];
     glGenBuffers(3, vbos);
@@ -86,7 +86,7 @@ void DrawableMesh::load() {
     glBindVertexArray(0);
 }
 
-void DrawableMesh::loadNodes() {
+void DrawableMesh::uploadNodes() {
     
     size_t nodesSize = nodes.size();
     double posBuffer[nodesSize*3];

@@ -17,6 +17,12 @@ Edges Triangle::edges() {
     return edges;
 }
 
+double Triangle::area() {
+    Vec3 axis0 = node1->position - node0->position;
+    Vec3 axis1 = node2->position - node0->position;
+    return axis0.cross(axis1).norm() * 0.5;
+}
+
 void Triangle::sortedIds(unsigned int& id0_, unsigned int& id1_,
                          unsigned int& id2_) const {
     id0_ = node0->id;

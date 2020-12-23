@@ -15,7 +15,8 @@ std::vector<std::string> inFiles;
 
 void render(void);
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+static void key_callback(GLFWwindow* window, int key, int scancode, int action,
+                         int mods);
 
 void idle(void);
 void reshape(int width_, int height_);

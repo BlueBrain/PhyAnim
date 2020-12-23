@@ -54,7 +54,7 @@ class Scene{
     unsigned int _compileShader(const std::string& source_, int type_);
 
     Camera* _camera;
-    std::vector<phyanim::DrawableMesh*> _meshes;
+    std::vector<phyanim::Mesh*> _meshes;
     phyanim::AnimSystem* _animSys;
     phyanim::CollisionDetection* _collDetect;
     double _dt;

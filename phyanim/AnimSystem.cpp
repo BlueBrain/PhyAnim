@@ -45,24 +45,33 @@ void AnimSystem::addMesh(Mesh* mesh_) {
     _meshes.push_back( mesh_ );
     double density = mesh_->density;
 
-    unsigned int i=0;
+    if (mesh_->tetrahedra.size()>0) {
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-    for (unsigned int i=0; i<mesh_->nodes.size(); i++) {
-        auto node = mesh_->nodes[i];
-        node->mass = 0.0;
-     }
+        for (unsigned int i=0; i<mesh_->nodes.size(); i++) {
+            auto node = mesh_->nodes[i];
+            node->mass = 0.0;
+        }
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-    for (unsigned int i=0; i<mesh_->tetrahedra.size(); i++) {
-        auto tet = mesh_->tetrahedra[i];
-        double massPerNode = tet->initVolume * density * 0.25;
-        tet->node0->mass +=  massPerNode;
-        tet->node1->mass +=  massPerNode;
-        tet->node2->mass +=  massPerNode;
-        tet->node3->mass +=  massPerNode;
+        for (unsigned int i=0; i<mesh_->tetrahedra.size(); i++) {
+            auto tet = mesh_->tetrahedra[i];
+            double massPerNode = tet->initVolume * density * 0.25;
+            tet->node0->mass +=  massPerNode;
+            tet->node1->mass +=  massPerNode;
+            tet->node2->mass +=  massPerNode;
+            tet->node3->mass +=  massPerNode;
+        }
+    } else {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i=0; i<mesh_->nodes.size(); i++) {
+            auto node = mesh_->nodes[i];
+            node->mass = density;
+        }
     }
 }
 

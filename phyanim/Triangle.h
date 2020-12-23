@@ -39,6 +39,8 @@ class Triangle {
 
     Edges edges(void);
 
+    double area(void);
+
     void sortedIds(unsigned int& id0_, unsigned int& id1_, unsigned int& id2_) const;
       
 };
