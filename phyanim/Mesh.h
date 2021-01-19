@@ -1,3 +1,4 @@
+
 #ifndef __PHYANIM_MESH__
 #define __PHYANIM_MESH__
 
@@ -39,16 +40,19 @@ class Mesh {
 
     void nodesToInitPos(void);
 
+    Mesh* copy(bool surfaceTriangles_=true, bool triangles_=true,
+               bool tetrahedra_=true, bool edges_=true);
+
     Nodes nodes;
 
-    Edges edges;
-
-    Tetrahedra tetrahedra;
-    
     Triangles surfaceTriangles;
 
     Triangles triangles;
 
+    Tetrahedra tetrahedra;
+    
+    Edges edges;
+    
     double initArea;
     
     double initVolume;

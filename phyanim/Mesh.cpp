@@ -157,6 +157,51 @@ void Mesh::nodesToInitPos() {
     }        
 }
 
+Mesh* Mesh::copy(bool surfaceTriangles_, bool triangles_, bool tetrahedra_,
+                 bool edges_) {
+    auto mesh = new Mesh();
+    std::unordered_map<Node*, Node*> nodesDicc;
+    for (auto node: nodes) {
+        auto newNode = new Node(node->position, node->id);
+        mesh->nodes.push_back(newNode);
+        nodesDicc[node]=newNode;
+    }
+    if (surfaceTriangles_) {
+        for (auto triangle: surfaceTriangles) {
+            auto newTriangle = new Triangle(nodesDicc[triangle->node0],
+                                            nodesDicc[triangle->node1],
+                                            nodesDicc[triangle->node2]);
+            mesh->surfaceTriangles.push_back(newTriangle);
+        }
+    }
+    if (triangles_) {
+        for (auto triangle: triangles) {
+            auto newTriangle = new Triangle(nodesDicc[triangle->node0],
+                                            nodesDicc[triangle->node1],
+                                            nodesDicc[triangle->node2]);
+            mesh->triangles.push_back(newTriangle);
+        }
+    }
+    if (tetrahedra_) {
+        for (auto tet: tetrahedra) {
+            auto newTet = new Tetrahedron(nodesDicc[tet->node0],
+                                          nodesDicc[tet->node1],
+                                          nodesDicc[tet->node2],
+                                          nodesDicc[tet->node3]);
+            mesh->tetrahedra.push_back(newTet);
+        }
+    }
+    if (edges_) {
+        for (auto edge: edges) {
+            auto newEdge = new Edge(nodesDicc[edge->node0],
+                                    nodesDicc[edge->node1]);
+            mesh->edges.push_back(newEdge);
+        }
+    }
+    return mesh;
+}
+
+
 
 void Mesh::_split(const std::string& string_,
                   std::vector<std::string>& strings_, char delim_) {

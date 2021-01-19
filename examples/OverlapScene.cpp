@@ -131,7 +131,9 @@ void OverlapScene::render() {
     if (!_solved){
         if(_mesh) {
             bool collision = _animSys->step(_dt);
-            phyanim::DrawableMesh* drawableMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
+            _mesh->aabb->update();
+            phyanim::DrawableMesh* drawableMesh =
+                    dynamic_cast<phyanim::DrawableMesh*>(_mesh);
             drawableMesh->uploadNodes();
             
             if (!collision)

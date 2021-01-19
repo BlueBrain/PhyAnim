@@ -14,4 +14,13 @@ Node::~Node() {
 
 }
 
+bool Node::operator ==(const Node& other_) const {
+    return (position==other_.position) &&
+    (id==other_.id);
+}
+
+bool Node::operator !=(const Node& other_) const {
+    return !(*this==other_);
+}
+
 }

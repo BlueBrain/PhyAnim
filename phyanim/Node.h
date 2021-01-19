@@ -29,6 +29,10 @@ class Node
 
     virtual ~Node(void);
 
+    bool operator ==(const Node& other_) const;
+    
+    bool operator !=(const Node& other_) const;
+
     Vec3 initPosition;
 
     Vec3 position;

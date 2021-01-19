@@ -7,11 +7,17 @@ namespace phyanim {
 CollisionDetection::CollisionDetection(double stiffness_)
     : aabb(Vec3(-100.0, -100.0, -100.0), Vec3(100.0, 100.0, 100.0)),
       stiffness(stiffness_) {
-       
+#ifdef PHYANIM_USES_OPENMP
+    _writelock = new omp_lock_t;
+    omp_init_lock(_writelock);
+#endif
 }
 
 CollisionDetection::~CollisionDetection() {
-    
+#ifdef PHYANIM_USES_OPENMP
+    omp_destroy_lock(_writelock);
+    delete _writelock;
+#endif
 }
 
 void CollisionDetection::dynamicMeshes(Meshes meshes_) {
@@ -29,13 +35,6 @@ void CollisionDetection::clear() {
 
 bool CollisionDetection::update() {
     unsigned int size = _dynamicMeshes.size();
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (unsigned int i=0; i<size; i++) {
-        auto mesh = _dynamicMeshes[i];
-        mesh->aabb->update();
-    }
     bool detectedCollision = false;
     for (unsigned int i=0; i<size; ++i) {
         auto mesh0 = _dynamicMeshes[i];
@@ -101,7 +100,14 @@ bool CollisionDetection::_checkMeshesCollision(Mesh* m0_, Mesh* m1_) {
 #endif
     for (unsigned int i=0; i<trianglePairs.size(); i++) {
         auto tPair = trianglePairs[i];
-        detectedCollision |= _checkTrianglesCollision(tPair.first, tPair.second);   
+        bool collision = _checkTrianglesCollision(tPair.first, tPair.second);
+#ifdef PHYANIM_USES_OPENMP
+        omp_set_lock(_writelock);
+#endif
+        detectedCollision |= collision;
+#ifdef PHYANIM_USES_OPENMP
+        omp_unset_lock(_writelock);
+#endif
     }
     return detectedCollision;
 }

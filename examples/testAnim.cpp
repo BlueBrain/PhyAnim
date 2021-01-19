@@ -216,8 +216,6 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
     if (cameraDisplaced) {
         auto pos = camera->position() + dxyz;
         camera->position(pos);
-        std::cout << "Camera position: " << pos.x() << " " << pos.y() << " "
-                  << pos.z() << std::endl;
     }   
 }
 

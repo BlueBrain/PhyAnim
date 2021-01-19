@@ -168,6 +168,7 @@ void Scene::render() {
         startTime = std::chrono::steady_clock::now();
         for (size_t i = 0; i < _meshes.size(); i++) {
             auto mesh = dynamic_cast<phyanim::DrawableMesh*>(_meshes[i]);
+            mesh->aabb->update();
             mesh->uploadNodes();
         }
         endTime = std::chrono::steady_clock::now();

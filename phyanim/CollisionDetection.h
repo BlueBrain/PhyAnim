@@ -36,7 +36,12 @@ class CollisionDetection {
     void _checkAndSetForce(Node* node_, Vec3 normal_, double dist_ );
 
     Meshes _dynamicMeshes;
+
     Meshes _staticMeshes;
+
+#ifdef PHYANIM_USES_OPENMP
+    omp_lock_t* _writelock;
+#endif
 
 };
 
