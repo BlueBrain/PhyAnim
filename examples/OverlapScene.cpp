@@ -138,9 +138,15 @@ void OverlapScene::render() {
             
             if (!collision)
             {
-                std::cout << "Mesh " + _file + " original volume: " <<
+                double mean, max, min, rms;
+                _mesh->positionDifference(mean, max, min, rms);
+                std::cout << "Mesh " + _file + ":" << std::endl;
+                std::cout << "\t* Original volume: " <<
                         _mesh->initVolume << ". Volume difference: " <<
                         (_mesh->initVolume/_mesh->volume()-1.0)*100.0 << "%" <<
+                        std::endl;
+                std::cout << "\t* Vertices distance mean: " << mean <<
+                        " max: " << max << " min: " << min << " rms: " << rms <<
                         std::endl;
                 std::string file( _file + "solution.off");
                 _mesh->write(file);

@@ -43,6 +43,8 @@ class Mesh {
     Mesh* copy(bool surfaceTriangles_=true, bool triangles_=true,
                bool tetrahedra_=true, bool edges_=true);
 
+    void positionDifference(double& mean_, double& max_, double& min_, double& rms_);
+
     Nodes nodes;
 
     Triangles surfaceTriangles;

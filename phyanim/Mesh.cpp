@@ -201,6 +201,25 @@ Mesh* Mesh::copy(bool surfaceTriangles_, bool triangles_, bool tetrahedra_,
     return mesh;
 }
 
+void Mesh::positionDifference(double& mean_, double &max_, double &min_,
+                              double &rms_) {
+    unsigned int size = nodes.size();
+    mean_ = 0.0;
+    max_ = std::numeric_limits<double>::min();
+    min_ = std::numeric_limits<double>::max();
+    rms_ = 0.0;
+    if (size>0) {
+        for (unsigned int i=0; i<size; i++) {
+            auto node = nodes[i];
+            double diff = std::abs((node->position-node->initPosition).norm());
+            mean_ += diff;
+            max_ = std::max(max_, diff);
+            min_ = std::min(min_, diff);
+            rms_ += diff * diff;
+        }
+        mean_ /= size;
+    }
+}
 
 
 void Mesh::_split(const std::string& string_,
