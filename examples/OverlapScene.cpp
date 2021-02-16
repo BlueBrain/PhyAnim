@@ -69,7 +69,7 @@ OverlapScene::OverlapScene(const std::vector<std::string>& files_,
     , _meshPoissonRatio(meshPoissonRatio_)
     , _collisionStiffness(collisionStiffness_), _solved(false)
     , _program(0), _uProjViewModel(-1), _uViewModel(-1), _numRenderMode(2)
-    , _renderMode(0) {
+    , _renderMode(0), anim(true) {
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
@@ -128,49 +128,58 @@ OverlapScene::~OverlapScene() {
 
 
 void OverlapScene::render() {
-    if (!_solved){
-        if(_mesh) {
-            bool collision = _animSys->step(_dt);
-            _mesh->aabb->update();
-            phyanim::DrawableMesh* drawableMesh =
-                    dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-            drawableMesh->uploadNodes();
-            
-            if (!collision)
-            {
-                double mean, max, min, rms;
-                _mesh->positionDifference(mean, max, min, rms);
-                std::cout << "Mesh " + _file + ":" << std::endl;
-                std::cout << "\t* Original volume: " <<
-                        _mesh->initVolume << ". Volume difference: " <<
-                        (_mesh->initVolume/_mesh->volume()-1.0)*100.0 << "%" <<
-                        std::endl;
-                std::cout << "\t* Vertices distance mean: " << mean <<
-                        " max: " << max << " min: " << min << " rms: " << rms <<
-                        std::endl;
-                std::string file( _file + "solution.off");
-                _mesh->write(file);
-                _meshes.push_back(_mesh);
-                _mesh = nullptr;
-            }
-        } else {
-            if (!_files.empty()){
-                _file = _files[0];
-                _files.erase(_files.begin());
-                _mesh = _loadMesh(_file);
-                phyanim::Meshes dMesh;
-                dMesh.push_back(_mesh);
+    if (anim)
+    {
+        if (!_solved){
+            if(_mesh) {
+                bool collision = _animSys->step(_dt);
+                _mesh->aabb->update();
+                phyanim::DrawableMesh* drawableMesh =
+                        dynamic_cast<phyanim::DrawableMesh*>(_mesh);
+                drawableMesh->uploadNodes();
                 
-                _animSys->clear();
-                _animSys->addMesh(_mesh);
-                _collDetect->dynamicMeshes(dMesh);
-                _collDetect->staticMeshes(_meshes);
+                if (!collision)
+                {
+                    double mean, max, min, rms;
+                    _mesh->positionDifference(mean, max, min, rms);
+                    std::cout << "Mesh " + _file + ":" << std::endl;
+                    std::cout << "\t* Original volume: " <<
+                            _mesh->initVolume << ". Volume difference: " <<
+                            (_mesh->initVolume/_mesh->volume()-1.0)*100.0 << "%" <<
+                            std::endl;
+                    std::cout << "\t* Vertices distance mean: " << mean <<
+                            " max: " << max << " min: " << min << " rms: " << rms <<
+                            std::endl;
+                    std::string file( _file + "solution.off");
+                    _mesh->write(file);
+                    _meshes.push_back(_mesh);
+                    _mesh = nullptr;
+                }
             } else {
-                auto endTime = std::chrono::steady_clock::now();
-                std::chrono::duration<double> elapsedTime = endTime-_startTime;
-                std::cout << "Overlap solved in: " << elapsedTime.count() <<
-                        "seconds" << std::endl;
-                _solved = true;
+                if (!_files.empty()){
+                    _file = _files[0];
+                    _files.erase(_files.begin());
+                    if (_file.find(".node") != std::string::npos) {
+                        _file1 = _files[0];
+                        _files.erase(_files.begin());
+                        _mesh = _loadMesh(_file, _file1);
+                    } else {
+                        _mesh = _loadMesh(_file);
+                    }
+                    phyanim::Meshes dMesh;
+                    dMesh.push_back(_mesh);
+                
+                    _animSys->clear();
+                    _animSys->addMesh(_mesh);
+                    _collDetect->dynamicMeshes(dMesh);
+                    _collDetect->staticMeshes(_meshes);
+                } else {
+                    auto endTime = std::chrono::steady_clock::now();
+                    std::chrono::duration<double> elapsedTime = endTime-_startTime;
+                    std::cout << "Overlap solved in: " << elapsedTime.count() <<
+                            "seconds" << std::endl;
+                    _solved = true;
+                }
             }
         }
     }
@@ -244,6 +253,28 @@ phyanim::DrawableMesh* OverlapScene::_loadMesh(const std::string& file_) {
     _collDetect->aabb = limits;
     center.z() = limits.upperLimit.z()+limits.upperLimit.x()-center.x();
     _camera->position(center);    
+    
+    return mesh;
+}
+
+phyanim::DrawableMesh* OverlapScene::_loadMesh(const std::string& nodeFile_,
+                                               const std::string& eleFile_) {
+    phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh(
+        _meshStiffness, _meshDensity, _meshDamping, _meshPoissonRatio);
+    mesh->load(nodeFile_, eleFile_);
+    mesh->upload();
+
+    phyanim::AABB limits = mesh->aabb->root->aabb;
+    phyanim::Vec3 center = limits.center();
+
+    center.z() = limits.upperLimit.z();
+    _camera->position(center);    
+
+    center = limits.center();
+    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*2.0;
+    limits.lowerLimit = center+axis0;
+    limits.upperLimit = center-axis0;
+    _collDetect->aabb = limits;
     
     return mesh;
 }

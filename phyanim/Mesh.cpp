@@ -39,8 +39,11 @@ void Mesh::load(const std::string& file_) {
                 std::endl; 
     }
 
+    std::cout << "File load with " << tetrahedra.size() << " tetrahera and " <<
+            nodes.size() << " vertices" << std::endl;
+    
     if (tetrahedra.size()>0) {
-        tetsToEdges();
+        // tetsToEdges();
         tetsToTriangles();
         initVolume = volume();
     } else {
@@ -49,6 +52,44 @@ void Mesh::load(const std::string& file_) {
     }
     initArea = area();
     aabb->generate(nodes, surfaceTriangles, tetrahedra);
+}
+
+void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
+{
+    if (nodeFile_.empty() || eleFile_.empty()) {
+        std::cerr << "Error loading: empty file" << std::endl;
+        return;
+    }
+    _loadTETGEN(nodeFile_, eleFile_);
+    std::cout << "File load with " << tetrahedra.size() << " tetrahera and " <<
+            nodes.size() << " vertices" << std::endl;
+    if (tetrahedra.size()>0) {
+        // tetsToEdges();
+
+        aabb->generate(nodes, surfaceTriangles, tetrahedra);
+        auto limit = aabb->root->aabb;
+        Vec3 center = limit.center();
+        Vec3 axis = (limit.lowerLimit - center) * 0.5; 
+        limit.lowerLimit = center + axis;
+        limit.upperLimit = center - axis;
+        for (auto it = tetrahedra.begin(); it != tetrahedra.end(); ++it)
+        {
+            Tetrahedron* tet = *it;
+            auto node = tet->node0;
+            if (!limit.inside(node->position))
+            {
+                tetrahedra.erase(it);
+                --it;
+            }
+        }
+
+        tetsToTriangles();
+        initVolume = volume();
+        initArea = area();
+        aabb->generate(nodes, surfaceTriangles, tetrahedra);
+        
+    }
+    std::cout << "tetrahedra size: " << tetrahedra.size() << std::endl;
 }
 
 void Mesh::write(const std::string& file_) {
@@ -349,6 +390,92 @@ void Mesh::_loadTET(const std::string& file_) {
         }
     } else {
         std::cerr << "Error: can not open " << file_ << std::endl;
+    }
+}
+
+void Mesh::_loadTETGEN(const std::string& nodeFile_, const std::string& eleFile_)
+{
+    try
+    {
+        std::ifstream nodeFile(nodeFile_.c_str());
+        std::string line;
+        std::vector<std::string> strs;
+        uint64_t count = 0;
+        uint64_t dim = 0;
+        uint64_t nodePerTet = 0;
+        uint64_t attribute= 0;
+        uint64_t marker = 0;
+        if (nodeFile.is_open())
+        {
+            while(!nodeFile.eof())
+            {
+                std::getline(nodeFile, line);
+                if (line[0] != '#')
+                {
+                    std::stringstream sstream(line);
+                    if (count == 0)
+                    {
+                        sstream >> count >> dim >> attribute >> marker;
+                        nodes.resize(count);
+                    }
+                    else
+                    {
+                        uint64_t index;
+                        float xCoord;
+                        float yCoord;
+                        float zCoord;
+                        sstream >> index >> xCoord >> yCoord >> zCoord;
+                        Vec3 pos(xCoord, yCoord, zCoord);
+                        nodes[index] = new Node(pos, index);
+                    }
+                }
+            }
+        }
+        else
+        {
+            std::cerr << "Error: can not open " << nodeFile_ << std::endl;
+        }
+
+        count = 0;
+        std::ifstream eleFile(eleFile_.c_str());
+        if (eleFile.is_open())
+        {
+            while(!eleFile.eof())
+            {
+                std::getline(eleFile, line);
+                if (line[0] != '#')
+                {
+                    std::stringstream sstream(line);
+                    if (count == 0)
+                    {
+                        sstream >> count >> nodePerTet >> attribute;
+                        tetrahedra.resize(count);
+                    }
+                    else
+                    {
+                        uint64_t index;
+                        uint64_t id0;
+                        uint64_t id1;
+                        uint64_t id2;
+                        uint64_t id3;
+                        sstream >> index >> id0 >> id1 >> id3 >> id2;
+                        auto tet = new Tetrahedron(nodes[id0],
+                                                   nodes[id1],
+                                                   nodes[id2],
+                                                   nodes[id3]);
+                        tetrahedra[index] = tet;
+                    }
+                }
+            }  
+        }
+        else
+        {
+            std::cerr << "Error: can not open " << eleFile_ << std::endl;
+        }
+    }
+    catch (...)
+    {
+        std::cerr << "Error while loading files" << std::endl;
     }
 }
 

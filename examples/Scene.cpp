@@ -197,6 +197,11 @@ void Scene::render() {
                             ". Volume difference: " <<
                             (mesh->initVolume/mesh->volume()-1.0)*100.0 << "%" <<
                             std::endl;
+                    // for (size_t i = 0; i < mesh->tetrahedra.size(); ++i)
+                    // {
+                    //     if (abs(mesh->tetrahedra[i]->volume() - _tetrahedraVolume[i]) >= 0.1 )
+                    //         std::cout << "Volume diference in tetrahedra " << i << std::endl;
+                    // }
                 }
             }
             _collision = false;
@@ -205,7 +210,10 @@ void Scene::render() {
             _simulationTime = 0.0;
             _meshUpdateTime = 0.0;
         }
+
+
     }
+
     
     glUseProgram(_program);
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
@@ -223,24 +231,16 @@ void Scene::loadMesh(const std::string& file_) {
                                           _meshDamping, _meshPoissonRatio);
     
     mesh->load(file_);
-    _animSys->addMesh(mesh);
-    mesh->upload();
-    _meshes.push_back(mesh);
-    std::cout << "Mesh loaded with: " << mesh->nodes.size() <<
-            " nodes, " << mesh->edges.size() << " edges, " <<
-            mesh->tetrahedra.size() << " tetrahedra and "<<
-            mesh->surfaceTriangles.size() << " triangles" <<
-            std::endl;
-  
-    phyanim::AABB limits = mesh->aabb->root->aabb;
+    _loadMesh(mesh);
+}
 
-    phyanim::Vec3 center = limits.center(); 
-    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*2.0;
-    limits.lowerLimit = center+axis0;
-    limits.upperLimit = center-axis0;
-    _collDetect->aabb = limits;
-    center.z() = limits.upperLimit.z()+limits.upperLimit.x()-center.x();
-    _camera->position(center);    
+void Scene::loadMesh(const std::string& nodeFile_, const std::string& eleFile_)
+{
+    auto mesh = new phyanim::DrawableMesh(_meshStiffness, _meshDensity,
+                                          _meshDamping, _meshPoissonRatio);
+    
+    mesh->load(nodeFile_, eleFile_);
+    _loadMesh(mesh);
 }
 
 void Scene::clear() {
@@ -311,6 +311,50 @@ unsigned int Scene::_compileShader(const std::string& source_,
       return 0;
     }
     return shader;
-  }
+}
+
+void Scene::_loadMesh(phyanim::DrawableMesh* mesh_)
+{
+    _animSys->addMesh(mesh_);
+    mesh_->upload();
+    _meshes.push_back(mesh_);
+    std::cout << "Mesh loaded with: " << mesh_->nodes.size() <<
+            " nodes, " << mesh_->edges.size() << " edges, " <<
+            mesh_->tetrahedra.size() << " tetrahedra and "<<
+            mesh_->surfaceTriangles.size() << " triangles" <<
+            std::endl;
+
+    _tetrahedraVolume = new double[mesh_->tetrahedra.size()];
+
+    for (size_t i = 0; i < mesh_->tetrahedra.size(); ++i)
+    {
+
+        auto tet = mesh_->tetrahedra[i];
+        _tetrahedraVolume[i] = tet->volume();
+
+        // double threshold = 0.0001;
+        // if (_tetrahedraVolume[i] < threshold)
+        // {
+        //     std::cout << "Tet id: " << i << // " " << tet->node0->id << " " << tet->node1->id <<
+        //             // " " <<  tet->node2->id << " " <<  tet->node3->id <<
+        //             " volume: " <<  _tetrahedraVolume[i] << std::endl; 
+        // }
+    }
+
+                
+    phyanim::AABB limits = mesh_->aabb->root->aabb;
+    phyanim::Vec3 center = limits.center();
+
+    
+    center.z() = limits.upperLimit.z();
+    _camera->position(center);
+
+    center = limits.center();
+    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*2.0;
+    limits.lowerLimit = center+axis0;
+    limits.upperLimit = center-axis0;
+    _collDetect->aabb = limits;
+
+}
 
 }

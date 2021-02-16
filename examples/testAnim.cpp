@@ -10,6 +10,7 @@
 examples::Camera* camera;
 examples::Scene* scene;
 std::string inFile;
+std::string inFile1;
 
 
 void render(void);
@@ -81,6 +82,10 @@ int main(int argc, char* argv[]){
             }  
             else {
                 inFile = std::string(argv[i]);
+                if (inFile.find(".node") != std::string::npos) {
+                    ++i;
+                    inFile1 = std::string(argv[i]);
+                }
             }
         } catch (...) {
             std::cerr << "Usage error:\n" << usage << std::endl;
@@ -123,7 +128,14 @@ int main(int argc, char* argv[]){
     camera = new examples::Camera();
     scene = new examples::Scene(camera, simSystem, dt, stiffness, density,
                                 damping, poissonRatio, collisionStiffness);
-    scene->loadMesh(inFile);
+    if (inFile1.empty())
+    {
+        scene->loadMesh(inFile);
+    }
+    else
+    {
+        scene->loadMesh(inFile, inFile1);
+    }
 
 
     while(!glfwWindowShouldClose(window)) {
@@ -183,7 +195,14 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
             scene->anim(!scene->anim());
             break;
         case 'T':
-            scene->loadMesh(inFile);
+            if (inFile1.empty())
+            {
+                scene->loadMesh(inFile);
+            }
+            else
+            {
+                scene->loadMesh(inFile, inFile1);
+            }
             break;
         }
     }

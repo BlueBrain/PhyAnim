@@ -168,6 +168,15 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
         case 'V':
             scene->changeRenderMode();
             break;
+        case 'B':
+            scene->anim = !scene->anim;
+            if (scene->anim) {
+                std::cout << "Overlap resumed" << std::endl;
+            }
+            else {
+                std::cout << "Overlap paused" << std::endl;
+            }
+            break;
         }
     }
     switch(key_){

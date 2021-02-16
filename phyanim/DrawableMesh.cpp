@@ -43,25 +43,24 @@ void DrawableMesh::upload() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(double)*nodesSize*3,
                  &posBuffer, GL_STATIC_DRAW);
  
+    // glBindVertexArray(_vao[0]);
 
-    glBindVertexArray(_vao[0]);
+    // glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
+    // glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+    // glEnableVertexAttribArray(0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
-    glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    size_t trianglesSize = triangles.size();
-    _indicesSize = trianglesSize*3;
-    unsigned int indices[_indicesSize];
-    for (size_t i = 0; i < trianglesSize; ++i) {
-        auto triangle = triangles[i];
-        indices[i*3] = triangle->node0->id;
-        indices[i*3+1] = triangle->node1->id;
-        indices[i*3+2] = triangle->node2->id;
-    }
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[1]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_indicesSize,
-                 &indices, GL_STATIC_DRAW);
+    // size_t trianglesSize = triangles.size();
+    // _indicesSize = trianglesSize*3;
+    // unsigned int indices[_indicesSize];
+    // for (size_t i = 0; i < trianglesSize; ++i) {
+    //     auto triangle = triangles[i];
+    //     indices[i*3] = triangle->node0->id;
+    //     indices[i*3+1] = triangle->node1->id;
+    //     indices[i*3+2] = triangle->node2->id;
+    // }
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[1]);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_indicesSize,
+    //              &indices, GL_STATIC_DRAW);
 
     glBindVertexArray(_vao[1]);
 
@@ -69,7 +68,7 @@ void DrawableMesh::upload() {
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
     
-    trianglesSize = surfaceTriangles.size();
+    size_t trianglesSize = surfaceTriangles.size();
     _surfaceIndicesSize = trianglesSize*3;
     unsigned int surfaceIndices[_surfaceIndicesSize];
     for (size_t i = 0; i < trianglesSize; ++i) {

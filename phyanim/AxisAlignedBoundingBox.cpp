@@ -1,12 +1,13 @@
 #include <limits>
+#include <iostream>
 
 #include "AxisAlignedBoundingBox.h"
 
 namespace phyanim {
 
-float const min = std::numeric_limits<float>::min();
-float const max = std::numeric_limits<float>::max();
-float const third = 1.0/3.0;
+double const min = std::numeric_limits<double>::lowest();
+double const max = std::numeric_limits<double>::max();
+double const third = 1.0/3.0;
 
 AABB::AABB()
     : lowerLimit(Vec3(max, max, max))
@@ -60,6 +61,7 @@ void AABB::update(const Vec3& pos_) {
     upperLimit.x() = std::max(upperLimit.x(),pos_.x());
     upperLimit.y() = std::max(upperLimit.y(),pos_.y());
     upperLimit.z() = std::max(upperLimit.z(),pos_.z());
+    
 }
 
 void AABB::update(const AABB& other_) {
@@ -237,8 +239,11 @@ void AxisAlignedBoundingBox::generate(Nodes& nodes_, Triangles& triangles_,
     root->nodes = nodes_;
     root->triangles = triangles_;
     root->tetrahedra = tetrahedra_;
-    for (auto node: nodes_) {
-        root->aabb.update(node->position);
+    for (auto tet: tetrahedra_) {
+        root->aabb.update(tet->node0->position);
+        root->aabb.update(tet->node1->position);
+        root->aabb.update(tet->node2->position);
+        root->aabb.update(tet->node3->position);
     }
     root->divide();
 }

@@ -34,6 +34,8 @@ class Scene{
     void render(void);
 
     void loadMesh(const std::string& file_);
+    
+    void loadMesh(const std::string& nodeFile_, const std::string& eleFile_);
 
     void clear(void);
     
@@ -53,6 +55,8 @@ class Scene{
 
     unsigned int _compileShader(const std::string& source_, int type_);
 
+    void _loadMesh(phyanim::DrawableMesh* mesh_);
+
     Camera* _camera;
     std::vector<phyanim::Mesh*> _meshes;
     phyanim::AnimSystem* _animSys;
@@ -63,6 +67,8 @@ class Scene{
     double _meshPoissonRatio;
     double _meshDensity;
     double _collisionStiffness;
+
+    double* _tetrahedraVolume;
     
     unsigned int _program;
     int _uProjViewModel;

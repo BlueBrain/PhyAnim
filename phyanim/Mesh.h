@@ -22,6 +22,8 @@ class Mesh {
 
     virtual void load(const std::string& file_);
 
+    virtual void load(const std::string& nodeFile_, const std::string& eleFile_);
+
     void write(const std::string& file_);
     
     double volume(void);
@@ -71,7 +73,8 @@ class Mesh {
 
   private:
 
-    void _split(const std::string& string_, std::vector<std::string>& strings_, char delim_ = ' ');
+    void _split(const std::string& string_, std::vector<std::string>& strings_,
+                char delim_ = ' ');
 
     void _loadOBJ(const std::string& file_);
 
@@ -80,6 +83,8 @@ class Mesh {
     void _loadPLY(const std::string& file_);
 
     void _loadTET(const std::string& file_);
+
+    void _loadTETGEN(const std::string& nodeFile_, const std::string& eleFile_);
 
     void _writeOFF(const std::string& file_);
 

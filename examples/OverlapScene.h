@@ -35,8 +35,18 @@ class OverlapScene{
     unsigned int _compileShader(const std::string& source_, int type_);
 
     phyanim::DrawableMesh* _loadMesh(const std::string& file_);
+    phyanim::DrawableMesh* _loadMesh(const std::string& nodeFile_,
+                                     const std::string& eleFile_);
+
+  public:
+
+    bool anim;
+
+  private:
+
     Camera* _camera;
     std::string _file;
+    std::string _file1;
     phyanim::Mesh* _mesh;
     std::vector<std::string> _files;
     phyanim::Meshes _meshes;
@@ -57,6 +67,7 @@ class OverlapScene{
 
     unsigned int _numRenderMode;
     unsigned int _renderMode;
+
 
 
     std::chrono::time_point<std::chrono::steady_clock> _startTime;

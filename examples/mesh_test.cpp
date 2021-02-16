@@ -16,6 +16,17 @@ void message(bool right_) {
 
 int main(int argc, char** argv) {
     std::cout << "Mesh test" << std::endl;
+
+    std::string file0;
+    std::string file1;
+    if (argc>1)
+    {
+        file0 = std::string(argv[1]);
+    }
+    if (argc>2)
+    {
+        file1 = std::string(argv[2]);
+    }
     
     auto node0 = new phyanim::Node(phyanim::Vec3(0.0, 1.633, 0.0), 0);
     auto node1 = new phyanim::Node(phyanim::Vec3(0.0, 0.0, 1.14315), 1);
@@ -68,6 +79,32 @@ int main(int argc, char** argv) {
     auto edge = meshCopied->edges[0];
     std::swap(edge->node0, edge->node1);
     message(!equivalentMeshes(mesh, meshCopied));
+
+
+    mesh = new phyanim::Mesh();
+
+    if (!file0.empty())
+    {
+        if (!file1.empty())
+        {
+            mesh->load(file0, file1);
+        }
+        else
+        {
+            mesh->load(file0);
+        }
+    }
+
+    for (auto node: mesh->nodes)
+    {
+        std::cout << "node " << node->id << ": " << node->position.x() << " " <<
+                node->position.y() << " " <<  node->position.z() << std::endl;
+    }
+    for (auto tet: mesh->tetrahedra)
+    {
+        std::cout << "tet: " << tet->node0->id << " " << tet->node1->id <<
+                " " << tet->node2->id << " " << tet->node3->id << std::endl;
+    }
 }
 
 
