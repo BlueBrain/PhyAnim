@@ -5,19 +5,38 @@
 
 namespace phyanim {
 
+typedef Eigen::Triplet<double> Triplet;
+typedef std::vector<Triplet> Triplets;
+
 class ImplicitFEMSystem : public AnimSystem {
 
   public:
 
-    ImplicitFEMSystem(CollisionDetection* collDetector_ = nullptr);
+    ImplicitFEMSystem(double dt, CollisionDetection* collDetector_ = nullptr);
 
     virtual ~ImplicitFEMSystem(void);
 
+    void addMesh(Mesh* mesh_);
+    
   private:
     
-    void _step(double dt_);
+    void _step();
 
-    void _polar(const Mat3& f_, Mat3& q_) const;    
+    void _conformKMatrix(Mesh* mesh);
+    
+    void _buildKTriplets(const Tetrahedra& tets, double dt2, Triplets& kTriplets,
+                        Triplets& ATriplets);
+    
+    void _computeTetsK(const Tetrahedra& tets, double D0, double D1, double D2);
+    
+    Mat3 _buildTetK(Vec3 bn, Vec3 bm, double D0, double D1, double D2,
+                    double volume);
+
+    void _addMatrixToTriplets(uint64_t id0, uint64_t id1, const Mat3& m,
+                              Triplets& triplets);
+    void _addIdentityValueToTriplets(uint64_t id0, double value,
+                                     Triplets& triplets);
+    void _addVec3ToVecX(uint64_t id, const Vec3& value, Eigen::VectorXd& vecx);
     
 };
 

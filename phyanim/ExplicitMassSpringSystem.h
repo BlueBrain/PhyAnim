@@ -9,13 +9,13 @@ class ExplicitMassSpringSystem : public AnimSystem {
 
   public:
     
-    ExplicitMassSpringSystem(CollisionDetection* collDetector_ = nullptr);
+    ExplicitMassSpringSystem(double dt, CollisionDetection* collDetector_ = nullptr);
 
     virtual ~ExplicitMassSpringSystem(void);
 
   protected:
 
-    void _step(double dt_);
+    void _step(void);
 
 };
 

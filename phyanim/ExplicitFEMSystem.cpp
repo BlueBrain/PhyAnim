@@ -6,13 +6,13 @@
 
 namespace phyanim {
 
-ExplicitFEMSystem::ExplicitFEMSystem(CollisionDetection* collDetector_)
-    : AnimSystem(collDetector_) {
+ExplicitFEMSystem::ExplicitFEMSystem(double dt, CollisionDetection* collDetector_)
+    : AnimSystem(dt, collDetector_) {
 }
 
 ExplicitFEMSystem::~ExplicitFEMSystem(void) {}
 
-void ExplicitFEMSystem::_step(double dt_) {
+void ExplicitFEMSystem::_step() {
     for (auto mesh: _meshes) {
         double kYoung = mesh->stiffness;
         double kPoisson = mesh->poissonRatio;
@@ -40,7 +40,7 @@ void ExplicitFEMSystem::_step(double dt_) {
             Vec3 v3 = tet->node3->velocity;
             
             x << x1-x0, x2-x0, x3-x0;
-            f = x * tet->basis;
+            f = x * tet->invBasis;
             _polar(f,q);
             fTilde = q.transpose() * f;
             strain = 0.5 * (fTilde + fTilde.transpose()) - Mat3::Identity();
@@ -48,7 +48,7 @@ void ExplicitFEMSystem::_step(double dt_) {
                     2.0 * mu * strain;
 
             xdot << v1-v0, v2-v0, v3-v0;
-            fdot = xdot * tet->basis;
+            fdot = xdot * tet->invBasis;
             fdotTilde = q.transpose() * fdot;
             strainrate = 0.5 * (fdotTilde + fdotTilde.transpose()) - Mat3::Identity();
             stressrate = damp * (lambda * strainrate.trace() * Mat3::Identity() +
@@ -68,8 +68,8 @@ void ExplicitFEMSystem::_step(double dt_) {
         for (unsigned int i=0; i<mesh->nodes.size(); i++) {
             auto node = mesh->nodes[i];
             Vec3 a = node->force / node->mass;
-            Vec3 v = node->velocity + a * dt_;
-            Vec3 x = node->position + v * dt_;
+            Vec3 v = node->velocity + a * _dt;
+            Vec3 x = node->position + v * _dt;
             node->velocity = v;
             node->position = x;
         }

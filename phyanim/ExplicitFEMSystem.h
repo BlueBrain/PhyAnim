@@ -9,13 +9,13 @@ class ExplicitFEMSystem : public AnimSystem {
 
   public:
 
-    ExplicitFEMSystem(CollisionDetection* collDetector_ = nullptr);
+    ExplicitFEMSystem(double dt, CollisionDetection* collDetector_ = nullptr);
 
     virtual ~ExplicitFEMSystem(void);
 
   private:
     
-    void _step(double dt_);
+    void _step(void);
 
     void _polar(const Mat3& f_, Mat3& q_) const;    
     

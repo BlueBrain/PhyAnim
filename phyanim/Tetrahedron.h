@@ -28,6 +28,19 @@ class Tetrahedron{
 
     Mat3 basis;
 
+    Mat3 invBasis;
+
+    Mat3 k00;
+    Mat3 k11;
+    Mat3 k22;
+    Mat3 k33;
+    Mat3 k01;
+    Mat3 k02;
+    Mat3 k03;
+    Mat3 k12;
+    Mat3 k13;
+    Mat3 k23;
+
     Vec3 normal0;
 
     Vec3 normal1;

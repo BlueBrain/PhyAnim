@@ -9,13 +9,13 @@ class AnimSystem {
 
   public:
 
-    AnimSystem(CollisionDetection* collDetector_ = nullptr);
+    AnimSystem(double dt, CollisionDetection* collDetector_ = nullptr);
 
     virtual ~AnimSystem(void);
 
-    bool step(double dt_);
+    bool step(void);
 
-    void addMesh(Mesh* mesh_);
+    virtual void addMesh(Mesh* mesh_);
 
     void clear(void);
 
@@ -23,12 +23,15 @@ class AnimSystem {
 
     bool collisions;
     
+
   protected:
 
-    virtual void _step(double dt_)=0;
+    virtual void _step(void)=0;
 
     Meshes _meshes;
 
+    double _dt;
+    
     CollisionDetection* _collisionDetector;
 
 };

@@ -5,14 +5,14 @@
 namespace phyanim {
 
 ImplicitMassSpringSystem::ImplicitMassSpringSystem(
-    CollisionDetection* collDetector_)
-    : AnimSystem(collDetector_) {
+    double dt, CollisionDetection* collDetector_)
+    : AnimSystem(dt, collDetector_) {
 }
 
 ImplicitMassSpringSystem::~ImplicitMassSpringSystem() {}
 
-void ImplicitMassSpringSystem::_step(double dt_) {
-    double dt2 = dt_*dt_;
+void ImplicitMassSpringSystem::_step() {
+    double dt2 = _dt*_dt;
     for (unsigned int i = 0; i < _meshes.size(); ++i) {
         auto mesh = _meshes[i];
         auto ks = mesh->stiffness;
@@ -32,9 +32,9 @@ void ImplicitMassSpringSystem::_step(double dt_) {
         for (unsigned int nodeId = 0; nodeId < n; ++nodeId) {
             float mass = nodes[nodeId]->mass;
             Vec3 fext = nodes[nodeId]->force;
-            b(nodeId*3) = fext.x()*dt_;
-            b(nodeId*3+1) = fext.y()*dt_;
-            b(nodeId*3+2) = fext.z()*dt_;
+            b(nodeId*3) = fext.x()*_dt;
+            b(nodeId*3+1) = fext.y()*_dt;
+            b(nodeId*3+2) = fext.z()*_dt;
 
             A(nodeId*3,nodeId*3) = mass;
             A(nodeId*3+1,nodeId*3+1) = mass;
@@ -70,13 +70,13 @@ void ImplicitMassSpringSystem::_step(double dt_) {
             Vec3 fij = ks * (1.0 - r*lI) * dij + dvij * kd;
 
 
-            b[idI*3] += fij.x()*dt_;
-            b[idI*3+1] += fij.y()*dt_;
-            b[idI*3+2] += fij.z()*dt_;
+            b[idI*3] += fij.x()*_dt;
+            b[idI*3+1] += fij.y()*_dt;
+            b[idI*3+2] += fij.z()*_dt;
 
-            b[idJ*3] -= fij.x()*dt_;
-            b[idJ*3+1] -= fij.y()*dt_;
-            b[idJ*3+2] -= fij.z()*dt_;
+            b[idJ*3] -= fij.x()*_dt;
+            b[idJ*3+1] -= fij.y()*_dt;
+            b[idJ*3+2] -= fij.z()*_dt;
 
             Mat3 outter = dij*dij.transpose()*lI2;
             Mat3 Jij = ks*(outter+(Eigen::Matrix3d::Identity()-outter)*(1-r*lI));
@@ -98,7 +98,7 @@ void ImplicitMassSpringSystem::_step(double dt_) {
             _addBlockToMatrix(Jii, A, idI*3, idI*3);
             _addBlockToMatrix(Jii, A, idJ*3, idJ*3);
 
-            Mat3 Jvij = Mat3::Identity()*(-kd)*dt_;
+            Mat3 Jvij = Mat3::Identity()*(-kd)*_dt;
             _addBlockToMatrix(Jvij, A, idI*3, idJ*3);
             _addBlockToMatrix(Jvij, A, idJ*3, idI*3);
             Jvij = (-1.0)*Jvij;
@@ -128,7 +128,7 @@ void ImplicitMassSpringSystem::_step(double dt_) {
             // Vec3 vInc(b[nodeId*3],b[nodeId*3+1],b[nodeId*3+2]);
             // vInc = vInc * (1.0/node->mass());
             Vec3 v = node->velocity + vInc;
-            Vec3 x = node->position + v * dt_;
+            Vec3 x = node->position + v * _dt;
             node->velocity = v;
             node->position = x;
         }

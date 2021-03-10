@@ -1,6 +1,7 @@
-
 #ifndef __PHYANIM_MESH__
 #define __PHYANIM_MESH__
+
+#include <Eigen/Sparse>
 
 #include <Tetrahedron.h>
 #include <AxisAlignedBoundingBox.h>
@@ -68,6 +69,10 @@ class Mesh {
     double damping;
 
     double poissonRatio;
+
+    Eigen::SparseMatrix<double> kMatrix;
+    Eigen::SparseMatrix<double> AMatrix;
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> AMatrixSolver;
 
     AxisAlignedBoundingBox* aabb;
 

@@ -1,5 +1,7 @@
 #include "Tetrahedron.h"
 
+#include <iostream>
+
 namespace phyanim{
 
 Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
@@ -14,9 +16,13 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     normal2 = (x3-x0).cross(x1-x0).normalized();
     normal3 = (x1-x0).cross(x2-x0).normalized();
 
-    basis << x1-x0, x2-x0, x3-x0;
+    Vec3 e10 = x1 - x0;
+    Vec3 e20 = x2 - x0;
+    Vec3 e30 = x3 - x0;
+
+    basis << e10, e20, e30;
     initVolume = std::abs(basis.determinant()/6.0);
-    basis = basis.inverse().eval();
+    invBasis = basis.inverse().eval();
 }
 
 Tetrahedron::~Tetrahedron(void) {}

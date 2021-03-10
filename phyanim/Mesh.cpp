@@ -67,21 +67,21 @@ void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
         // tetsToEdges();
 
         aabb->generate(nodes, surfaceTriangles, tetrahedra);
-        auto limit = aabb->root->aabb;
-        Vec3 center = limit.center();
-        Vec3 axis = (limit.lowerLimit - center) * 0.5; 
-        limit.lowerLimit = center + axis;
-        limit.upperLimit = center - axis;
-        for (auto it = tetrahedra.begin(); it != tetrahedra.end(); ++it)
-        {
-            Tetrahedron* tet = *it;
-            auto node = tet->node0;
-            if (!limit.inside(node->position))
-            {
-                tetrahedra.erase(it);
-                --it;
-            }
-        }
+        // auto limit = aabb->root->aabb;
+        // Vec3 center = limit.center();
+        // Vec3 axis = (limit.lowerLimit - center) * 0.5; 
+        // limit.lowerLimit = center + axis;
+        // limit.upperLimit = center - axis;
+        // for (auto it = tetrahedra.begin(); it != tetrahedra.end(); ++it)
+        // {
+        //     Tetrahedron* tet = *it;
+        //     auto node = tet->node0;
+        //     if (!limit.inside(node->position))
+        //     {
+        //         tetrahedra.erase(it);
+        //         --it;
+        //     }
+        // }
 
         tetsToTriangles();
         initVolume = volume();

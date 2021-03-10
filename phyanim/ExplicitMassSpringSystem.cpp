@@ -5,15 +5,15 @@
 namespace phyanim {
 
 ExplicitMassSpringSystem::ExplicitMassSpringSystem(
-    CollisionDetection* collDetector_)
-    : AnimSystem(collDetector_) {
+    double dt, CollisionDetection* collDetector_)
+    : AnimSystem(dt, collDetector_) {
 }
 
 ExplicitMassSpringSystem::~ExplicitMassSpringSystem() {
     
 }
 
-void ExplicitMassSpringSystem::_step(double dt_) {
+void ExplicitMassSpringSystem::_step() {
     for (auto mesh: _meshes) {
         auto ks = mesh->stiffness;
         auto kd = 1000.0 * mesh->damping;
@@ -33,8 +33,8 @@ void ExplicitMassSpringSystem::_step(double dt_) {
         
         for (auto node: mesh->nodes) { 
             Vec3 a = node->force / node->mass;
-            Vec3 v = node->velocity + a * dt_;
-            Vec3 x = node->position + v * dt_;
+            Vec3 v = node->velocity + a * _dt;
+            Vec3 x = node->position + v * _dt;
             node->velocity = v;
             node->position = x;
         }

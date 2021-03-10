@@ -4,8 +4,11 @@
 
 namespace phyanim {
 
-AnimSystem::AnimSystem(CollisionDetection* collDetector_)
-    : gravity(true), collisions(true), _collisionDetector(collDetector_) {
+AnimSystem::AnimSystem(double dt_, CollisionDetection* collDetector_)
+    : gravity(true)
+    , collisions(true)
+    , _dt(dt_)
+    , _collisionDetector(collDetector_) {
     if (!_collisionDetector) {
         _collisionDetector = new CollisionDetection();
     }
@@ -13,7 +16,7 @@ AnimSystem::AnimSystem(CollisionDetection* collDetector_)
 
 AnimSystem::~AnimSystem() {}
 
-bool AnimSystem::step(double dt_) {
+bool AnimSystem::step() {
     bool collision = false;
     Vec3 g = Vec3::Zero();
     if (gravity) {
@@ -33,7 +36,7 @@ bool AnimSystem::step(double dt_) {
         collision = _collisionDetector->update();
     }
 
-    _step(dt_);
+    _step();
 
     if (collisions) {
         _collisionDetector->checkLimitsCollision();

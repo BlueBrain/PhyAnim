@@ -105,7 +105,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ExplicitMassSpringSystem(_collDetect);
+        _animSys = new phyanim::ExplicitMassSpringSystem(_dt, _collDetect);
         break;
     case IMPLICITMASSSPRING:
         std::cout << "Implicit mass-spring simulation with:\n\tdt " << _dt <<
@@ -114,7 +114,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ImplicitMassSpringSystem(_collDetect);
+        _animSys = new phyanim::ImplicitMassSpringSystem(_dt, _collDetect);
         break;
     case EXPLICITFEM:
         std::cout << "Explicit FEM simulation with:\n\tdt " << _dt <<
@@ -123,7 +123,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ExplicitFEMSystem(_collDetect); 
+        _animSys = new phyanim::ExplicitFEMSystem(_dt, _collDetect); 
         break;
     case IMPLICITFEM:
         std::cout << "Implicit FEM simulation with:\n\tdt " << _dt <<
@@ -132,7 +132,7 @@ Scene::Scene(Camera* camera_, SimSystem simSystem_, double dt_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ImplicitFEMSystem(_collDetect); 
+        _animSys = new phyanim::ImplicitFEMSystem(_dt, _collDetect); 
         break;
     }
     std::srand(std::time(0));
@@ -159,7 +159,7 @@ void Scene::render() {
 
         _collDetect->dynamicMeshes(_meshes);
         auto startTime = std::chrono::steady_clock::now();
-        bool collision = _animSys->step(_dt);
+        bool collision = _animSys->step();
         _collision = _collision || collision;
         auto endTime = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsedTime = endTime-startTime; 

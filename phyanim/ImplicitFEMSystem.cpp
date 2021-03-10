@@ -6,71 +6,237 @@
 
 namespace phyanim {
 
-ImplicitFEMSystem::ImplicitFEMSystem(CollisionDetection* collDetector_)
-    : AnimSystem(collDetector_) {
+ImplicitFEMSystem::ImplicitFEMSystem(double dt, CollisionDetection* collDetector_)
+    : AnimSystem(dt, collDetector_) {
 }
 
 ImplicitFEMSystem::~ImplicitFEMSystem(void) {}
 
-void ImplicitFEMSystem::_step(double dt_) {
+void ImplicitFEMSystem::addMesh(Mesh *mesh_)
+{
+    AnimSystem::addMesh(mesh_);
+
+    _conformKMatrix(mesh_);
+    
+    std::cout << "*********************************Addmesh in IMplicit FEM" << std::endl;
+}
+
+void ImplicitFEMSystem::_step() {
     for (auto mesh: _meshes) {
-        double kYoung = mesh->stiffness;
-        double kPoisson = mesh->poissonRatio;
-        double lambda = (kPoisson*kYoung) /((1 + kPoisson)*(1 - 2*kPoisson));
-        double mu = kYoung / (2*(1 + kPoisson));
-        double damp = mesh->damping;
-      
-        for (auto tet:mesh->tetrahedra) {
-            Mat3 x, f, q, fTilde, strain, stress;
-            
-            Mat3 xdot, fdot, fdotTilde, strainrate, stressrate;
+        Nodes& nodes = mesh->nodes;
+        uint64_t size = nodes.size()*3;  
+        Eigen::VectorXd u(size);
+        Eigen::VectorXd mv(size);
+        Eigen::VectorXd fext(size);
+        Eigen::VectorXd v_1(size);
+        Eigen::VectorXd b(size);
 
-            Vec3 x0 = tet->node0->position;
-            Vec3 x1 = tet->node1->position;
-            Vec3 x2 = tet->node2->position;
-            Vec3 x3 = tet->node3->position;
-            
-            Vec3 v0 = tet->node0->velocity;
-            Vec3 v1 = tet->node1->velocity;
-            Vec3 v2 = tet->node2->velocity;
-            Vec3 v3 = tet->node3->velocity;
-            
-            x << x1-x0, x2-x0, x3-x0;
-            f = x * tet->basis;
-            _polar(f,q);
-            fTilde = q.transpose() * f;
-            strain = 0.5 * (fTilde + fTilde.transpose()) - Mat3::Identity();
-            stress = lambda * strain.trace() * Mat3::Identity() +
-                    2.0 * mu * strain;
-
-            xdot << v1-v0, v2-v0, v3-v0;
-            fdot = xdot * tet->basis;
-            fdotTilde = q.transpose() * fdot;
-            strainrate = 0.5 * (fdotTilde + fdotTilde.transpose()) - Mat3::Identity();
-            stressrate = damp * (lambda * strainrate.trace() * Mat3::Identity() +
-                                 2.0 * mu * strainrate);
-
-            
-            tet->node0->force += q*(stress+stressrate) * tet->normal0 / 0.6;
-            tet->node1->force += q*(stress+stressrate) * tet->normal1 / 0.6;
-            tet->node2->force += q*(stress+stressrate) * tet->normal2 / 0.6;
-            tet->node3->force += q*(stress+stressrate) * tet->normal3 / 0.6;
+        for (uint64_t i=0; i< size/3; ++i)
+        {
+            Node* node = mesh->nodes[i];
+            _addVec3ToVecX( i, node->position - node->initPosition, u);
+            _addVec3ToVecX( i, node->velocity*node->mass, mv);
+            _addVec3ToVecX( i, node->force, fext);
         }
-        for (auto node: mesh->nodes) { 
-            Vec3 a = node->force / node->mass;
-            Vec3 v = node->velocity + a * dt_;
-            Vec3 x = node->position + v * dt_;
+
+        b = mv - _dt * (mesh->kMatrix * u - fext);
+
+        v_1 = mesh->AMatrixSolver.solve(b);
+
+        for (uint64_t i=0; i< size/3; ++i)
+        {
+            // std::cout << "Node " << i << ": " << b[i*3] << " " << b[i*3+1] << " "<< b[i*3+2] << std::endl;
+            Node* node = mesh->nodes[i];
+            Vec3 v(v_1[i*3], v_1[i*3+1], v_1[i*3+2]);
+            Vec3 x = node->position + v * _dt;
             node->velocity = v;
             node->position = x;
         }
     }
 }
+
+void ImplicitFEMSystem::_conformKMatrix(Mesh* mesh)
+{
+    double young = mesh->stiffness;
+    double poisson = mesh->poissonRatio;    
+    double D = young / ((1 + poisson) * (1 - 2 * poisson));
+    double D0 = D * (1 - poisson);
+    double D1 = D * poisson;
+    double D2 = D * (1 - 2 * poisson) * 0.5;
+    double dt2 = _dt * _dt;
+    _computeTetsK(mesh->tetrahedra, D0, D1, D2);
+
+    Nodes& nodes = mesh->nodes;
+    uint64_t size = nodes.size()*3;    
+    for (uint64_t i = 0; i < size/3; ++i)
+    {
+        nodes[i]->id = i;
+    }
     
-void ImplicitFEMSystem::_polar(const Mat3& f_, Mat3& q_) const {
-    Eigen::JacobiSVD<Mat3> svd(f_, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    auto u = svd.matrixU();
-    auto v = svd.matrixV();
-    q_ = u * v.transpose();
+    Triplets kTriplets;
+    Triplets ATriplets;
+    _buildKTriplets(mesh->tetrahedra, dt2, kTriplets, ATriplets);
+    for (uint64_t i = 0; i < size/3; ++i)
+    {
+        _addIdentityValueToTriplets(i, nodes[i]->mass, ATriplets);
+    }
+    
+    mesh->kMatrix.resize(size, size);
+    
+    mesh->AMatrix.resize(size, size);
+    mesh->kMatrix.resizeNonZeros(kTriplets.size());
+    mesh->AMatrix.resizeNonZeros(ATriplets.size());
+    mesh->kMatrix.setFromTriplets( kTriplets.begin(), kTriplets.end());
+    mesh->AMatrix.setFromTriplets( ATriplets.begin(), ATriplets.end());
+
+    kTriplets.clear();
+    ATriplets.clear();
+    
+    mesh->AMatrixSolver.compute(mesh->AMatrix);
+}
+
+
+
+void ImplicitFEMSystem::_buildKTriplets(const Tetrahedra& tets, double dt2,
+                                       Triplets& kTriplets, Triplets& ATriplets)
+{
+    for (auto tet: tets)
+    {
+        uint64_t id0 = tet->node0->id;
+        uint64_t id1 = tet->node1->id;
+        uint64_t id2 = tet->node2->id;
+        uint64_t id3 = tet->node3->id;
+        Mat3 k = tet->k00;
+        _addMatrixToTriplets(id0, id0, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id0, id0, k, ATriplets);
+        k = tet->k11;
+        _addMatrixToTriplets(id1, id1, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id1, id1, k, ATriplets);
+        k = tet->k22;
+        _addMatrixToTriplets(id2, id2, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id2, id2, k, ATriplets);
+        k = tet->k33;
+        _addMatrixToTriplets(id3, id3, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id3, id3, k, ATriplets);
+
+        k = tet->k01;
+        _addMatrixToTriplets(id0, id1, k, kTriplets);
+        _addMatrixToTriplets(id1, id0, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id0, id1, k, ATriplets);
+        _addMatrixToTriplets(id1, id0, k, ATriplets);
+        k = tet->k02;
+        _addMatrixToTriplets(id0, id2, k, kTriplets);
+        _addMatrixToTriplets(id2, id0, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id0, id2, k, ATriplets);
+        _addMatrixToTriplets(id2, id0, k, ATriplets);
+        k = tet->k03;
+        _addMatrixToTriplets(id0, id3, k, kTriplets);
+        _addMatrixToTriplets(id3, id0, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id0, id3, k, ATriplets);
+        _addMatrixToTriplets(id3, id0, k, ATriplets);
+
+        
+        k = tet->k12;
+        _addMatrixToTriplets(id1, id2, k, kTriplets);
+        _addMatrixToTriplets(id2, id1, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id1, id2, k, ATriplets);
+        _addMatrixToTriplets(id2, id1, k, ATriplets);
+        k = tet->k13;
+        _addMatrixToTriplets(id1, id3, k, kTriplets);
+        _addMatrixToTriplets(id3, id1, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id1, id3, k, ATriplets);
+        _addMatrixToTriplets(id3, id1, k, ATriplets);
+
+        k = tet->k23;
+        _addMatrixToTriplets(id2, id3, k, kTriplets);
+        _addMatrixToTriplets(id3, id2, k, kTriplets);
+        k *= dt2;
+        _addMatrixToTriplets(id2, id3, k, ATriplets);
+        _addMatrixToTriplets(id3, id2, k, ATriplets);        
+    }
+}
+
+void ImplicitFEMSystem::_computeTetsK(const Tetrahedra& tets, double D0,
+                                      double D1, double D2)
+{
+    for (auto tet: tets)
+    {
+        Vec3 b1 = tet->invBasis.row(0);
+        Vec3 b2 = tet->invBasis.row(1);
+        Vec3 b3 = tet->invBasis.row(2);
+        Vec3 b0 = -b1 - b2 - b3;
+        double volume = tet->initVolume;
+        tet->k00 =  _buildTetK(b0, b0, D0, D1, D2, volume);
+        tet->k11 =  _buildTetK(b1, b1, D0, D1, D2, volume);
+        tet->k22 =  _buildTetK(b2, b2, D0, D1, D2, volume);
+        tet->k33 =  _buildTetK(b3, b3, D0, D1, D2, volume);
+        tet->k01 =  _buildTetK(b0, b1, D0, D1, D2, volume);
+        tet->k02 =  _buildTetK(b0, b2, D0, D1, D2, volume);
+        tet->k03 =  _buildTetK(b0, b3, D0, D1, D2, volume);
+        tet->k12 =  _buildTetK(b1, b2, D0, D1, D2, volume);
+        tet->k13 =  _buildTetK(b1, b3, D0, D1, D2, volume);
+        tet->k23 =  _buildTetK(b2, b3, D0, D1, D2, volume);
+    }
+}
+
+Mat3 ImplicitFEMSystem::_buildTetK(Vec3 bn_, Vec3 bm_, double D0, double D1,
+                                   double D2, double volume)
+{
+    double bn = bn_[0];
+    double cn = bn_[1];
+    double dn = bn_[2];
+    double bm = bm_[0];
+    double cm = bm_[1];
+    double dm = bm_[2];
+    Mat3 knm;
+    knm << D0*(bn*bm)+D2*(cn*cm+dn*dm), D1*(bn*cm)+D2*(cn*bm), D1*(bn*dm)+D2*(dn*bm),
+            D1*(cn*bm)+D2*(bn*cm),  D0*(cn*cm)+D2*(bn*bm+dn*dm),  D1*(cn*dm)+D2*(dn*cm),
+            D1*(dn*bm)+D2*(bn*dm),  D1*(dn*cm)+D2*(cn*dm),  D0*(dn*dm)+D2*(bn*bm+cn*cm);
+    knm *= volume;
+    return knm;
+}
+
+void ImplicitFEMSystem::_addMatrixToTriplets(uint64_t id0, uint64_t id1,
+                                             const Mat3& m, Triplets& triplets)
+{
+    id0 *= 3;
+    id1 *= 3;
+
+    for (uint64_t i = 0; i<3; ++i)
+    {
+        for (uint64_t j = 0; j<3; ++j)
+        {
+            triplets.push_back( Triplet(id0 + i, id1 + j, m(i,j)));
+        }
+    }
+}
+
+void ImplicitFEMSystem::_addIdentityValueToTriplets(uint64_t id0, double value,
+                                                    Triplets& triplets)
+{
+    id0 *= 3;
+
+    for (uint64_t i = 0; i<3; ++i)
+    {
+        triplets.push_back( Triplet(id0 + i, id0 + i, value));
+    }
+}
+void ImplicitFEMSystem::_addVec3ToVecX(uint64_t id, const Vec3& value,
+                                      Eigen::VectorXd& vecx)
+{
+    for (uint64_t i = 0; i<3; ++i)
+    {
+        vecx[id*3+i] = value[i];
+    }
 }
 
 }

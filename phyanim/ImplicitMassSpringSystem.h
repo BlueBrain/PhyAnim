@@ -14,13 +14,13 @@ class ImplicitMassSpringSystem : public AnimSystem {
 
   public:
     
-    ImplicitMassSpringSystem(CollisionDetection* collDetector_ = nullptr);
+    ImplicitMassSpringSystem(double dt, CollisionDetection* collDetector_ = nullptr);
 
     virtual ~ImplicitMassSpringSystem(void);
 
   private:
 
-    void _step(double dt_);
+    void _step();
 
     Tds _mat3ToTd(Mat3& mat_, unsigned int i_, unsigned int j_);
 

@@ -101,7 +101,7 @@ OverlapScene::OverlapScene(const std::vector<std::string>& files_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ImplicitFEMSystem(_collDetect);
+        _animSys = new phyanim::ImplicitFEMSystem(_dt, _collDetect);
         break;
         
     default:
@@ -111,7 +111,7 @@ OverlapScene::OverlapScene(const std::vector<std::string>& files_,
                 _meshDamping << "\n\tpoisson ratio " << _meshPoissonRatio <<
                 "\n\tcollision stiffness " << _collisionStiffness <<
                 std::endl;
-        _animSys = new phyanim::ExplicitFEMSystem(_collDetect); 
+        _animSys = new phyanim::ExplicitFEMSystem(_dt, _collDetect); 
         break;
     }
     _animSys->gravity = false;
@@ -132,7 +132,7 @@ void OverlapScene::render() {
     {
         if (!_solved){
             if(_mesh) {
-                bool collision = _animSys->step(_dt);
+                bool collision = _animSys->step();
                 _mesh->aabb->update();
                 phyanim::DrawableMesh* drawableMesh =
                         dynamic_cast<phyanim::DrawableMesh*>(_mesh);
