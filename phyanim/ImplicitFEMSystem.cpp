@@ -15,10 +15,7 @@ ImplicitFEMSystem::~ImplicitFEMSystem(void) {}
 void ImplicitFEMSystem::addMesh(Mesh *mesh_)
 {
     AnimSystem::addMesh(mesh_);
-
     _conformKMatrix(mesh_);
-    
-    std::cout << "*********************************Addmesh in IMplicit FEM" << std::endl;
 }
 
 void ImplicitFEMSystem::_step() {

@@ -89,7 +89,6 @@ void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
         aabb->generate(nodes, surfaceTriangles, tetrahedra);
         
     }
-    std::cout << "tetrahedra size: " << tetrahedra.size() << std::endl;
 }
 
 void Mesh::write(const std::string& file_) {

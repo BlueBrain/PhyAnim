@@ -131,15 +131,20 @@ void OverlapScene::render() {
     if (anim)
     {
         if (!_solved){
-            if(_mesh) {
-                bool collision = _animSys->step();
-                _mesh->aabb->update();
-                phyanim::DrawableMesh* drawableMesh =
-                        dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-                drawableMesh->uploadNodes();
-                
-                if (!collision)
+            if(_mesh)
+            {                                                                
+                if (_collDetect->update())
                 {
+                    std::cout << "Collision" << std::endl;
+                    _animSys->step();
+                    _mesh->aabb->update();
+                    phyanim::DrawableMesh* drawableMesh =
+                            dynamic_cast<phyanim::DrawableMesh*>(_mesh);
+                    drawableMesh->uploadNodes();
+                }
+                else
+                {
+                    
                     double mean, max, min, rms;
                     _mesh->positionDifference(mean, max, min, rms);
                     std::cout << "Mesh " + _file + ":" << std::endl;
@@ -169,10 +174,14 @@ void OverlapScene::render() {
                     phyanim::Meshes dMesh;
                     dMesh.push_back(_mesh);
                 
-                    _animSys->clear();
-                    _animSys->addMesh(_mesh);
                     _collDetect->dynamicMeshes(dMesh);
                     _collDetect->staticMeshes(_meshes);
+
+                    if (_collDetect->update())
+                    {
+                        _animSys->clear();
+                        _animSys->addMesh(_mesh);
+                    }
                 } else {
                     auto endTime = std::chrono::steady_clock::now();
                     std::chrono::duration<double> elapsedTime = endTime-_startTime;

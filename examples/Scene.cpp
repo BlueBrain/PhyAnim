@@ -350,7 +350,7 @@ void Scene::_loadMesh(phyanim::DrawableMesh* mesh_)
     _camera->position(center);
 
     center = limits.center();
-    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*2.0;
+    phyanim::Vec3 axis0 = (limits.lowerLimit-center)*4.0;
     limits.lowerLimit = center+axis0;
     limits.upperLimit = center-axis0;
     _collDetect->aabb = limits;
