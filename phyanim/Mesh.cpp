@@ -66,7 +66,7 @@ void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
     if (tetrahedra.size()>0) {
         // tetsToEdges();
 
-        aabb->generate(nodes, surfaceTriangles, tetrahedra);
+        // aabb->generate(nodes, surfaceTriangles, tetrahedra);:
         // auto limit = aabb->root->aabb;
         // Vec3 center = limit.center();
         // Vec3 axis = (limit.lowerLimit - center) * 0.5; 
@@ -380,8 +380,8 @@ void Mesh::_loadTET(const std::string& file_) {
                 tetrahedra[i] = new Tetrahedron(
                     nodes[std::atoi(strs[0].c_str())],
                     nodes[std::atoi(strs[1].c_str())],
-                    nodes[std::atoi(strs[3].c_str())],
-                    nodes[std::atoi(strs[2].c_str())]);
+                    nodes[std::atoi(strs[2].c_str())],
+                    nodes[std::atoi(strs[3].c_str())]);
             }        
             inFile.close();
         } catch (...) {
@@ -460,8 +460,8 @@ void Mesh::_loadTETGEN(const std::string& nodeFile_, const std::string& eleFile_
                         sstream >> index >> id0 >> id1 >> id3 >> id2;
                         auto tet = new Tetrahedron(nodes[id0],
                                                    nodes[id1],
-                                                   nodes[id2],
-                                                   nodes[id3]);
+                                                   nodes[id3],
+                                                   nodes[id2]);
                         tetrahedra[index] = tet;
                     }
                 }

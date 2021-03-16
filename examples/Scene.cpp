@@ -346,7 +346,7 @@ void Scene::_loadMesh(phyanim::DrawableMesh* mesh_)
     phyanim::Vec3 center = limits.center();
 
     
-    center.z() = limits.upperLimit.z();
+    center.z() = limits.upperLimit.z() * 2;
     _camera->position(center);
 
     center = limits.center();

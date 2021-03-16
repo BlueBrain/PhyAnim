@@ -135,16 +135,16 @@ void OverlapScene::render() {
             {                                                                
                 if (_collDetect->update())
                 {
-                    std::cout << "Collision" << std::endl;
                     _animSys->step();
                     _mesh->aabb->update();
                     phyanim::DrawableMesh* drawableMesh =
                             dynamic_cast<phyanim::DrawableMesh*>(_mesh);
                     drawableMesh->uploadNodes();
+                    std::cout << "." << std::flush;
                 }
                 else
                 {
-                    
+                    std::cout << std::endl;
                     double mean, max, min, rms;
                     _mesh->positionDifference(mean, max, min, rms);
                     std::cout << "Mesh " + _file + ":" << std::endl;

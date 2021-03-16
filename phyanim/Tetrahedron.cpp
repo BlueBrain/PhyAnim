@@ -19,10 +19,12 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     Vec3 e10 = x1 - x0;
     Vec3 e20 = x2 - x0;
     Vec3 e30 = x3 - x0;
-
     basis << e10, e20, e30;
-    initVolume = std::abs(basis.determinant()/6.0);
-    invBasis = basis.inverse().eval();
+    double det = basis.determinant();
+    initVolume = det/6.0;
+        
+    Mat3 E = basis;
+    invBasis = E.inverse().eval();
 }
 
 Tetrahedron::~Tetrahedron(void) {}
@@ -55,10 +57,10 @@ Edges Tetrahedron::edges(void) {
 Triangles Tetrahedron::triangles(void) {
     Triangles triangles(4);
 
-    triangles[0] = new Triangle(node0, node1, node2);
-    triangles[1] = new Triangle(node0, node2, node3);
-    triangles[2] = new Triangle(node0, node3, node1);
-    triangles[3] = new Triangle(node1, node3, node2);
+    triangles[0] = new Triangle(node0, node1, node3);
+    triangles[1] = new Triangle(node0, node2, node1);
+    triangles[2] = new Triangle(node0, node3, node2);
+    triangles[3] = new Triangle(node1, node2, node3);
 
     return triangles;
 }
