@@ -5,87 +5,58 @@
 
 #include <Camera.h>
 #include <DrawableMesh.h>
-#include <AnimSystem.h>
+#include <RenderProgram.h>
+
 
 namespace examples{
 
-typedef enum{
-    EXPLICITMASSSPRING = 0,
-    IMPLICITMASSSPRING,
-    EXPLICITFEM,
-    IMPLICITFEM
-} SimSystem;
-
-class Scene{
-  
+class Scene
+{
   public:
-  
-    Scene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
-          double dt_ = 0.01, double meshStiffness_ = 1000.0,
-          double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
-          double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
 
-    virtual ~Scene(void);
+    Scene();
 
-    double dt(void);
+    ~Scene();
 
-    void dt(float dt_);
+    void render();
+
+    void addMesh(phyanim::DrawableMesh* mesh);
+
+    void clear();
+
+    void cameraRatio(uint32_t width, uint32_t height);
+
+    void displaceCamera(phyanim::Vec3 displace);
+
+    void rotateCamera(double pitch, double yaw);
     
-    void render(void);
+    void changeRenderMode();
 
-    void loadMesh(const std::string& file_);
-    
-    void loadMesh(const std::string& nodeFile_, const std::string& eleFile_);
+  public:
 
-    void clear(void);
-    
-    void restart(void);
-    
-    void gravity(void);
-
-    void collisions(void);
-
-    void changeRenderMode(void);
-
-    bool anim(void);
-
-    void anim(bool anim_);
+    bool showFPS;
     
   private:
 
-    unsigned int _compileShader(const std::string& source_, int type_);
-
-    void _loadMesh(phyanim::DrawableMesh* mesh_);
-
-    Camera* _camera;
-    std::vector<phyanim::Mesh*> _meshes;
-    phyanim::AnimSystem* _animSys;
-    phyanim::CollisionDetection* _collDetect;
-    double _dt;
-    double _meshStiffness;
-    double _meshDamping;
-    double _meshPoissonRatio;
-    double _meshDensity;
-    double _collisionStiffness;
-
-    double* _tetrahedraVolume;
+    typedef enum RenderMode
+    {
+        SOLID = 0,
+        WIREFRAME
+    } RenderMode;
     
-    unsigned int _program;
-    int _uProjViewModel;
-    int _uViewModel;
+    Camera* _camera;
 
-    unsigned int _numRenderMode;
-    unsigned int _renderMode;
-    bool _anim;
+    std::vector<phyanim::DrawableMesh*> _meshes;
 
-    double _meshVolume;
+    phyanim::AABB _limits;
 
-    std::chrono::time_point<std::chrono::steady_clock> _previousTime;
+    RenderMode _renderMode;
 
-    bool _collision;
-    unsigned int _framesCount;
-    double _simulationTime;
-    double _meshUpdateTime;
+    RenderProgram* _program;
+    
+    uint64_t _framesCount;
+
+    std::chrono::time_point<std::chrono::steady_clock> _previousTime; 
 };
 
 }

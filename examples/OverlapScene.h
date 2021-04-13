@@ -26,7 +26,6 @@ class OverlapScene{
     
     void render(void);
 
-    void writeMesh( phyanim::Mesh* mesh_, const std::string& file_);
     
     void changeRenderMode(void);
     

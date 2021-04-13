@@ -10,6 +10,7 @@ class Camera{
   public:
 
     Camera(phyanim::Vec3 position_ = phyanim::Vec3::Zero(),
+           phyanim::Mat3 rotation = phyanim::Mat3::Identity(),
            double fov_ = 90.0,
            double ratio_ = 1.0);
 
@@ -17,6 +18,9 @@ class Camera{
 
     phyanim::Vec3 position(void) const;
     void position(phyanim::Vec3 position_);
+
+    phyanim::Mat3 rotation() const;
+    void rotation(phyanim::Mat3 rotation);
 
     void fov(double fov_);
 
@@ -35,6 +39,7 @@ class Camera{
     void _makeProjectionMat(void);
 
     phyanim::Vec3 _position;
+    phyanim::Mat3 _rotation;
     double _fov;
     double _ratio;
 

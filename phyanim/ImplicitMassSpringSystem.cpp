@@ -4,16 +4,16 @@
 
 namespace phyanim {
 
-ImplicitMassSpringSystem::ImplicitMassSpringSystem(
-    double dt, CollisionDetection* collDetector_)
-    : AnimSystem(dt, collDetector_) {
-}
+ImplicitMassSpringSystem::ImplicitMassSpringSystem(double dt)
+    : AnimSystem(dt) {}
 
 ImplicitMassSpringSystem::~ImplicitMassSpringSystem() {}
 
-void ImplicitMassSpringSystem::_step() {
+void ImplicitMassSpringSystem::_step()
+{
     double dt2 = _dt*_dt;
-    for (unsigned int i = 0; i < _meshes.size(); ++i) {
+    for (unsigned int i = 0; i < _meshes.size(); ++i)
+    {
         auto mesh = _meshes[i];
         auto ks = mesh->stiffness;
         auto kd = 1000.0 * mesh->damping;
@@ -21,15 +21,18 @@ void ImplicitMassSpringSystem::_step() {
         auto& nodes = mesh->nodes;
         unsigned int n = nodes.size();
         Eigen::MatrixXd A(n*3,n*3);
-        for (unsigned int mI=0; mI < n*3; ++mI) {
-            for (unsigned int mJ=0; mJ < n*3; ++mJ) {
+        for (unsigned int mI=0; mI < n*3; ++mI)
+        {
+            for (unsigned int mJ=0; mJ < n*3; ++mJ)
+            {
                 A(mI,mJ) = 0.0;
             }
         }
         Eigen::VectorXd b(n*3);
         Eigen::VectorXd vIncVec(n*3);
         
-        for (unsigned int nodeId = 0; nodeId < n; ++nodeId) {
+        for (unsigned int nodeId = 0; nodeId < n; ++nodeId)
+        {
             float mass = nodes[nodeId]->mass;
             Vec3 fext = nodes[nodeId]->force;
             b(nodeId*3) = fext.x()*_dt;
@@ -45,7 +48,8 @@ void ImplicitMassSpringSystem::_step() {
         }
 
 
-        for (auto edge: mesh->edges) {
+        for (auto edge: mesh->edges)
+        {
             unsigned int idI = edge->node0->id;
             unsigned int idJ = edge->node1->id;
             auto nodeI = edge->node0;
@@ -55,13 +59,15 @@ void ImplicitMassSpringSystem::_step() {
             
             double r = edge->resLength;
             double rI = r;
-            if (rI!=0) {
+            if (rI!=0)
+            {
                 rI = 1.0/rI;
             }
             double l = dij.norm();
             double lI = l;
             double lI2 = l;
-            if (lI!=0) {
+            if (lI!=0)
+            {
                 lI = 1.0/lI;
                 lI2 = lI*lI;
             }
@@ -122,7 +128,8 @@ void ImplicitMassSpringSystem::_step() {
 
         vIncVec = A.colPivHouseholderQr().solve(b);
         
-        for (unsigned int nodeId = 0; nodeId < n; ++nodeId) {
+        for (unsigned int nodeId = 0; nodeId < n; ++nodeId)
+        {
             auto node = nodes[nodeId]; 
             Vec3 vInc(vIncVec[nodeId*3],vIncVec[nodeId*3+1],vIncVec[nodeId*3+2]);
             // Vec3 vInc(b[nodeId*3],b[nodeId*3+1],b[nodeId*3+2]);
@@ -132,25 +139,17 @@ void ImplicitMassSpringSystem::_step() {
             node->velocity = v;
             node->position = x;
         }
-        
-        // for (unsigned int nodeId = 0; nodeId < n; ++nodeId) {
-        //     auto node = nodes[nodeId]; 
-        //     Vec3 a(b[nodeId*3],b[nodeId*3+1],b[nodeId*3+2]);
-        //     a /= node->mass();
-        //     Vec3 v = node->velocity() + a * dt_;
-        //     Vec3 x = node->position() + v * dt_;
-        //     node->velocity(v);
-        //     node->position(x);
-        //     _checkFloorCollision(node);
-        // }
     }
 }
 
-Tds ImplicitMassSpringSystem::_mat3ToTd(
-    Mat3& mat_, unsigned int i_, unsigned int j_) {
+Tds ImplicitMassSpringSystem::_mat3ToTd(Mat3& mat_, unsigned int i_,
+                                        unsigned int j_)
+{
     Tds triplets(9);
-    for (unsigned int i = 0; i < 3; ++i) {
-        for (unsigned int j = 0; j < 3; ++j) {
+    for (unsigned int i = 0; i < 3; ++i)
+    {
+        for (unsigned int j = 0; j < 3; ++j)
+        {
             triplets[i+j*3] = Td(i_*3+i, j_*3+j, mat_(i,j));
         }
     }
@@ -158,9 +157,12 @@ Tds ImplicitMassSpringSystem::_mat3ToTd(
 }
 
 void ImplicitMassSpringSystem::_addBlockToMatrix(
-    Mat3& block_, Eigen::MatrixXd& mat_, unsigned int i_, unsigned int j_) {
-    for (unsigned int i = 0; i < 3; ++i) {
-        for (unsigned int j = 0; j < 3; ++j) {
+    Mat3& block_, Eigen::MatrixXd& mat_, unsigned int i_, unsigned int j_)
+{
+    for (unsigned int i = 0; i < 3; ++i)
+    {
+        for (unsigned int j = 0; j < 3; ++j)
+        {
             mat_(i_+i,j_+j) += block_(i,j);
         }
     }
@@ -168,13 +170,13 @@ void ImplicitMassSpringSystem::_addBlockToMatrix(
 
 
 Tds ImplicitMassSpringSystem::_diagVec3ToTd(
-    Vec3& vec_, unsigned int i_, unsigned int j_) {
+    Vec3& vec_, unsigned int i_, unsigned int j_)
+{
     Tds triplets(3);
     triplets[0] = Td(i_*3, j_*3, vec_.x());
     triplets[1] = Td(i_*3+1, j_*3+1, vec_.x());
     triplets[2] = Td(i_*3+2, j_*3+2, vec_.x());
     return triplets;
 }
-
 
 }

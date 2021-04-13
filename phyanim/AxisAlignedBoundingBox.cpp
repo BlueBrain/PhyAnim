@@ -239,11 +239,10 @@ void AxisAlignedBoundingBox::generate(Nodes& nodes_, Triangles& triangles_,
     root->nodes = nodes_;
     root->triangles = triangles_;
     root->tetrahedra = tetrahedra_;
-    for (auto tet: tetrahedra_) {
-        root->aabb.update(tet->node0->position);
-        root->aabb.update(tet->node1->position);
-        root->aabb.update(tet->node2->position);
-        root->aabb.update(tet->node3->position);
+    for (auto tri: triangles_) {
+        root->aabb.update(tri->node0->position);
+        root->aabb.update(tri->node1->position);
+        root->aabb.update(tri->node2->position);
     }
     root->divide();
 }

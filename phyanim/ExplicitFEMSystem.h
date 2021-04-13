@@ -9,7 +9,7 @@ class ExplicitFEMSystem : public AnimSystem {
 
   public:
 
-    ExplicitFEMSystem(double dt, CollisionDetection* collDetector_ = nullptr);
+    ExplicitFEMSystem(double dt);
 
     virtual ~ExplicitFEMSystem(void);
 

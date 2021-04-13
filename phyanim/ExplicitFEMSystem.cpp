@@ -6,14 +6,15 @@
 
 namespace phyanim {
 
-ExplicitFEMSystem::ExplicitFEMSystem(double dt, CollisionDetection* collDetector_)
-    : AnimSystem(dt, collDetector_) {
-}
+ExplicitFEMSystem::ExplicitFEMSystem(double dt)
+    : AnimSystem(dt) {}
 
 ExplicitFEMSystem::~ExplicitFEMSystem(void) {}
 
-void ExplicitFEMSystem::_step() {
-    for (auto mesh: _meshes) {
+void ExplicitFEMSystem::_step()
+{
+    for (auto mesh: _meshes)
+    {
         double kYoung = mesh->stiffness;
         double kPoisson = mesh->poissonRatio;
         double lambda = (kPoisson*kYoung) /((1 + kPoisson)*(1 - 2*kPoisson));
@@ -23,7 +24,8 @@ void ExplicitFEMSystem::_step() {
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned int i=0; i<mesh->tetrahedra.size(); i++) {
+        for (unsigned int i=0; i<mesh->tetrahedra.size(); i++)
+        {
             auto tet = mesh->tetrahedra[i];
             Mat3 x, f, q, fTilde, strain, stress;
             
@@ -65,7 +67,8 @@ void ExplicitFEMSystem::_step() {
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-        for (unsigned int i=0; i<mesh->nodes.size(); i++) {
+        for (unsigned int i=0; i<mesh->nodes.size(); i++)
+        {
             auto node = mesh->nodes[i];
             Vec3 a = node->force / node->mass;
             Vec3 v = node->velocity + a * _dt;
@@ -76,7 +79,8 @@ void ExplicitFEMSystem::_step() {
     }
 }
     
-void ExplicitFEMSystem::_polar(const Mat3& f_, Mat3& q_) const {
+void ExplicitFEMSystem::_polar(const Mat3& f_, Mat3& q_) const
+{
     Eigen::JacobiSVD<Mat3> svd(f_, Eigen::ComputeFullU | Eigen::ComputeFullV);
     auto u = svd.matrixU();
     auto v = svd.matrixV();

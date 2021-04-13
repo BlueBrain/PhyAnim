@@ -9,31 +9,31 @@ class AnimSystem {
 
   public:
 
-    AnimSystem(double dt, CollisionDetection* collDetector_ = nullptr);
+    AnimSystem(double dt);
 
     virtual ~AnimSystem(void);
 
-    bool step(void);
+    void step(void);
 
-    virtual void addMesh(Mesh* mesh_);
+    virtual void addMesh(Mesh* mesh);
+
+    void addMeshes(Meshes meshes);
 
     void clear(void);
-
-    bool gravity;
-
-    bool collisions;
-    
 
   protected:
 
     virtual void _step(void)=0;
 
+  public:
+
+    bool gravity;
+
+  protected:
+
     Meshes _meshes;
 
     double _dt;
-    
-    CollisionDetection* _collisionDetector;
-
 };
 
 }

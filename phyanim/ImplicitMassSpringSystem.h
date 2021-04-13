@@ -10,11 +10,12 @@ namespace phyanim {
 typedef Eigen::Triplet<double> Td;
 typedef std::vector<Td> Tds;
 
-class ImplicitMassSpringSystem : public AnimSystem {
+class ImplicitMassSpringSystem : public AnimSystem
+{
 
   public:
     
-    ImplicitMassSpringSystem(double dt, CollisionDetection* collDetector_ = nullptr);
+    ImplicitMassSpringSystem(double dt);
 
     virtual ~ImplicitMassSpringSystem(void);
 

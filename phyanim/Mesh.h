@@ -41,7 +41,11 @@ class Mesh {
     
     void tetsToTriangles(void);
 
+    void computePerNodeMass(void);
+    
     void nodesToInitPos(void);
+
+    void nodesForceZero(void);
 
     Mesh* copy(bool surfaceTriangles_=true, bool triangles_=true,
                bool tetrahedra_=true, bool edges_=true);

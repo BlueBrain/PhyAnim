@@ -7,8 +7,7 @@
 namespace phyanim {
 
 ImplicitFEMSystem::ImplicitFEMSystem(double dt, CollisionDetection* collDetector_)
-    : AnimSystem(dt, collDetector_) {
-}
+    : AnimSystem(dt) {}
 
 ImplicitFEMSystem::~ImplicitFEMSystem(void) {}
 
@@ -18,8 +17,10 @@ void ImplicitFEMSystem::addMesh(Mesh *mesh_)
     _conformKMatrix(mesh_);
 }
 
-void ImplicitFEMSystem::_step() {
-    for (auto mesh: _meshes) {
+void ImplicitFEMSystem::_step()
+{
+    for (auto mesh: _meshes)
+    {
         Nodes& nodes = mesh->nodes;
         uint64_t size = nodes.size()*3;  
         Eigen::VectorXd u(size);
