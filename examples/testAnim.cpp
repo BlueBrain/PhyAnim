@@ -2,7 +2,6 @@
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <igl/readOFF.h>
 
 
 #include "Scene.h"
@@ -36,62 +35,62 @@ int main(int argc, char* argv[]){
                         "\n\t--help        Print help message"
                         );
     
-    double stiffness = 1000.0;
-    double damping = 0.1;
-    double density = 10.0;
-    double poissonRatio = 0.3;
-    double collisionStiffness = 1000.0;
-    double dt = 0.01;
-    examples::SimSystem simSystem = examples::EXPLICITMASSSPRING;
-    if (argc < 2) {
-        std::cerr << "Usage error:\n" << usage << std::endl;
-        return -1;
-    }
-    for (int i = 1; i < argc; ++i) {
-        std::string option(argv[i]);
-        try {
-            if (option.compare("-dt") == 0) {
-                dt = std::atof(argv[i+1]);
-                ++i;
-            } else if (option.compare("-ks") == 0) {
-                stiffness = std::atof(argv[i+1]);
-                ++i;   
-            } else if (option.compare("-d") == 0) {
-                density = std::atof(argv[i+1]);
-                ++i;
-            }  else if (option.compare("-kd") == 0) {
-                damping = std::atof(argv[i+1]);
-                ++i;
-            } else if (option.compare("-kp") == 0) {
-                poissonRatio = std::atof(argv[i+1]);
-                ++i;
-            } else if (option.compare("-kc") == 0) {
-                collisionStiffness = std::atof(argv[i+1]);
-                ++i;
-            } else if (option.compare("--help") == 0) {
-                std::cout << usage << std::endl;
-                return 0;
-            } else if (option.compare("-exmass") == 0) {
-                simSystem = examples::EXPLICITMASSSPRING;
-            } else if (option.compare("-immass") == 0) {
-                simSystem = examples::IMPLICITMASSSPRING;
-            } else if (option.compare("-exfem") == 0) {
-                simSystem = examples::EXPLICITFEM;
-            } else if (option.compare("-imfem") == 0) {
-                simSystem = examples::IMPLICITFEM;
-            }  
-            else {
-                inFile = std::string(argv[i]);
-                if (inFile.find(".node") != std::string::npos) {
-                    ++i;
-                    inFile1 = std::string(argv[i]);
-                }
-            }
-        } catch (...) {
-            std::cerr << "Usage error:\n" << usage << std::endl;
-            return -1;
-        }
-    }
+    // double stiffness = 1000.0;
+    // double damping = 0.1;
+    // double density = 10.0;
+    // double poissonRatio = 0.3;
+    // double collisionStiffness = 1000.0;
+    // double dt = 0.01;
+    // examples::SimSystem simSystem = examples::EXPLICITMASSSPRING;
+    // if (argc < 2) {
+    //     std::cerr << "Usage error:\n" << usage << std::endl;
+    //     return -1;
+    // }
+    // for (int i = 1; i < argc; ++i) {
+    //     std::string option(argv[i]);
+    //     try {
+    //         if (option.compare("-dt") == 0) {
+    //             dt = std::atof(argv[i+1]);
+    //             ++i;
+    //         } else if (option.compare("-ks") == 0) {
+    //             stiffness = std::atof(argv[i+1]);
+    //             ++i;   
+    //         } else if (option.compare("-d") == 0) {
+    //             density = std::atof(argv[i+1]);
+    //             ++i;
+    //         }  else if (option.compare("-kd") == 0) {
+    //             damping = std::atof(argv[i+1]);
+    //             ++i;
+    //         } else if (option.compare("-kp") == 0) {
+    //             poissonRatio = std::atof(argv[i+1]);
+    //             ++i;
+    //         } else if (option.compare("-kc") == 0) {
+    //             collisionStiffness = std::atof(argv[i+1]);
+    //             ++i;
+    //         } else if (option.compare("--help") == 0) {
+    //             std::cout << usage << std::endl;
+    //             return 0;
+    //         } else if (option.compare("-exmass") == 0) {
+    //             simSystem = examples::EXPLICITMASSSPRING;
+    //         } else if (option.compare("-immass") == 0) {
+    //             simSystem = examples::IMPLICITMASSSPRING;
+    //         } else if (option.compare("-exfem") == 0) {
+    //             simSystem = examples::EXPLICITFEM;
+    //         } else if (option.compare("-imfem") == 0) {
+    //             simSystem = examples::IMPLICITFEM;
+    //         }  
+    //         else {
+    //             inFile = std::string(argv[i]);
+    //             if (inFile.find(".node") != std::string::npos) {
+    //                 ++i;
+    //                 inFile1 = std::string(argv[i]);
+    //             }
+    //         }
+    //     } catch (...) {
+    //         std::cerr << "Usage error:\n" << usage << std::endl;
+    //         return -1;
+    //     }
+    // }
 
     GLFWwindow* window;
 
@@ -126,24 +125,23 @@ int main(int argc, char* argv[]){
 
     
     camera = new examples::Camera();
-    scene = new examples::Scene(camera, simSystem, dt, stiffness, density,
-                                damping, poissonRatio, collisionStiffness);
-    if (inFile1.empty())
-    {
-        scene->loadMesh(inFile);
-    }
-    else
-    {
-        scene->loadMesh(inFile, inFile1);
-    }
+    // scene = new examples::Scene(camera, simSystem, dt, stiffness, density,
+    //                             damping, poissonRatio, collisionStiffness);
+    // if (inFile1.empty())
+    // {
+    //     scene->loadMesh(inFile);
+    // }
+    // else
+    // {
+    //     scene->loadMesh(inFile, inFile1);
+    // }
 
 
-    while(!glfwWindowShouldClose(window)) {
-        render();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-      
-    }
+    // while(!glfwWindowShouldClose(window)) {
+    //     glfwPollEvents();
+    //     render();
+    //     glfwSwapBuffers(window);
+    // }
 
     glfwTerminate();
     return 0;
@@ -154,8 +152,6 @@ int main(int argc, char* argv[]){
 
    
     // glutMainLoop();
-
-    return 0;
 }
 
 
@@ -175,37 +171,37 @@ static void key_callback(GLFWwindow* window_, int key_, int scancode_, int actio
     phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
     bool cameraDisplaced = false;
 
-    if (action_ == GLFW_PRESS) {
-        switch(key_) {
-        case 'Z':
-            std::cout << "Gravity changed" << std::endl;
-            scene->gravity();
-            break;
-        case 'X':
-            std::cout << "Collision changed" << std::endl;
-            scene->collisions();
-            break;
-        case 'C':
-            scene->clear();
-            break;
-        case 'V':
-            scene->changeRenderMode();
-            break;
-        case 'B':
-            scene->anim(!scene->anim());
-            break;
-        case 'T':
-            if (inFile1.empty())
-            {
-                scene->loadMesh(inFile);
-            }
-            else
-            {
-                scene->loadMesh(inFile, inFile1);
-            }
-            break;
-        }
-    }
+    // if (action_ == GLFW_PRESS) {
+    //     switch(key_) {
+    //     case 'Z':
+    //         std::cout << "Gravity changed" << std::endl;
+    //         scene->gravity();
+    //         break;
+    //     case 'X':
+    //         std::cout << "Collision changed" << std::endl;
+    //         scene->collisions();
+    //         break;
+    //     case 'C':
+    //         scene->clear();
+    //         break;
+    //     case 'V':
+    //         scene->changeRenderMode();
+    //         break;
+    //     case 'B':
+    //         scene->anim(!scene->anim());
+    //         break;
+    //     case 'T':
+    //         if (inFile1.empty())
+    //         {
+    //             scene->loadMesh(inFile);
+    //         }
+    //         else
+    //         {
+    //             scene->loadMesh(inFile, inFile1);
+    //         }
+    //         break;
+    //     }
+    // }
     switch(key_){
     case 'W':
         dxyz = phyanim::Vec3(0.0, 0.0, -dx);

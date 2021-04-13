@@ -5,89 +5,133 @@
 
 #include <Camera.h>
 #include <DrawableMesh.h>
-#include <AnimSystem.h>
+#include <RenderProgram.h>
 
 namespace examples{
 
-typedef enum{
-    EXPLICITMASSSPRING = 0,
-    IMPLICITMASSSPRING,
-    EXPLICITFEM,
-    IMPLICITFEM
-} SimSystem;
+typedef enum RenderMode
+{
+    SOLID = 0,
+    WIREFRAME
+} RenderMode;
 
-class Scene{
-  
+class Scene
+{
   public:
-  
-    Scene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
-          double dt_ = 0.01, double meshStiffness_ = 1000.0,
-          double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
-          double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
+
+    Scene(Camera* camera);
 
     virtual ~Scene(void);
 
-    double dt(void);
-
-    void dt(float dt_);
-    
     void render(void);
 
-    void loadMesh(const std::string& file_);
-    
-    void loadMesh(const std::string& nodeFile_, const std::string& eleFile_);
+    void addMesh(phyanim::DrawableMesh* mesh);
 
     void clear(void);
-    
-    void restart(void);
-    
-    void gravity(void);
 
-    void collisions(void);
+    RenderMode renderMode(void);
 
-    void changeRenderMode(void);
+    void renderMode(RenderMode renderMode);
 
-    bool anim(void);
-
-    void anim(bool anim_);
-    
   private:
 
-    unsigned int _compileShader(const std::string& source_, int type_);
-
-    void _loadMesh(phyanim::DrawableMesh* mesh_);
-
     Camera* _camera;
-    std::vector<phyanim::Mesh*> _meshes;
-    phyanim::AnimSystem* _animSys;
-    phyanim::CollisionDetection* _collDetect;
-    double _dt;
-    double _meshStiffness;
-    double _meshDamping;
-    double _meshPoissonRatio;
-    double _meshDensity;
-    double _collisionStiffness;
 
-    double* _tetrahedraVolume;
-    
-    unsigned int _program;
-    int _uProjViewModel;
-    int _uViewModel;
+    std::vector<phyanim::DrawableMesh*> _meshes;
 
-    unsigned int _numRenderMode;
-    unsigned int _renderMode;
-    bool _anim;
+    RenderMode _renderMode;
 
-    double _meshVolume;
+    RenderProgram* _program;
 
-    std::chrono::time_point<std::chrono::steady_clock> _previousTime;
+    uint64_t _framesCount;
 
-    bool _collision;
-    unsigned int _framesCount;
-    double _simulationTime;
-    double _meshUpdateTime;
+    std::chrono::time_point<std::chrono::steady_clock> _previousTime; 
 };
+
+
 
 }
 
-#endif
+#endif 
+// typedef enum{
+//     EXPLICITMASSSPRING = 0,
+//     IMPLICITMASSSPRING,
+//     EXPLICITFEM,
+//     IMPLICITFEM
+// } SimSystem;
+
+// class Scene{
+  
+//   public:
+  
+//     Scene(Camera* camera_, SimSystem simSystem_ = EXPLICITMASSSPRING,
+//           double dt_ = 0.01, double meshStiffness_ = 1000.0,
+//           double meshDensity_ = 10.0, double meshDamping_ = 0.1, 
+//           double meshPoissonRatio_ = 0.499, double collisionStiffness_ = 1000.0);
+
+//     virtual ~Scene(void);
+
+//     double dt(void);
+
+//     void dt(float dt_);
+    
+//     void render(void);
+
+//     void loadMesh(const std::string& file_);
+    
+//     void loadMesh(const std::string& nodeFile_, const std::string& eleFile_);
+
+//     void clear(void);
+    
+//     void restart(void);
+    
+//     void gravity(void);
+
+//     void collisions(void);
+
+//     void changeRenderMode(void);
+
+//     bool anim(void);
+
+//     void anim(bool anim_);
+    
+//   private:
+
+//     unsigned int _compileShader(const std::string& source_, int type_);
+
+//     void _loadMesh(phyanim::DrawableMesh* mesh_);
+
+//     Camera* _camera;
+//     std::vector<phyanim::Mesh*> _meshes;
+//     phyanim::AnimSystem* _animSys;
+//     phyanim::CollisionDetection* _collDetect;
+//     double _dt;
+//     double _meshStiffness;
+//     double _meshDamping;
+//     double _meshPoissonRatio;
+//     double _meshDensity;
+//     double _collisionStiffness;
+
+//     double* _tetrahedraVolume;
+    
+//     unsigned int _program;
+//     int _uProjViewModel;
+//     int _uViewModel;
+
+//     unsigned int _numRenderMode;
+//     unsigned int _renderMode;
+//     bool _anim;
+
+//     double _meshVolume;
+
+//     std::chrono::time_point<std::chrono::steady_clock> _previousTime; 
+
+//     bool _collision;
+//     unsigned int _framesCount;
+//     double _simulationTime;
+//     double _meshUpdateTime;
+// };
+
+// }
+
+// #endif

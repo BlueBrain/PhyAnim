@@ -39,18 +39,19 @@ void Mesh::load(const std::string& file_) {
                 std::endl; 
     }
 
-    std::cout << "File load with " << tetrahedra.size() << " tetrahera and " <<
+    std::cout << "File load with " << triangles.size() << " triangles and " <<
             nodes.size() << " vertices" << std::endl;
-    
-    if (tetrahedra.size()>0) {
-        // tetsToEdges();
-        tetsToTriangles();
-        initVolume = volume();
-    } else {
-        trianglesToEdges();
-        surfaceTriangles = triangles;
-    }
-    initArea = area();
+
+    surfaceTriangles = triangles;
+    // if (tetrahedra.size()>0) {
+    //     // tetsToEdges();
+    //     tetsToTriangles();
+    //     initVolume = volume();
+    // } else {
+    //     trianglesToEdges();
+    //     surfaceTriangles = triangles;
+    // }
+    // initArea = area();
     aabb->generate(nodes, surfaceTriangles, tetrahedra);
 }
 
