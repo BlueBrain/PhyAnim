@@ -4,64 +4,82 @@
 
 namespace examples
 {
-
-AnimMeshApp::AnimMeshApp()
-    : GLFWApp()
-    , _anim(false)
-{
-    
-}
+AnimMeshApp::AnimMeshApp() : GLFWApp(), _anim(false) {}
 
 void AnimMeshApp::init(int argc, char** argv)
 {
     _scene = new Scene();
     _animSys = new phyanim::ImplicitFEMSystem(0.01);
-    _collisionSys = new phyanim::CollisionDetection();
+    _collisionSys = new phyanim::CollisionDetection(100);
 
-    std::string usage = std::string("Usage error: Use ") + std::string(argv[0]) +
-            std::string(" mesh_file[.tet|.node .ele]");
+    std::string usage = std::string("Usage error: Use ") +
+                        std::string(argv[0]) +
+                        std::string(" mesh_file[.tet|.node .ele]");
     if (argc < 2)
     {
         std::cerr << usage << std::endl;
         exit(-1);
     }
 
-    _mesh = new phyanim::DrawableMesh();
-    std::string file(argv[1]);
-    
-    if (file.find(".node") != std::string::npos)
+    phyanim::AABB limits;
+    for (uint32_t i = 1; i < argc; ++i)
     {
-        std::string file1(argv[2]);
-        _mesh->load(file, file1);
+        auto mesh = new phyanim::DrawableMesh();
+        std::string file(argv[i]);
+
+        if (file.find(".node") != std::string::npos)
+        {
+            std::string file1(argv[i + 1]);
+            mesh->load(file, file1);
+            ++i;
+        }
+        else if (file.find(".tet") != std::string::npos)
+        {
+            mesh->load(file);
+        }
+        else
+        {
+            std::cerr << usage << std::endl;
+            exit(-1);
+        }
+
+        _meshes.push_back(mesh);
+        mesh->upload();
+        limits.update(mesh->aabb->root->aabb);
+        _scene->addMesh(mesh);
+        _animSys->addMesh(mesh);
     }
-    else if (file.find(".tet") != std::string::npos)
-    {
-        _mesh->load(file);
-    }
-    else
-    {
-        std::cerr << usage << std::endl;
-        exit(-1);
-    }
-    _mesh->upload();
-    _scene->addMesh(_mesh);
-    _animSys->addMesh(_mesh);
-    phyanim::Meshes collMeshes(1);
-    collMeshes[0] = _mesh;
-    _collisionSys->dynamicMeshes(collMeshes);
+    _collisionSys->dynamicMeshes(_meshes);
+
+    phyanim::Vec3 halfSides = limits.upperLimit - limits.center();
+    limits.lowerLimit -= halfSides;
+    limits.upperLimit += halfSides;
+    _setCameraPos(limits);
+    _collisionSys->aabb = limits;
 }
 
 void AnimMeshApp::loop()
 {
-    while(!glfwWindowShouldClose(_window))
+    while (!glfwWindowShouldClose(_window))
     {
         if (_anim)
         {
-            _mesh->nodesForceZero();
+            for (auto mesh : _meshes)
+            {
+                mesh->nodesForceZero();
+            }
             _collisionSys->update();
             _animSys->step();
+            for (auto mesh : _meshes)
+            {
+                mesh->aabb->update();
+            }
             _collisionSys->checkLimitsCollision();
-            _mesh->uploadNodes();
+            for (auto mesh : _meshes)
+            {
+                auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(mesh);
+                drawMesh->uploadNodes();
+            }
         }
         _scene->render();
         glfwSwapBuffers(_window);
@@ -70,15 +88,18 @@ void AnimMeshApp::loop()
     glfwTerminate();
 }
 
-void AnimMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
-                               int action, int mods)
+void AnimMeshApp::_keyCallback(GLFWwindow* window,
+                               int key,
+                               int scancode,
+                               int action,
+                               int mods)
 {
     GLFWApp::_keyCallback(window, key, scancode, action, mods);
     if (_scene)
     {
         if (action == GLFW_PRESS)
         {
-            switch(key)
+            switch (key)
             {
             case GLFW_KEY_SPACE:
                 _anim = !_anim;
@@ -88,4 +109,4 @@ void AnimMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
     }
 }
 
-}
+}  // namespace examples

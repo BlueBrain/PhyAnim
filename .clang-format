@@ -1,0 +1,30 @@
+---
+Language:        Cpp
+BasedOnStyle:  Google
+IndentWidth:     4
+AlignAfterOpenBracket: Align 
+AllowAllConstructorInitializersOnNextLine: false
+BreakConstructorInitializersBeforeComma: true
+AllowAllParametersOfDeclarationOnNextLine: false
+BreakBeforeBraces: Custom
+BinPackArguments: true
+BinPackParameters: false
+BraceWrapping:   
+  AfterCaseLabel: true
+  AfterClass:      true
+  AfterControlStatement: Always
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  AfterExternBlock: true
+  BeforeCatch:     true
+  BeforeElse:      true
+  IndentBraces:    false
+IndentCaseLabels: false
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+...

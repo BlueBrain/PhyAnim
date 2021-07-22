@@ -23,9 +23,11 @@ class Scene
     void addMesh(phyanim::DrawableMesh* mesh);
 
     void clear();
-
+ 
     void cameraRatio(uint32_t width, uint32_t height);
 
+    void cameraPosition(phyanim::Vec3 position);
+    
     void displaceCamera(phyanim::Vec3 displace);
 
     void rotateCamera(double pitch, double yaw);
@@ -47,8 +49,6 @@ class Scene
     Camera* _camera;
 
     std::vector<phyanim::DrawableMesh*> _meshes;
-
-    phyanim::AABB _limits;
 
     RenderMode _renderMode;
 

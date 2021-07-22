@@ -1,15 +1,14 @@
-#ifndef __EXAMPLES_ANIM_MESH_APP__
-#define __EXAMPLES_ANIM_MESH_APP__
+#ifndef __EXAMPLES_MOVE_MESH_APP__
+#define __EXAMPLES_MOVE_MESH_APP__
 
 #include <GLFWApp.h>
-#include <ImplicitFEMSystem.h>
 
 namespace examples
 {
-class AnimMeshApp : public GLFWApp
+class MoveMeshApp : public GLFWApp
 {
 public:
-    AnimMeshApp();
+    MoveMeshApp();
 
     void init(int argc, char** argv);
 
@@ -22,14 +21,12 @@ protected:
                       int action,
                       int mods);
 
-private:
-    phyanim::AnimSystem* _animSys;
-
-    phyanim::CollisionDetection* _collisionSys;
-
     phyanim::Meshes _meshes;
+    phyanim::Mesh* _mesh;
+    uint32_t _meshId;
 
-    bool _anim;
+    bool _editing;
+    bool _finished;
 };
 
 }  // namespace examples

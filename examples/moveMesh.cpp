@@ -1,9 +1,8 @@
-#include "OverlapApp.h"
+#include "MoveMeshApp.h"
 
 int main(int argc, char* argv[])
 {
-    examples::OverlapApp app;
-
+    examples::MoveMeshApp app;
     app.init(argc, argv);
 
     app.loop();

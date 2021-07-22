@@ -1,12 +1,12 @@
-#include <iostream>
-#include <cstdlib>   
+#include "Scene.h"
 
 #include <GL/glew.h>
 
-#include "Scene.h"
+#include <cstdlib>
+#include <iostream>
 
-namespace examples {
-
+namespace examples
+{
 const std::string vshaderSource(
     "#version 400\n"
     "in vec3 inPos;"
@@ -52,11 +52,7 @@ const std::string fshaderSource(
     "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-
-Scene::Scene()
-    : showFPS(false)
-    , _renderMode(SOLID)
-    , _framesCount(0)
+Scene::Scene() : showFPS(false), _renderMode(SOLID), _framesCount(0)
 {
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
@@ -74,7 +70,6 @@ Scene::~Scene()
 
 void Scene::render()
 {
-    
     ++_framesCount;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     _program->use();
@@ -83,13 +78,13 @@ void Scene::render()
     glUniformMatrix4fv(_program->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
     glUniformMatrix4fv(_program->viewmodelIndex, 1, GL_FALSE, view.data());
-    for (auto mesh: _meshes)
+    for (auto mesh : _meshes)
     {
         mesh->renderSurface();
     }
     auto currentTime = std::chrono::steady_clock::now();
-    double elapsed_seconds = (std::chrono::duration<double>
-                              (currentTime - _previousTime)).count();
+    double elapsed_seconds =
+        (std::chrono::duration<double>(currentTime - _previousTime)).count();
     if (elapsed_seconds >= 1.0)
     {
         if (showFPS)
@@ -99,34 +94,24 @@ void Scene::render()
     }
 }
 
-void Scene::addMesh(phyanim::DrawableMesh* mesh)
-{
-    _meshes.push_back(mesh);
-    _limits.update(mesh->aabb->root->aabb);
+void Scene::addMesh(phyanim::DrawableMesh* mesh) { _meshes.push_back(mesh); }
 
-    phyanim::Vec3 cameraPos = _limits.center();
-    phyanim::Vec3 dist = _limits.upperLimit - cameraPos;
-    double max = std::max(std::max(dist.x(), dist.y()), dist.z());
-    cameraPos.z() = _limits.upperLimit.z() + 1.5 * max;
-    _camera->position(cameraPos);
-
-    // std::cout << "camera position: "<< _camera->position() << std::endl;
-}
-
-void Scene::clear()
-{
-    _meshes.clear();
-}
+void Scene::clear() { _meshes.clear(); }
 
 void Scene::cameraRatio(uint32_t width, uint32_t height)
 {
-    _camera->ratio((double)width/height);
+    _camera->ratio((double)width / height);
     glViewport(0, 0, width, height);
+}
+
+void Scene::cameraPosition(phyanim::Vec3 position)
+{
+    _camera->position(position);
 }
 
 void Scene::displaceCamera(phyanim::Vec3 displace)
 {
-    phyanim::Vec3 rotDis = _camera->rotation()*displace;
+    phyanim::Vec3 rotDis = _camera->rotation() * displace;
     _camera->position(_camera->position() + rotDis);
 }
 
@@ -137,20 +122,16 @@ void Scene::rotateCamera(double pitch, double yaw)
     double cosY = cos(yaw);
     double sinY = sin(yaw);
     phyanim::Mat3 rotX;
-    rotX << 1.0, 0.0, 0.0,
-            0.0, cosX, -sinX,
-            0.0, sinX, cosX;
+    rotX << 1.0, 0.0, 0.0, 0.0, cosX, -sinX, 0.0, sinX, cosX;
     phyanim::Mat3 rotY;
-    rotY << cosY, 0.0, sinY,
-            0.0, 1.0, 0.0,
-            -sinY, 0.0, cosY;
+    rotY << cosY, 0.0, sinY, 0.0, 1.0, 0.0, -sinY, 0.0, cosY;
     phyanim::Mat3 rot = rotX * rotY;
-    _camera->rotation(_camera->rotation()*rot);
+    _camera->rotation(_camera->rotation() * rot);
 }
-        
+
 void Scene::changeRenderMode()
 {
-    switch(_renderMode)
+    switch (_renderMode)
     {
     case SOLID:
         _renderMode = WIREFRAME;
@@ -165,4 +146,4 @@ void Scene::changeRenderMode()
     }
 }
 
-}
+}  // namespace examples
