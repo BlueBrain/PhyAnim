@@ -1,13 +1,9 @@
 #include <BoundingVolume.h>
 
-namespace phyanim {
+namespace phyanim
+{
+BoundingVolume::BoundingVolume() {}
 
-BoundingVolume::BoundingVolume() {
-    
-}
+BoundingVolume::~BoundingVolume() {}
 
-BoundingVolume::~BoundingVolume() {
-    
-}
-
-}
+}  // namespace phyanim

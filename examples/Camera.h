@@ -3,12 +3,11 @@
 
 #include <Node.h>
 
-namespace examples{
-
-class Camera{
-
-  public:
-
+namespace examples
+{
+class Camera
+{
+public:
     Camera(phyanim::Vec3 position_ = phyanim::Vec3::Zero(),
            phyanim::Mat3 rotation = phyanim::Mat3::Identity(),
            double fov_ = 90.0,
@@ -31,9 +30,8 @@ class Camera{
     phyanim::Mat4 projectionMatrix(void) const;
 
     phyanim::Mat4 projectionViewMatrix(void) const;
-    
-  private:
 
+private:
     void _makeViewMat(void);
 
     void _makeProjectionMat(void);
@@ -45,10 +43,8 @@ class Camera{
 
     phyanim::Mat4 _viewMat;
     phyanim::Mat4 _projectionMat;
-    
-    
 };
 
-}
+}  // namespace examples
 
 #endif

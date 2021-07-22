@@ -3,24 +3,21 @@
 
 #include <AnimSystem.h>
 
-namespace phyanim {
-
-class ExplicitFEMSystem : public AnimSystem {
-
-  public:
-
+namespace phyanim
+{
+class ExplicitFEMSystem : public AnimSystem
+{
+public:
     ExplicitFEMSystem(double dt);
 
     virtual ~ExplicitFEMSystem(void);
 
-  private:
-    
+private:
     void _step(void);
 
-    void _polar(const Mat3& f_, Mat3& q_) const;    
-    
+    void _polar(const Mat3& f_, Mat3& q_) const;
 };
 
-}
+}  // namespace phyanim
 
 #endif

@@ -3,21 +3,19 @@
 
 #include <AnimSystem.h>
 
-namespace phyanim {
-
-class ExplicitMassSpringSystem : public AnimSystem {
-
-  public:
-    
+namespace phyanim
+{
+class ExplicitMassSpringSystem : public AnimSystem
+{
+public:
     ExplicitMassSpringSystem(double dt);
 
     virtual ~ExplicitMassSpringSystem(void);
 
-  protected:
-
+protected:
     void _step(void);
 };
 
-}
+}  // namespace phyanim
 
 #endif

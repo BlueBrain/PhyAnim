@@ -1,34 +1,34 @@
 #ifndef __PHYANIM_EDGE__
 #define __PHYANIM_EDGE__
 
-#include <unordered_set>
-
 #include <Node.h>
 
+#include <unordered_set>
 
-namespace phyanim{
-
+namespace phyanim
+{
 class Edge;
 
 typedef std::vector<Edge*> Edges;
 
-struct EdgePointerHash { 
-  public:
+struct EdgePointerHash
+{
+public:
     size_t operator()(const Edge* edge_) const;
 };
 
-
-struct EdgePointerEqual { 
-  public:
+struct EdgePointerEqual
+{
+public:
     bool operator()(const Edge* edge0_, const Edge* edge1_) const;
-}; 
+};
 
-typedef std::unordered_set<Edge*, EdgePointerHash, EdgePointerEqual> UniqueEdges;
+typedef std::unordered_set<Edge*, EdgePointerHash, EdgePointerEqual>
+    UniqueEdges;
 
-class Edge {
-
-  public:
-
+class Edge
+{
+public:
     Edge(Node* node0_, Node* node1_);
 
     virtual ~Edge(void);
@@ -40,9 +40,8 @@ class Edge {
     Node* node1;
 
     double resLength;
-   
 };
 
-}
+}  // namespace phyanim
 
 #endif

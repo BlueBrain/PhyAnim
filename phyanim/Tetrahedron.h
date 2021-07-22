@@ -4,18 +4,17 @@
 #include <Edge.h>
 #include <Triangle.h>
 
-namespace phyanim{
-
+namespace phyanim
+{
 class Tetrahedron;
 
 typedef std::vector<Tetrahedron*> Tetrahedra;
 
-class Tetrahedron{
-
-  public:
-
+class Tetrahedron
+{
+public:
     Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_);
-    
+
     virtual ~Tetrahedron(void);
 
     Node* node0;
@@ -54,16 +53,13 @@ class Tetrahedron{
     double volume(void) const;
 
     Edges edges(void);
-      
+
     Triangles triangles(void);
 
-  private:
-
+private:
     double _volume;
-    
-
 };
 
-}
+}  // namespace phyanim
 
 #endif

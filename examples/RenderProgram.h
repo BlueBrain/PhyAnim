@@ -5,11 +5,9 @@
 
 namespace examples
 {
-
 class RenderProgram
 {
-  public:
-
+public:
     RenderProgram(const std::string& vShaderSource,
                   const std::string& gShaderSource,
                   const std::string& fShaderSource);
@@ -18,29 +16,26 @@ class RenderProgram
 
     void use(void);
 
-  private:
-
+private:
     void _createProgram(const std::string& vShaderSource,
                         const std::string& gShaderSource,
                         const std::string& fShaderSource);
-    
+
     void _deleteProgram(void);
-    
+
     uint64_t _compileShader(const std::string& source, int type);
 
-  public:
-
+public:
     int64_t projviewmodelIndex;
     int64_t viewmodelIndex;
 
-  private:
-
+private:
     uint64_t _id;
     uint64_t _vshader;
     uint64_t _gshader;
     uint64_t _fshader;
 };
 
-}
+}  // namespace examples
 
-#endif 
+#endif

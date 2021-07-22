@@ -1,12 +1,11 @@
-#include <iostream>
+#include "RenderProgram.h"
 
 #include <GL/glew.h>
 
-#include "RenderProgram.h"
+#include <iostream>
 
 namespace examples
 {
-
 RenderProgram::RenderProgram(const std::string& vShaderSource,
                              const std::string& gShaderSource,
                              const std::string& fShaderSource)
@@ -20,11 +19,7 @@ RenderProgram::RenderProgram(const std::string& vShaderSource,
     _createProgram(vShaderSource, gShaderSource, fShaderSource);
 }
 
-
-RenderProgram::~RenderProgram()
-{
-    _deleteProgram();
-}
+RenderProgram::~RenderProgram() { _deleteProgram(); }
 
 void RenderProgram::use()
 {
@@ -60,7 +55,8 @@ void RenderProgram::_createProgram(const std::string& vSource,
             if (_gshader == 0)
             {
                 _deleteProgram();
-                throw std::runtime_error("Compilation error in Geometry Shader");
+                throw std::runtime_error(
+                    "Compilation error in Geometry Shader");
             }
             glAttachShader(_id, _gshader);
         }
@@ -70,7 +66,8 @@ void RenderProgram::_createProgram(const std::string& vSource,
             if (_fshader == 0)
             {
                 _deleteProgram();
-                throw std::runtime_error("Compilation error in Fragment Shader");
+                throw std::runtime_error(
+                    "Compilation error in Fragment Shader");
             }
             glAttachShader(_id, _fshader);
         }
@@ -122,7 +119,7 @@ uint64_t RenderProgram::_compileShader(const std::string& source, int type)
     shader = glCreateShader(type);
     const char* cSource = source.c_str();
     glShaderSource(shader, 1, &cSource, nullptr);
-    
+
     int status;
     glCompileShader(shader);
     glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
@@ -139,4 +136,4 @@ uint64_t RenderProgram::_compileShader(const std::string& source, int type)
     return shader;
 }
 
-}
+}  // namespace examples

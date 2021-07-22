@@ -3,12 +3,11 @@
 
 #include <CollisionDetection.h>
 
-namespace phyanim {
-
-class AnimSystem {
-
-  public:
-
+namespace phyanim
+{
+class AnimSystem
+{
+public:
     AnimSystem(double dt);
 
     virtual ~AnimSystem(void);
@@ -21,21 +20,18 @@ class AnimSystem {
 
     void clear(void);
 
-  protected:
+protected:
+    virtual void _step(void) = 0;
 
-    virtual void _step(void)=0;
-
-  public:
-
+public:
     bool gravity;
 
-  protected:
-
+protected:
     Meshes _meshes;
 
     double _dt;
 };
 
-}
+}  // namespace phyanim
 
 #endif

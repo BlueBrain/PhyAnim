@@ -4,30 +4,27 @@
 
 namespace examples
 {
-
 MoveMeshApp::MoveMeshApp()
     : GLFWApp()
     , _editing(false)
     , _meshId(0)
     , _finished(false)
 {
-    
 }
 
 void MoveMeshApp::init(int argc, char** argv)
 {
     _scene = new Scene();
 
-
     phyanim::AABB limits;
-    for(uint32_t i = 1; i < argc; ++i)
+    for (uint32_t i = 1; i < argc; ++i)
     {
         phyanim::DrawableMesh* mesh;
         std::string file(argv[i]);
-    
+
         if (file.find(".node") != std::string::npos)
         {
-            std::string file1(argv[i+1]);
+            std::string file1(argv[i + 1]);
             mesh = new phyanim::DrawableMesh();
             mesh->load(file, file1);
             ++i;
@@ -56,10 +53,9 @@ void MoveMeshApp::init(int argc, char** argv)
 
 void MoveMeshApp::loop()
 {
-    while(!glfwWindowShouldClose(_window))
+    while (!glfwWindowShouldClose(_window))
     {
-
-        if(!_editing && !_finished)
+        if (!_editing && !_finished)
         {
             if (_meshId < _meshes.size())
             {
@@ -71,7 +67,8 @@ void MoveMeshApp::loop()
             {
                 for (uint32_t i = 0; i < _meshes.size(); ++i)
                 {
-                    std::string file("result_" + std::to_string(i+1) + ".tet");
+                    std::string file("result_" + std::to_string(i + 1) +
+                                     ".tet");
                     _meshes[i]->write(file);
                     std::cout << "File " << file << " saved." << std::endl;
                 }
@@ -85,15 +82,19 @@ void MoveMeshApp::loop()
     glfwTerminate();
 }
 
-void MoveMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
-                                int action, int mods)
+void MoveMeshApp::_keyCallback(GLFWwindow* window,
+                               int key,
+                               int scancode,
+                               int action,
+                               int mods)
 {
     GLFWApp::_keyCallback(window, key, scancode, action, mods);
 
     phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
     double dx = 0.1;
     bool meshDisplaced = false;
-    switch(key){
+    switch (key)
+    {
     case 'I':
         dxyz += phyanim::Vec3(0.0, 0.0, -dx);
         meshDisplaced = true;
@@ -119,8 +120,9 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
         meshDisplaced = true;
         break;
     }
-    if (meshDisplaced) {
-        for (auto node: _mesh->nodes)
+    if (meshDisplaced)
+    {
+        for (auto node : _mesh->nodes)
         {
             node->position += dxyz;
         }
@@ -129,7 +131,8 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
     }
     if (action == GLFW_PRESS)
     {
-        switch(key){
+        switch (key)
+        {
         case GLFW_KEY_SPACE:
             _editing = false;
             break;
@@ -137,5 +140,4 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window, int key, int scancode,
     }
 }
 
-
-}
+}  // namespace examples

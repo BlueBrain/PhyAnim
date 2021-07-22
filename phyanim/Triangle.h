@@ -3,30 +3,31 @@
 
 #include "Edge.h"
 
-namespace phyanim {
-
+namespace phyanim
+{
 class Triangle;
 
 typedef std::vector<Triangle*> Triangles;
 
-struct TrianglePointerHash { 
-  public:
+struct TrianglePointerHash
+{
+public:
     size_t operator()(const Triangle* triangle_) const;
 };
 
-struct TrianglePointerEqual { 
-  public:
-    bool operator()(const Triangle* triangle0_, const Triangle* triangle_) const;
-}; 
+struct TrianglePointerEqual
+{
+public:
+    bool operator()(const Triangle* triangle0_,
+                    const Triangle* triangle_) const;
+};
 
-typedef std::unordered_set<Triangle*, TrianglePointerHash,
-                           TrianglePointerEqual> UniqueTriangles;
+typedef std::unordered_set<Triangle*, TrianglePointerHash, TrianglePointerEqual>
+    UniqueTriangles;
 
-
-class Triangle {
-
-  public:
-
+class Triangle
+{
+public:
     Triangle(Node* n0_, Node* n1_, Node* n2_);
 
     virtual ~Triangle(void);
@@ -41,10 +42,11 @@ class Triangle {
 
     double area(void);
 
-    void sortedIds(unsigned int& id0_, unsigned int& id1_, unsigned int& id2_) const;
-      
+    void sortedIds(unsigned int& id0_,
+                   unsigned int& id1_,
+                   unsigned int& id2_) const;
 };
 
-}
+}  // namespace phyanim
 
 #endif

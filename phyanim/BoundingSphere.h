@@ -3,12 +3,11 @@
 
 #include <BoundingVolume.h>
 
-namespace phyanim {
-
-class BoundingSphere: public BoundingVolume {
-
-  public:
-    
+namespace phyanim
+{
+class BoundingSphere : public BoundingVolume
+{
+public:
     BoundingSphere(void);
 
     virtual ~BoundingSphere(void);
@@ -22,9 +21,8 @@ class BoundingSphere: public BoundingVolume {
     Vec3 center;
 
     double radius;
-
 };
 
-}
+}  // namespace phyanim
 
-#endif 
+#endif

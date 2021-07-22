@@ -3,12 +3,11 @@
 
 #include <Mesh.h>
 
-namespace phyanim {
-
-class AnimSystem {
-
-  public:
-
+namespace phyanim
+{
+class AnimSystem
+{
+public:
     AnimSystem(void);
 
     virtual ~AnimSystem(void);
@@ -25,16 +24,14 @@ class AnimSystem {
 
     bool floorCollision(void);
 
-  protected:
-
+protected:
     bool _gravity;
 
     bool _floor;
 
     Meshes _meshes;
-
 };
 
-}
+}  // namespace phyanim
 
 #endif
