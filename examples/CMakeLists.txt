@@ -11,6 +11,7 @@
   target_link_libraries(mesh_test PUBLIC phyanim)
   
 if(GLFW3_FOUND)
+  
   add_executable(animMesh animMesh.cpp AnimMeshApp.cpp GLFWApp.cpp Scene.cpp
     Camera.cpp RenderProgram.cpp)
   target_include_directories(animMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
@@ -34,4 +35,12 @@ if(GLFW3_FOUND)
   target_include_directories(moveMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     ${GLFW3_INCLUDE_DIR})
   target_link_libraries(moveMesh PUBLIC ${GLFW3_LIBRARY} phyanim)
+
+  add_definitions(-DPATH_TO_ICO="${CMAKE_CURRENT_SOURCE_DIR}/data/ico6.tet")
+  add_executable(somaGen somaGen.cpp SomaApp.cpp GLFWApp.cpp Scene.cpp
+    Camera.cpp RenderProgram.cpp Icosphere.cpp SomaGenerator.cpp)
+  target_include_directories(somaGen PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    ${GLFW3_INCLUDE_DIR})
+  target_link_libraries(somaGen PUBLIC ${GLFW3_LIBRARY} phyanim)
+
 endif()
