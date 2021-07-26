@@ -11,7 +11,6 @@ list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake)
 
 
 find_package(OpenGL REQUIRED)
-find_package(Eigen3 REQUIRED)
 find_package(GLEW REQUIRED)
 option(LIBIGL_WITH_TETGEN "Use Tetgen" ON)
 find_package(LIBIGL REQUIRED SYSTEM)

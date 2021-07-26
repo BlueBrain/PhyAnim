@@ -18,7 +18,7 @@ public:
     virtual ~ImplicitMassSpringSystem(void);
 
 private:
-    void _step();
+    void _step(Mesh* mesh);
 
     Tds _mat3ToTd(Mat3& mat_, unsigned int i_, unsigned int j_);
 

@@ -13,7 +13,7 @@ public:
     virtual ~ExplicitMassSpringSystem(void);
 
 protected:
-    void _step(void);
+    void _step(Mesh* mesh);
 };
 
 }  // namespace phyanim

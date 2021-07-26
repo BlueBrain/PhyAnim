@@ -13,40 +13,37 @@ ImplicitFEMSystem::ImplicitFEMSystem(double dt,
 
 ImplicitFEMSystem::~ImplicitFEMSystem(void) {}
 
-void ImplicitFEMSystem::addMesh(Mesh* mesh_)
-{
-    AnimSystem::addMesh(mesh_);
-    _conformKMatrix(mesh_);
-}
+void ImplicitFEMSystem::preprocessMesh(Mesh* mesh_) { _conformKMatrix(mesh_); }
 
-void ImplicitFEMSystem::_step()
+void ImplicitFEMSystem::_step(Mesh* mesh)
 {
-    for (auto mesh : _meshes)
+    Nodes& nodes = mesh->nodes;
+    uint64_t size = nodes.size() * 3;
+    Eigen::VectorXd u(size);
+    Eigen::VectorXd mv(size);
+    Eigen::VectorXd fext(size);
+    Eigen::VectorXd v_1(size);
+    Eigen::VectorXd b(size);
+
+    for (uint64_t i = 0; i < size / 3; ++i)
     {
-        Nodes& nodes = mesh->nodes;
-        uint64_t size = nodes.size() * 3;
-        Eigen::VectorXd u(size);
-        Eigen::VectorXd mv(size);
-        Eigen::VectorXd fext(size);
-        Eigen::VectorXd v_1(size);
-        Eigen::VectorXd b(size);
+        Node* node = mesh->nodes[i];
+        _addVec3ToVecX(i, node->position - node->initPosition, u);
+        _addVec3ToVecX(i, node->velocity * node->mass, mv);
+        _addVec3ToVecX(i, node->force, fext);
+    }
 
-        for (uint64_t i = 0; i < size / 3; ++i)
+    b = mv - _dt * (mesh->kMatrix * u - fext);
+    v_1 = mesh->AMatrixSolver.solve(b);
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint64_t i = 0; i < size / 3; ++i)
+    {
+        Node* node = mesh->nodes[i];
+        if (!node->fixed)
         {
-            Node* node = mesh->nodes[i];
-            _addVec3ToVecX(i, node->position - node->initPosition, u);
-            _addVec3ToVecX(i, node->velocity * node->mass, mv);
-            _addVec3ToVecX(i, node->force, fext);
-        }
-
-        b = mv - _dt * (mesh->kMatrix * u - fext);
-        v_1 = mesh->AMatrixSolver.solve(b);
-
-        for (uint64_t i = 0; i < size / 3; ++i)
-        {
-            // std::cout << "Node " << i << ": " << b[i*3] << " " << b[i*3+1] <<
-            // " " << b[i*3+2] << std::endl;
-            Node* node = mesh->nodes[i];
             Vec3 v(v_1[i * 3], v_1[i * 3 + 1], v_1[i * 3 + 2]);
             Vec3 x = node->position + v * _dt;
             node->velocity = v;

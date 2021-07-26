@@ -153,7 +153,7 @@ void OverlapApp::loop()
                 _mesh->nodesForceZero();
                 if (_collisionSys->update())
                 {
-                    _animSys->step();
+                    _animSys->step(_mesh);
                     _mesh->aabb->update();
                     _collisionSys->checkLimitsCollision();
                     auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
@@ -195,8 +195,7 @@ void OverlapApp::loop()
                     _collisionSys->dynamicMeshes(dynamicMeshes);
                     _collisionSys->staticMeshes(_staticMeshes);
 
-                    _animSys->clear();
-                    _animSys->addMesh(_mesh);
+                    _animSys->preprocessMesh(_mesh);
                     _anim = false;
                 }
                 else

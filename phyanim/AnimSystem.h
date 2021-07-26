@@ -12,16 +12,16 @@ public:
 
     virtual ~AnimSystem(void);
 
-    void step(void);
+    void step(Mesh* mesh);
 
-    virtual void addMesh(Mesh* mesh);
+    void step(Meshes meshes);
 
-    void addMeshes(Meshes meshes);
+    virtual void preprocessMesh(Mesh* mesh){};
 
-    void clear(void);
+    void preprocessMesh(Meshes meshes);
 
 protected:
-    virtual void _step(void) = 0;
+    virtual void _step(Mesh* mesh) = 0;
 
 public:
     bool gravity;

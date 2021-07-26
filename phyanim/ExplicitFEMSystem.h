@@ -13,7 +13,7 @@ public:
     virtual ~ExplicitFEMSystem(void);
 
 private:
-    void _step(void);
+    void _step(Mesh* mesh);
 
     void _polar(const Mat3& f_, Mat3& q_) const;
 };

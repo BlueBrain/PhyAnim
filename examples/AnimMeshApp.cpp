@@ -142,8 +142,9 @@ void AnimMeshApp::init(int argc, char** argv)
         mesh->upload();
         limits.update(mesh->aabb->root->aabb);
         _scene->addMesh(mesh);
-        _animSys->addMesh(mesh);
     }
+
+    _animSys->preprocessMesh(_meshes);
     _collisionSys->dynamicMeshes(_meshes);
 
     phyanim::Vec3 halfSides = limits.upperLimit - limits.center();
@@ -164,7 +165,7 @@ void AnimMeshApp::loop()
                 mesh->nodesForceZero();
             }
             _collisionSys->update();
-            _animSys->step();
+            _animSys->step(_meshes);
             for (auto mesh : _meshes)
             {
                 mesh->aabb->update();

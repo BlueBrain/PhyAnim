@@ -15,10 +15,10 @@ public:
 
     virtual ~ImplicitFEMSystem(void);
 
-    void addMesh(Mesh* mesh_);
+    void preprocessMesh(Mesh* mesh_);
 
 private:
-    void _step();
+    void _step(Mesh* mesh);
 
     void _conformKMatrix(Mesh* mesh);
 

@@ -25,7 +25,8 @@ public:
          Vec3 velocity_ = Vec3::Zero(),
          Vec3 force_ = Vec3::Zero(),
          double mass_ = 1.0,
-         bool surface_ = false);
+         bool surface_ = false,
+         bool fixed_ = false);
 
     virtual ~Node(void);
 
@@ -48,6 +49,8 @@ public:
     unsigned int id;
 
     bool surface;
+
+    bool fixed;
 };
 
 }  // namespace phyanim

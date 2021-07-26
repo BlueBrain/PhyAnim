@@ -7,7 +7,8 @@ Node::Node(Vec3 position_,
            Vec3 velocity_,
            Vec3 force_,
            double mass_,
-           bool surface_)
+           bool surface_,
+           bool fixed_)
     : initPosition(position_)
     , position(position_)
     , id(id_)
@@ -16,6 +17,7 @@ Node::Node(Vec3 position_,
     , force(force_)
     , mass(mass_)
     , surface(surface_)
+    , fixed(fixed_)
 {
 }
 
