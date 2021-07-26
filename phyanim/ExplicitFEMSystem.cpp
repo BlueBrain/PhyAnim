@@ -57,10 +57,14 @@ void ExplicitFEMSystem::_step()
                 damp * (lambda * strainrate.trace() * Mat3::Identity() +
                         2.0 * mu * strainrate);
 
-            tet->node0->force += q * (stress + stressrate) * tet->normal0 / 0.6;
-            tet->node1->force += q * (stress + stressrate) * tet->normal1 / 0.6;
-            tet->node2->force += q * (stress + stressrate) * tet->normal2 / 0.6;
-            tet->node3->force += q * (stress + stressrate) * tet->normal3 / 0.6;
+            tet->node0->force +=
+                q * (stress + stressrate) * -tet->normal0 / 0.6;
+            tet->node1->force +=
+                q * (stress + stressrate) * -tet->normal1 / 0.6;
+            tet->node2->force +=
+                q * (stress + stressrate) * -tet->normal2 / 0.6;
+            tet->node3->force +=
+                q * (stress + stressrate) * -tet->normal3 / 0.6;
         }
 
 #ifdef PHYANIM_USES_OPENMP

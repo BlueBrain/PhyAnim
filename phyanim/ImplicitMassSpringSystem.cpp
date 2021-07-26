@@ -17,7 +17,7 @@ void ImplicitMassSpringSystem::_step()
     {
         auto mesh = _meshes[i];
         auto ks = mesh->stiffness;
-        auto kd = 1000.0 * mesh->damping;
+        auto kd = mesh->damping;
 
         auto& nodes = mesh->nodes;
         unsigned int n = nodes.size();
@@ -43,9 +43,6 @@ void ImplicitMassSpringSystem::_step()
             A(nodeId * 3, nodeId * 3) = mass;
             A(nodeId * 3 + 1, nodeId * 3 + 1) = mass;
             A(nodeId * 3 + 2, nodeId * 3 + 2) = mass;
-            // coeffs.push_back(Td(mass, nodeId*3));
-            // coeffs.push_back(Td(mass, nodeId*3+1));
-            // coeffs.push_back(Td(mass, nodeId*3+2));
         }
 
         for (auto edge : mesh->edges)

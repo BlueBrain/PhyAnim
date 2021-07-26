@@ -15,7 +15,7 @@ void ExplicitMassSpringSystem::_step()
     for (auto mesh : _meshes)
     {
         auto ks = mesh->stiffness;
-        auto kd = 1000.0 * mesh->damping;
+        auto kd = mesh->damping;
 
         for (auto edge : mesh->edges)
         {

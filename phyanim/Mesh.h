@@ -22,10 +22,11 @@ public:
 
     virtual ~Mesh(void);
 
-    virtual void load(const std::string& file_);
+    virtual void load(const std::string& file_, bool createEdges = false);
 
     virtual void load(const std::string& nodeFile_,
-                      const std::string& eleFile_);
+                      const std::string& eleFile_,
+                      bool createEdges = false);
 
     void write(const std::string& file_);
 

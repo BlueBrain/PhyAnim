@@ -27,7 +27,7 @@ Mesh::Mesh(double stiffness_,
 
 Mesh::~Mesh(void) {}
 
-void Mesh::load(const std::string& file_)
+void Mesh::load(const std::string& file_, bool createEdges)
 {
     bool tetraLoaded = false;
     if (file_.empty())
@@ -67,11 +67,18 @@ void Mesh::load(const std::string& file_)
     {
         surfaceTriangles = triangles;
     }
+    if (createEdges)
+    {
+        trianglesToEdges();
+    }
     initArea = area();
+    computePerNodeMass();
     aabb->generate(nodes, surfaceTriangles, tetrahedra);
 }
 
-void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
+void Mesh::load(const std::string& nodeFile_,
+                const std::string& eleFile_,
+                bool createEdges)
 {
     if (nodeFile_.empty() || eleFile_.empty())
     {
@@ -83,7 +90,12 @@ void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
               << nodes.size() << " vertices" << std::endl;
     tetsToTriangles();
     initVolume = volume();
+    if (createEdges)
+    {
+        trianglesToEdges();
+    }
     initArea = area();
+    computePerNodeMass();
     aabb->generate(nodes, surfaceTriangles, tetrahedra);
 }
 

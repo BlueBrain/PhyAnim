@@ -1,8 +1,9 @@
 #ifndef __EXAMPLES_ANIM_MESH_APP__
 #define __EXAMPLES_ANIM_MESH_APP__
 
+#include <AnimSystem.h>
+#include <CollisionDetection.h>
 #include <GLFWApp.h>
-#include <ImplicitFEMSystem.h>
 
 namespace examples
 {
@@ -23,6 +24,14 @@ protected:
                       int mods);
 
 private:
+    enum SimSystem
+    {
+        exmass,
+        immass,
+        exfem,
+        imfem
+    };
+
     phyanim::AnimSystem* _animSys;
 
     phyanim::CollisionDetection* _collisionSys;
