@@ -47,6 +47,10 @@ public:
                    unsigned int& id2_) const;
 };
 
+typedef std::pair<Triangle*, Triangle*> TrianglePair;
+
+typedef std::vector<TrianglePair> TrianglePairs;
+
 }  // namespace phyanim
 
 #endif

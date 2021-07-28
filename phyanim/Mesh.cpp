@@ -1,4 +1,3 @@
-#include <BoundingSphere.h>
 #include <Mesh.h>
 #include <igl/readOBJ.h>
 #include <igl/readOFF.h>
