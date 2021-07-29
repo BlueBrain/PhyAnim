@@ -134,9 +134,6 @@ void OverlapApp::init(int argc, char** argv)
         }
     }
 
-    // phyanim::Vec3 halfSides = limits.upperLimit - limits.center();
-    // limits.lowerLimit -= halfSides;
-    // limits.upperLimit += halfSides;
     _setCameraPos(limits);
     _collisionSys->aabb = limits;
     _startTime = std::chrono::steady_clock::now();
@@ -153,6 +150,11 @@ void OverlapApp::loop()
                 _mesh->nodesForceZero();
                 if (_collisionSys->update())
                 {
+                    if (_mesh->kMatrix.data().size() == 0)
+                    {
+                        _animSys->preprocessMesh(_mesh);
+                    }
+
                     _animSys->step(_mesh);
                     _mesh->aabb->update();
                     _collisionSys->checkLimitsCollision();
@@ -195,7 +197,6 @@ void OverlapApp::loop()
                     _collisionSys->dynamicMeshes(dynamicMeshes);
                     _collisionSys->staticMeshes(_staticMeshes);
 
-                    _animSys->preprocessMesh(_mesh);
                     _anim = false;
                 }
                 else

@@ -25,6 +25,9 @@ void ImplicitFEMSystem::_step(Mesh* mesh)
     Eigen::VectorXd v_1(size);
     Eigen::VectorXd b(size);
 
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
     for (uint64_t i = 0; i < size / 3; ++i)
     {
         Node* node = mesh->nodes[i];
@@ -65,111 +68,135 @@ void ImplicitFEMSystem::_conformKMatrix(Mesh* mesh)
 
     Nodes& nodes = mesh->nodes;
     uint64_t size = nodes.size() * 3;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
     for (uint64_t i = 0; i < size / 3; ++i)
     {
         nodes[i]->id = i;
     }
 
-    Triplets kTriplets;
-    Triplets ATriplets;
-    _buildKTriplets(mesh->tetrahedra, dt2, kTriplets, ATriplets);
+    Triplets kTriplets(mesh->tetrahedra.size() * 16 * 9);
+    Triplets aTriplets(kTriplets.size() + nodes.size() * 3);
+    _buildKTriplets(mesh->tetrahedra, dt2, kTriplets, aTriplets);
+
+    uint64_t tripletId = kTriplets.size();
     for (uint64_t i = 0; i < size / 3; ++i)
     {
-        _addIdentityValueToTriplets(i, nodes[i]->mass, ATriplets);
+        _addIdentityValueToTriplets(i, nodes[i]->mass, aTriplets,
+                                    tripletId + i * 3);
     }
 
     mesh->kMatrix.resize(size, size);
     mesh->AMatrix.resize(size, size);
     mesh->kMatrix.resizeNonZeros(kTriplets.size());
-    mesh->AMatrix.resizeNonZeros(ATriplets.size());
+    mesh->AMatrix.resizeNonZeros(aTriplets.size());
     mesh->kMatrix.setFromTriplets(kTriplets.begin(), kTriplets.end());
-    mesh->AMatrix.setFromTriplets(ATriplets.begin(), ATriplets.end());
+    mesh->AMatrix.setFromTriplets(aTriplets.begin(), aTriplets.end());
 
     kTriplets.clear();
-    ATriplets.clear();
+    aTriplets.clear();
     mesh->AMatrixSolver.compute(mesh->AMatrix);
 }
 
 void ImplicitFEMSystem::_buildKTriplets(const Tetrahedra& tets,
                                         double dt2,
                                         Triplets& kTriplets,
-                                        Triplets& ATriplets)
+                                        Triplets& aTriplets)
 {
-    for (auto tet : tets)
+    for (uint64_t i = 0; i < tets.size(); ++i)
     {
+        auto tet = tets[i];
         uint64_t id0 = tet->node0->id;
         uint64_t id1 = tet->node1->id;
         uint64_t id2 = tet->node2->id;
         uint64_t id3 = tet->node3->id;
 
+        uint64_t tripletId = i * 16 * 9;
+
         // row 0
         Mat3 k = tet->k00;
-        _addMatrixToTriplets(id0, id0, k, kTriplets);
+        _addMatrixToTriplets(id0, id0, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id0, id0, k, ATriplets);
+        _addMatrixToTriplets(id0, id0, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k01;
-        _addMatrixToTriplets(id0, id1, k, kTriplets);
+        _addMatrixToTriplets(id0, id1, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id0, id1, k, ATriplets);
+        _addMatrixToTriplets(id0, id1, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k02;
-        _addMatrixToTriplets(id0, id2, k, kTriplets);
+        _addMatrixToTriplets(id0, id2, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id0, id2, k, ATriplets);
+        _addMatrixToTriplets(id0, id2, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k03;
-        _addMatrixToTriplets(id0, id3, k, kTriplets);
+        _addMatrixToTriplets(id0, id3, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id0, id3, k, ATriplets);
+        _addMatrixToTriplets(id0, id3, k, aTriplets, tripletId);
         // row 1
+        tripletId += 9;
         k = tet->k01.transpose();
-        _addMatrixToTriplets(id1, id0, k, kTriplets);
+        _addMatrixToTriplets(id1, id0, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id1, id0, k, ATriplets);
+        _addMatrixToTriplets(id1, id0, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k11;
-        _addMatrixToTriplets(id1, id1, k, kTriplets);
+        _addMatrixToTriplets(id1, id1, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id1, id1, k, ATriplets);
+        _addMatrixToTriplets(id1, id1, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k12;
-        _addMatrixToTriplets(id1, id2, k, kTriplets);
+        _addMatrixToTriplets(id1, id2, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id1, id2, k, ATriplets);
+        _addMatrixToTriplets(id1, id2, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k13;
-        _addMatrixToTriplets(id1, id3, k, kTriplets);
+        _addMatrixToTriplets(id1, id3, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id1, id3, k, ATriplets);
+        _addMatrixToTriplets(id1, id3, k, aTriplets, tripletId);
         // row 2
+        tripletId += 9;
         k = tet->k02.transpose();
-        _addMatrixToTriplets(id2, id0, k, kTriplets);
+        _addMatrixToTriplets(id2, id0, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id2, id0, k, ATriplets);
+        _addMatrixToTriplets(id2, id0, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k12.transpose();
-        _addMatrixToTriplets(id2, id1, k, kTriplets);
+        _addMatrixToTriplets(id2, id1, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id2, id1, k, ATriplets);
+        _addMatrixToTriplets(id2, id1, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k22;
-        _addMatrixToTriplets(id2, id2, k, kTriplets);
+        _addMatrixToTriplets(id2, id2, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id2, id2, k, ATriplets);
+        _addMatrixToTriplets(id2, id2, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k23;
-        _addMatrixToTriplets(id2, id3, k, kTriplets);
+        _addMatrixToTriplets(id2, id3, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id2, id3, k, ATriplets);
+        _addMatrixToTriplets(id2, id3, k, aTriplets, tripletId);
         // row 3
+        tripletId += 9;
         k = tet->k03.transpose();
-        _addMatrixToTriplets(id3, id0, k, kTriplets);
+        _addMatrixToTriplets(id3, id0, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id3, id0, k, ATriplets);
+        _addMatrixToTriplets(id3, id0, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k13.transpose();
-        _addMatrixToTriplets(id3, id1, k, kTriplets);
+        _addMatrixToTriplets(id3, id1, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id3, id1, k, ATriplets);
+        _addMatrixToTriplets(id3, id1, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k23.transpose();
-        _addMatrixToTriplets(id3, id2, k, kTriplets);
+        _addMatrixToTriplets(id3, id2, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id3, id2, k, ATriplets);
+        _addMatrixToTriplets(id3, id2, k, aTriplets, tripletId);
+        tripletId += 9;
         k = tet->k33;
-        _addMatrixToTriplets(id3, id3, k, kTriplets);
+        _addMatrixToTriplets(id3, id3, k, kTriplets, tripletId);
         k *= dt2;
-        _addMatrixToTriplets(id3, id3, k, ATriplets);
+        _addMatrixToTriplets(id3, id3, k, aTriplets, tripletId);
     }
 }
 
@@ -182,8 +209,13 @@ void ImplicitFEMSystem::_computeTetsK(const Tetrahedra& tets,
     D << D0, D1, D1, 0.0, 0.0, 0.0, D1, D0, D1, 0.0, 0.0, 0.0, D1, D1, D0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, D2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, D2, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, D2;
-    for (auto tet : tets)
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint64_t i = 0; i < tets.size(); ++i)
     {
+        auto tet = tets[i];
         Vec3 b1 = tet->invBasis.row(0);
         Vec3 b2 = tet->invBasis.row(1);
         Vec3 b3 = tet->invBasis.row(2);
@@ -222,17 +254,6 @@ void ImplicitFEMSystem::_computeTetsK(const Tetrahedra& tets,
         tet->k12 = B1T * D * B2 * volume;
         tet->k13 = B1T * D * B3 * volume;
         tet->k23 = B2T * D * B3 * volume;
-
-        // tet->k00 =  _buildTetK(b0, b0, D0, D1, D2, volume);
-        // tet->k11 =  _buildTetK(b1, b1, D0, D1, D2, volume);
-        // tet->k22 =  _buildTetK(b2, b2, D0, D1, D2, volume);
-        // tet->k33 =  _buildTetK(b3, b3, D0, D1, D2, volume);
-        // tet->k01 =  _buildTetK(b0, b1, D0, D1, D2, volume);
-        // tet->k02 =  _buildTetK(b0, b2, D0, D1, D2, volume);
-        // tet->k03 =  _buildTetK(b0, b3, D0, D1, D2, volume);
-        // tet->k12 =  _buildTetK(b1, b2, D0, D1, D2, volume);
-        // tet->k13 =  _buildTetK(b1, b3, D0, D1, D2, volume);
-        // tet->k23 =  _buildTetK(b2, b3, D0, D1, D2, volume);
     }
 }
 
@@ -264,7 +285,8 @@ Mat3 ImplicitFEMSystem::_buildTetK(Vec3 bn_,
 void ImplicitFEMSystem::_addMatrixToTriplets(uint64_t id0,
                                              uint64_t id1,
                                              const Mat3& m,
-                                             Triplets& triplets)
+                                             Triplets& triplets,
+                                             uint64_t tripletId)
 {
     id0 *= 3;
     id1 *= 3;
@@ -273,20 +295,22 @@ void ImplicitFEMSystem::_addMatrixToTriplets(uint64_t id0,
     {
         for (uint64_t j = 0; j < 3; ++j)
         {
-            triplets.push_back(Triplet(id0 + i, id1 + j, m(i, j)));
+            triplets[tripletId + (i * 3 + j)] =
+                Triplet(id0 + i, id1 + j, m(i, j));
         }
     }
 }
 
 void ImplicitFEMSystem::_addIdentityValueToTriplets(uint64_t id0,
                                                     double value,
-                                                    Triplets& triplets)
+                                                    Triplets& triplets,
+                                                    uint64_t tripletId)
 {
     id0 *= 3;
 
     for (uint64_t i = 0; i < 3; ++i)
     {
-        triplets.push_back(Triplet(id0 + i, id0 + i, value));
+        triplets[tripletId + i] = Triplet(id0 + i, id0 + i, value);
     }
 }
 void ImplicitFEMSystem::_addVec3ToVecX(uint64_t id,
