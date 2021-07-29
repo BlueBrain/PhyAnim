@@ -1,14 +1,18 @@
-  add_executable(tetrahedralizeMesh tetrahedralizeMesh.cpp)
-  target_include_directories(tetrahedralizeMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(tetrahedralizeMesh PUBLIC igl::core igl::tetgen)
+# Data copy to build folder
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION 
+  ${CMAKE_BINARY_DIR}/data)
 
-  add_executable(checkCollision checkCollision.cpp)
-  target_include_directories(checkCollision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(checkCollision PUBLIC phyanim)
+add_executable(tetrahedralizeMesh tetrahedralizeMesh.cpp)
+target_include_directories(tetrahedralizeMesh PUBLIC 
+  ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tetrahedralizeMesh PUBLIC igl::core igl::tetgen)
 
-  add_executable(mesh_test mesh_test.cpp)
-  target_include_directories(mesh_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(mesh_test PUBLIC phyanim)
+add_custom_command( TARGET  tetrahedralizeMesh POST_BUILD COMMAND   
+  tetrahedralizeMesh ${CMAKE_BINARY_DIR}/data/*)
+
+add_executable(checkCollision checkCollision.cpp)
+target_include_directories(checkCollision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(checkCollision PUBLIC phyanim)
   
 if(GLFW3_FOUND)
   
@@ -46,33 +50,3 @@ if(GLFW3_FOUND)
 endif()
 
 # Data copy to build folder
-
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/tet.off DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/bar.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/cube.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/cylinder.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ico.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ico5.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ico6.ply DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/tet.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ico5.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ico6.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/mesh-1-0.5.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/mesh-1-1.0.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/mesh-2-0.5.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/mesh-2-1.0.tet DESTINATION 
-  ${CMAKE_BINARY_DIR}/data)
