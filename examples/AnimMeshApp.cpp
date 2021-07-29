@@ -31,7 +31,7 @@ void AnimMeshApp::init(int argc, char** argv)
     double dt = 0.01;
     double damping = 1.0;
     double density = 1.0;
-    SimSystem simSystem = exmass;
+    SimSystem simSystem = imfem;
 
     std::vector<std::string> files;
     for (uint64_t i = 1; i < argc; ++i)

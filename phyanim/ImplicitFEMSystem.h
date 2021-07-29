@@ -25,7 +25,7 @@ private:
     void _buildKTriplets(const Tetrahedra& tets,
                          double dt2,
                          Triplets& kTriplets,
-                         Triplets& ATriplets);
+                         Triplets& aTriplets);
 
     void _computeTetsK(const Tetrahedra& tets, double D0, double D1, double D2);
 
@@ -39,10 +39,14 @@ private:
     void _addMatrixToTriplets(uint64_t id0,
                               uint64_t id1,
                               const Mat3& m,
-                              Triplets& triplets);
+                              Triplets& triplets,
+                              uint64_t tripletId);
+
     void _addIdentityValueToTriplets(uint64_t id0,
                                      double value,
-                                     Triplets& triplets);
+                                     Triplets& triplets,
+                                     uint64_t tripletId);
+
     void _addVec3ToVecX(uint64_t id, const Vec3& value, Eigen::VectorXd& vecx);
 };
 
