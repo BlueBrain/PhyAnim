@@ -34,9 +34,10 @@ private:
 
     phyanim::AnimSystem* _animSys;
 
-    phyanim::CollisionDetection* _collisionSys;
-
     phyanim::Meshes _meshes;
+    phyanim::HierarchicalAABBs _dynamics;
+
+    double _collisionStiffness;
 
     bool _anim;
 };

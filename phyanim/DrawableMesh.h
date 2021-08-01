@@ -1,7 +1,7 @@
 #ifndef __PHYANIM_DRAWABLEMESH__
 #define __PHYANIM_DRAWABLEMESH__
 
-#include <Mesh.h>
+#include "Mesh.h"
 
 namespace phyanim
 {

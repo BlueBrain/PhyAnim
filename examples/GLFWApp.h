@@ -2,7 +2,8 @@
 #define __EXAMPLES_GLFW_APP__
 
 #include <GLFW/glfw3.h>
-#include <Scene.h>
+
+#include "Scene.h"
 
 namespace examples
 {
@@ -18,7 +19,7 @@ public:
     void loop();
 
 protected:
-    void _setCameraPos(phyanim::AABB limits);
+    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits);
 
     virtual void _keyCallback(GLFWwindow* window,
                               int key,
@@ -71,6 +72,8 @@ protected:
     bool _rightButtonPressed;
 
     double _cameraPosInc;
+
+    phyanim::AxisAlignedBoundingBox _limits;
 };
 
 }  // namespace examples

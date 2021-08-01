@@ -76,10 +76,10 @@ void SomaApp::init(int argc, char** argv)
     std::cout << "dt: " << _dt << "\nkso: " << _kso << "\nksi: " << _ksi
               << "\nksp: " << _ksp << "\nkd: " << _kd << std::endl;
     phyanim::DrawableMesh* mesh;
-    phyanim::AABB limits;
+    phyanim::AxisAlignedBoundingBox limits;
     mesh = somaGen->mesh();
     mesh->upload();
-    limits.update(mesh->aabb->root->aabb);
+    limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
     _scene->addMesh(mesh);
     _setCameraPos(limits);
 }

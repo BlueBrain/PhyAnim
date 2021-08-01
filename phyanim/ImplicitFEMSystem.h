@@ -1,7 +1,7 @@
 #ifndef __PHYANIM_IMPLICITFEMSYSTEM__
 #define __PHYANIM_IMPLICITFEMSYSTEM__
 
-#include <AnimSystem.h>
+#include "AnimSystem.h"
 
 namespace phyanim
 {
@@ -22,12 +22,12 @@ private:
 
     void _conformKMatrix(Mesh* mesh);
 
-    void _buildKTriplets(const Tetrahedra& tets,
+    void _buildKTriplets(const Primitives& tets,
                          double dt2,
                          Triplets& kTriplets,
                          Triplets& aTriplets);
 
-    void _computeTetsK(const Tetrahedra& tets, double D0, double D1, double D2);
+    void _computeTetsK(const Primitives& tets, double D0, double D1, double D2);
 
     Mat3 _buildTetK(Vec3 bn,
                     Vec3 bm,

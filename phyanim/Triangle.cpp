@@ -11,7 +11,16 @@ Triangle::Triangle(Node* n0_, Node* n1_, Node* n2_)
 
 Triangle::~Triangle() {}
 
-Edges Triangle::edges()
+Nodes Triangle::nodes() const
+{
+    Nodes nodes(3);
+    nodes[0] = node0;
+    nodes[1] = node1;
+    nodes[2] = node2;
+    return nodes;
+}
+
+Edges Triangle::edges() const
 {
     Edges edges(3);
     edges[0] = new Edge(node0, node1);
@@ -20,7 +29,7 @@ Edges Triangle::edges()
     return edges;
 }
 
-double Triangle::area()
+double Triangle::area() const
 {
     Vec3 axis0 = node1->position - node0->position;
     Vec3 axis1 = node2->position - node0->position;

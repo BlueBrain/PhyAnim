@@ -1,65 +1,54 @@
 #ifndef __PHYANIM_HIERARCHICAL_AABB__
 #define __PHYANIM_HIERARCHICAL_AABB__
 
+#include "AxisAlignedBoundingBox.h"
+
 namespace phyanim
 {
-class AABBNode
+class HierarchicalAABB;
+
+typedef HierarchicalAABB* HierarchicalAABBPtr;
+
+typedef std::vector<HierarchicalAABBPtr> HierarchicalAABBs;
+
+class HierarchicalAABB : public AxisAlignedBoundingBox
 {
 public:
-    AABBNode(void);
+    HierarchicalAABB();
 
-    AABBNode(AABBNode* other);
+    HierarchicalAABB(Primitives& primitives, uint64_t cellSize = 10);
 
-    ~AABBNode(void);
+    ~HierarchicalAABB();
 
-    void divide(void);
+    void update();
 
-    void outterNodes(Nodes& nodes_, const AABB& aabb_);
+    Nodes outterNodes(const AxisAlignedBoundingBox& axisAlignedBoundingBox);
 
-    void trianglePairs(TrianglePairs& trianglePairs_,
-                       AABBNode* node0_,
-                       AABBNode* node1_);
+    Primitives insidePrimitives(
+        const AxisAlignedBoundingBox& axisAlignedBoundingBox);
 
-    void update(void);
-
-    AABB aabb;
-
-    AABBNode* child0;
-
-    AABBNode* child1;
-
-    Nodes nodes;
-
-    Triangles triangles;
-
-    Tetrahedra tetrahedra;
+    PrimitivePairs collidingPrimitives(HierarchicalAABBPtr hierarchicalAABB);
 
 protected:
-    Vec3 _center(Triangle* triangle_);
-};
+    void _update();
 
-class AxisAlignedBoundingBox
-{
-public:
-    AxisAlignedBoundingBox(void);
+    void _divide(Primitives& primitives, uint64_t cellSize);
 
-    AxisAlignedBoundingBox(Nodes& nodes_,
-                           Triangles& triangles_,
-                           Tetrahedra& tetrahedra_);
+    void _outterNodes(const AxisAlignedBoundingBox& aabb, Nodes& nodes);
 
-    virtual ~AxisAlignedBoundingBox(void);
+    void _insidePrimitives(const AxisAlignedBoundingBox& axisAlignedBoundingBox,
+                           Primitives& primitives);
 
-    void generate(Nodes& nodes_,
-                  Triangles& triangles_,
-                  Tetrahedra& tetrahedra_);
+    void _collidingPrimitives(HierarchicalAABBPtr aabb0,
+                              HierarchicalAABBPtr aabb1,
+                              PrimitivePairs& primitivePairs);
 
-    void update(void);
+protected:
+    Primitives _primitives;
 
-    Nodes outterNodes(const AABB& aabb_);
+    HierarchicalAABBPtr _child0;
 
-    TrianglePairs trianglePairs(AxisAlignedBoundingBox* other_);
-
-    AABBNode* root;
+    HierarchicalAABBPtr _child1;
 };
 
 }  // namespace phyanim

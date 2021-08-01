@@ -16,7 +16,7 @@ void MoveMeshApp::init(int argc, char** argv)
 {
     _scene = new Scene();
 
-    phyanim::AABB limits;
+    phyanim::AxisAlignedBoundingBox limits;
     for (uint32_t i = 1; i < argc; ++i)
     {
         phyanim::DrawableMesh* mesh;
@@ -43,7 +43,7 @@ void MoveMeshApp::init(int argc, char** argv)
         if (mesh)
         {
             mesh->upload();
-            limits.update(mesh->aabb->root->aabb);
+            limits.unite(phyanim::HierarchicalAABB(mesh->surfaceTriangles));
             _meshes.push_back(mesh);
             _scene->addMesh(mesh);
         }

@@ -1,8 +1,8 @@
 #ifndef __PHYANIM_MESH__
 #define __PHYANIM_MESH__
 
-#include <AxisAlignedBoundingBox.h>
-#include <Tetrahedron.h>
+#include <HierarchicalAABB.h>
+#include <Primitive.h>
 
 #include <Eigen/Sparse>
 
@@ -10,7 +10,9 @@ namespace phyanim
 {
 class Mesh;
 
-typedef std::vector<Mesh*> Meshes;
+typedef Mesh* MeshPtr;
+
+typedef std::vector<MeshPtr> Meshes;
 
 class Mesh
 {
@@ -62,11 +64,11 @@ public:
 
     Nodes nodes;
 
-    Triangles surfaceTriangles;
+    Primitives surfaceTriangles;
 
-    Triangles triangles;
+    Primitives triangles;
 
-    Tetrahedra tetrahedra;
+    Primitives tetrahedra;
 
     Edges edges;
 
@@ -85,8 +87,6 @@ public:
     Eigen::SparseMatrix<double> kMatrix;
     Eigen::SparseMatrix<double> AMatrix;
     Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> AMatrixSolver;
-
-    AxisAlignedBoundingBox* aabb;
 
 private:
     void _split(const std::string& string_,

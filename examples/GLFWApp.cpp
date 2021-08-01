@@ -38,7 +38,6 @@ void GLFWApp::init(int argc, char** argv)
     }
 
     phyanim::DrawableMesh* mesh;
-    phyanim::AABB limits;
     for (uint32_t i = 1; i < argc; ++i)
     {
         std::string file(argv[i]);
@@ -46,10 +45,10 @@ void GLFWApp::init(int argc, char** argv)
         std::cout << "Loading file " << file << std::endl;
         mesh->load(file);
         mesh->upload();
-        limits.update(mesh->aabb->root->aabb);
+        _limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
         _scene->addMesh(mesh);
     }
-    _setCameraPos(limits);
+    _setCameraPos(_limits);
 }
 
 void GLFWApp::loop()
@@ -63,12 +62,12 @@ void GLFWApp::loop()
     glfwTerminate();
 }
 
-void GLFWApp::_setCameraPos(phyanim::AABB limits)
+void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
 {
     phyanim::Vec3 cameraPos = limits.center();
-    phyanim::Vec3 dist = limits.upperLimit - cameraPos;
+    phyanim::Vec3 dist = limits.upperLimit() - cameraPos;
     double max = std::max(std::max(dist.x(), dist.y()), dist.z());
-    cameraPos.z() = limits.upperLimit.z() + max;
+    cameraPos.z() = limits.upperLimit().z() + max;
     _cameraPosInc = max * 0.01;
     _scene->cameraPosition(cameraPos);
 }

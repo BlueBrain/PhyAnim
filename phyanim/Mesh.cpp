@@ -1,4 +1,5 @@
-#include <Mesh.h>
+#include "Mesh.h"
+
 #include <igl/readOBJ.h>
 #include <igl/readOFF.h>
 #include <igl/readPLY.h>
@@ -7,6 +8,9 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 namespace phyanim
 {
@@ -21,7 +25,6 @@ Mesh::Mesh(double stiffness_,
     , damping(damping_)
     , poissonRatio(poissonRatio_)
 {
-    aabb = new AxisAlignedBoundingBox();
 }
 
 Mesh::~Mesh(void) {}
@@ -72,7 +75,6 @@ void Mesh::load(const std::string& file_, bool createEdges)
     }
     initArea = area();
     computePerNodeMass();
-    aabb->generate(nodes, surfaceTriangles, tetrahedra);
 }
 
 void Mesh::load(const std::string& nodeFile_,
@@ -95,7 +97,6 @@ void Mesh::load(const std::string& nodeFile_,
     }
     initArea = area();
     computePerNodeMass();
-    aabb->generate(nodes, surfaceTriangles, tetrahedra);
 }
 
 void Mesh::write(const std::string& file_)
@@ -127,8 +128,9 @@ double Mesh::volume()
 
     if (!tetrahedra.empty())
     {
-        for (auto tet : tetrahedra)
+        for (auto primitive : tetrahedra)
         {
+            auto tet = dynamic_cast<TetrahedronPtr>(primitive);
             volume += tet->volume();
         }
     }
@@ -140,15 +142,17 @@ double Mesh::area()
     double sumArea = 0.0;
     if (surfaceTriangles.size() > 0)
     {
-        for (auto tri : surfaceTriangles)
+        for (auto prim : surfaceTriangles)
         {
+            auto tri = dynamic_cast<TrianglePtr>(prim);
             sumArea += tri->area();
         }
     }
     else
     {
-        for (auto tri : triangles)
+        for (auto prim : triangles)
         {
+            auto tri = dynamic_cast<TrianglePtr>(prim);
             sumArea += tri->area();
         }
     }
@@ -160,9 +164,10 @@ void Mesh::trianglesToNodes()
     std::set<Node*> uNodes;
     for (auto tri : triangles)
     {
-        uNodes.insert(tri->node0);
-        uNodes.insert(tri->node1);
-        uNodes.insert(tri->node2);
+        for (auto node : tri->nodes())
+        {
+            uNodes.insert(node);
+        }
     }
     nodes.clear();
     nodes.insert(nodes.end(), uNodes.begin(), uNodes.end());
@@ -182,10 +187,10 @@ void Mesh::tetsToNodes()
     std::set<Node*> uNodes;
     for (auto tet : tetrahedra)
     {
-        uNodes.insert(tet->node0);
-        uNodes.insert(tet->node1);
-        uNodes.insert(tet->node2);
-        uNodes.insert(tet->node3);
+        for (auto node : tet->nodes())
+        {
+            uNodes.insert(node);
+        }
     }
     nodes.clear();
     nodes.insert(nodes.end(), uNodes.begin(), uNodes.end());
@@ -210,8 +215,9 @@ void Mesh::tetsToTriangles()
     surfaceTriangles.clear();
     UniqueTriangles surfaceTs;
     std::pair<UniqueTriangles::iterator, bool> insertionResult;
-    for (auto tet : tetrahedra)
+    for (auto primitive : tetrahedra)
     {
+        auto tet = dynamic_cast<TetrahedronPtr>(primitive);
         for (auto t : tet->triangles())
         {
             insertionResult = surfaceTs.insert(t);
@@ -239,17 +245,16 @@ void Mesh::computePerNodeMass(void)
             auto node = nodes[i];
             node->mass = 0.0;
         }
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
+
         for (unsigned int i = 0; i < tetrahedra.size(); i++)
         {
-            auto tet = tetrahedra[i];
+            auto tet = dynamic_cast<TetrahedronPtr>(tetrahedra[i]);
             double massPerNode = tet->initVolume * density * 0.25;
-            tet->node0->mass += massPerNode;
-            tet->node1->mass += massPerNode;
-            tet->node2->mass += massPerNode;
-            tet->node3->mass += massPerNode;
+
+            for (auto node : tet->nodes())
+            {
+                node->mass += massPerNode;
+            }
         }
     }
     else
@@ -305,8 +310,9 @@ Mesh* Mesh::copy(bool surfaceTriangles_,
     }
     if (surfaceTriangles_)
     {
-        for (auto triangle : surfaceTriangles)
+        for (auto primitive : surfaceTriangles)
         {
+            auto triangle = dynamic_cast<TrianglePtr>(primitive);
             auto newTriangle = new Triangle(nodesDicc[triangle->node0],
                                             nodesDicc[triangle->node1],
                                             nodesDicc[triangle->node2]);
@@ -315,8 +321,9 @@ Mesh* Mesh::copy(bool surfaceTriangles_,
     }
     if (triangles_)
     {
-        for (auto triangle : triangles)
+        for (auto primitive : triangles)
         {
+            auto triangle = dynamic_cast<TrianglePtr>(primitive);
             auto newTriangle = new Triangle(nodesDicc[triangle->node0],
                                             nodesDicc[triangle->node1],
                                             nodesDicc[triangle->node2]);
@@ -325,9 +332,10 @@ Mesh* Mesh::copy(bool surfaceTriangles_,
     }
     if (tetrahedra_)
     {
-        for (auto tet : tetrahedra)
+        for (auto primitive : tetrahedra)
         {
-            auto newTet =
+            auto tet = dynamic_cast<TetrahedronPtr>(primitive);
+            PrimitivePtr newTet =
                 new Tetrahedron(nodesDicc[tet->node0], nodesDicc[tet->node1],
                                 nodesDicc[tet->node2], nodesDicc[tet->node3]);
             mesh->tetrahedra.push_back(newTet);
@@ -620,8 +628,8 @@ void Mesh::_writeOFF(const std::string& file_)
     for (unsigned int i = 0; i < nFacets; i++)
     {
         Eigen::MatrixXi facet(1, 3);
-        facet << surfaceTriangles[i]->node0->id, surfaceTriangles[i]->node1->id,
-            surfaceTriangles[i]->node2->id;
+        auto triangle = dynamic_cast<TrianglePtr>(surfaceTriangles[i]);
+        facet << triangle->node0->id, triangle->node1->id, triangle->node2->id;
         facets.row(i) = facet;
     }
     igl::writeOFF(file_.c_str(), vertices, facets);
@@ -645,9 +653,9 @@ void Mesh::_writeTET(const std::string& file_)
     }
     for (unsigned int i = 0; i < nTets; i++)
     {
-        os << tetrahedra[i]->node0->id << " " << tetrahedra[i]->node1->id << " "
-           << tetrahedra[i]->node2->id << " " << tetrahedra[i]->node3->id
-           << "\n";
+        auto tet = dynamic_cast<TetrahedronPtr>(tetrahedra[i]);
+        os << tet->node0->id << " " << tet->node1->id << " " << tet->node2->id
+           << " " << tet->node3->id << "\n";
     }
     os.close();
 }

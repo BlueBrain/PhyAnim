@@ -1,69 +1,51 @@
-#include <CollisionDetection.h>
+#include "CollisionDetection.h"
 
 #include <iostream>
 
 namespace phyanim
 {
-CollisionDetection::CollisionDetection(double stiffness_)
-    : aabb(Vec3(-100.0, -100.0, -100.0), Vec3(100.0, 100.0, 100.0))
-    , stiffness(stiffness_)
+bool CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
+                                           double stiffness)
 {
-#ifdef PHYANIM_USES_OPENMP
-    _writelock = new omp_lock_t;
-    omp_init_lock(_writelock);
-#endif
+    HierarchicalAABBs statics;
+    return computeCollisions(dynamics, statics, stiffness);
 }
 
-CollisionDetection::~CollisionDetection()
+bool CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
+                                           HierarchicalAABBs& statics,
+                                           double stiffness)
 {
-#ifdef PHYANIM_USES_OPENMP
-    omp_destroy_lock(_writelock);
-    delete _writelock;
-#endif
-}
-
-void CollisionDetection::dynamicMeshes(Meshes meshes_)
-{
-    _dynamicMeshes = meshes_;
-}
-
-void CollisionDetection::staticMeshes(Meshes meshes_)
-{
-    _staticMeshes = meshes_;
-}
-
-void CollisionDetection::clear()
-{
-    _dynamicMeshes.clear();
-    _staticMeshes.clear();
-}
-
-bool CollisionDetection::update()
-{
-    unsigned int size = _dynamicMeshes.size();
+    unsigned int size = dynamics.size();
     bool detectedCollision = false;
     for (unsigned int i = 0; i < size; ++i)
     {
-        auto mesh0 = _dynamicMeshes[i];
+        auto dynamic0 = dynamics[i];
         for (unsigned int j = i + 1; j < size; ++j)
         {
-            auto mesh1 = _dynamicMeshes[j];
-            detectedCollision |= _checkMeshesCollision(mesh0, mesh1);
+            auto dynamic1 = dynamics[j];
+            detectedCollision |=
+                _checkMeshesCollision(dynamic0, dynamic1, stiffness);
         }
-        for (unsigned int j = 0; j < _staticMeshes.size(); j++)
+        for (unsigned int j = 0; j < statics.size(); j++)
         {
-            auto mesh1 = _staticMeshes[j];
-            detectedCollision |= _checkMeshesCollision(mesh0, mesh1);
+            auto dynamic1 = statics[j];
+            detectedCollision |=
+                _checkMeshesCollision(dynamic0, dynamic1, stiffness);
         }
     }
     return detectedCollision;
 }
 
-void CollisionDetection::checkLimitsCollision(void)
+void CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
+                                           const AxisAlignedBoundingBox& aabb,
+                                           double stiffness)
 {
-    for (auto mesh : _dynamicMeshes)
+    for (auto dynamic : dynamics)
     {
-        auto nodes = mesh->aabb->outterNodes(aabb);
+        auto nodes = dynamic->outterNodes(aabb);
+
+        Vec3 lowerLimit = aabb.lowerLimit();
+        Vec3 upperLimit = aabb.upperLimit();
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -72,34 +54,34 @@ void CollisionDetection::checkLimitsCollision(void)
             auto node = nodes[i];
             bool collision = false;
             Vec3 pos = node->position;
-            if (pos.x() <= aabb.lowerLimit.x())
+            if (pos.x() <= lowerLimit.x())
             {
-                pos.x() = aabb.lowerLimit.x();
+                pos.x() = lowerLimit.x();
                 collision = true;
             }
-            else if (pos.x() >= aabb.upperLimit.x())
+            else if (pos.x() >= upperLimit.x())
             {
-                pos.x() = aabb.upperLimit.x();
+                pos.x() = upperLimit.x();
                 collision = true;
             }
-            if (pos.y() <= aabb.lowerLimit.y())
+            if (pos.y() <= lowerLimit.y())
             {
-                pos.y() = aabb.lowerLimit.y();
+                pos.y() = lowerLimit.y();
                 collision = true;
             }
-            else if (pos.y() >= aabb.upperLimit.y())
+            else if (pos.y() >= upperLimit.y())
             {
-                pos.y() = aabb.upperLimit.y();
+                pos.y() = upperLimit.y();
                 collision = true;
             }
-            if (pos.z() <= aabb.lowerLimit.z())
+            if (pos.z() <= lowerLimit.z())
             {
-                pos.z() = aabb.lowerLimit.z();
+                pos.z() = lowerLimit.z();
                 collision = true;
             }
-            else if (pos.z() >= aabb.upperLimit.z())
+            else if (pos.z() >= upperLimit.z())
             {
-                pos.z() = aabb.upperLimit.z();
+                pos.z() = upperLimit.z();
                 collision = true;
             }
 
@@ -112,31 +94,40 @@ void CollisionDetection::checkLimitsCollision(void)
     }
 }
 
-bool CollisionDetection::_checkMeshesCollision(Mesh* m0_, Mesh* m1_)
+bool CollisionDetection::_checkMeshesCollision(HierarchicalAABBPtr haabb0,
+                                               HierarchicalAABBPtr haabb1,
+                                               double stiffness)
 {
     bool detectedCollision = false;
-    auto aabb0 = m0_->aabb;
-    auto aabb1 = m1_->aabb;
-    auto trianglePairs = aabb0->trianglePairs(aabb1);
+    auto trianglePairs = haabb0->collidingPrimitives(haabb1);
 #ifdef PHYANIM_USES_OPENMP
+    omp_lock_t writelock;
+    omp_init_lock(&writelock);
 #pragma omp parallel for
 #endif
     for (unsigned int i = 0; i < trianglePairs.size(); i++)
     {
         auto tPair = trianglePairs[i];
-        bool collision = _checkTrianglesCollision(tPair.first, tPair.second);
+        bool collision = _checkTrianglesCollision(
+            dynamic_cast<TrianglePtr>(tPair.first),
+            dynamic_cast<TrianglePtr>(tPair.second), stiffness);
 #ifdef PHYANIM_USES_OPENMP
-        omp_set_lock(_writelock);
+        omp_set_lock(&writelock);
 #endif
         detectedCollision |= collision;
 #ifdef PHYANIM_USES_OPENMP
-        omp_unset_lock(_writelock);
+        omp_unset_lock(&writelock);
 #endif
     }
+#ifdef PHYANIM_USES_OPENMP
+    omp_destroy_lock(&writelock);
+#endif
     return detectedCollision;
 }
 
-bool CollisionDetection::_checkTrianglesCollision(Triangle* t0_, Triangle* t1_)
+bool CollisionDetection::_checkTrianglesCollision(TrianglePtr t0_,
+                                                  TrianglePtr t1_,
+                                                  double stiffness)
 {
     Vec3 vt0[3], vt1[3];
     vt0[0] = t0_->node0->position;
@@ -257,19 +248,20 @@ bool CollisionDetection::_checkTrianglesCollision(Triangle* t0_, Triangle* t1_)
 
     n0.normalize();
     n1.normalize();
-    _checkAndSetForce(t0_->node0, n1, dt0[0]);
-    _checkAndSetForce(t0_->node1, n1, dt0[1]);
-    _checkAndSetForce(t0_->node2, n1, dt0[2]);
-    _checkAndSetForce(t1_->node0, n0, dt1[0]);
-    _checkAndSetForce(t1_->node1, n0, dt1[1]);
-    _checkAndSetForce(t1_->node2, n0, dt1[2]);
+    _checkAndSetForce(t0_->node0, n1, dt0[0], stiffness);
+    _checkAndSetForce(t0_->node1, n1, dt0[1], stiffness);
+    _checkAndSetForce(t0_->node2, n1, dt0[2], stiffness);
+    _checkAndSetForce(t1_->node0, n0, dt1[0], stiffness);
+    _checkAndSetForce(t1_->node1, n0, dt1[1], stiffness);
+    _checkAndSetForce(t1_->node2, n0, dt1[2], stiffness);
 
     return true;
 }
 
-void CollisionDetection::_checkAndSetForce(Node* node_,
+void CollisionDetection::_checkAndSetForce(NodePtr node_,
                                            Vec3 normal_,
-                                           double dist_)
+                                           double dist_,
+                                           double stiffness)
 {
     if (dist_ < 0.0)
     {

@@ -9,7 +9,9 @@ namespace phyanim
 {
 class Node;
 
-typedef std::vector<Node*> Nodes;
+typedef Node* NodePtr;
+
+typedef std::vector<NodePtr> Nodes;
 
 class Node
 {

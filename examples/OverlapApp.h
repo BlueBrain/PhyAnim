@@ -27,17 +27,18 @@ protected:
 private:
     phyanim::AnimSystem* _animSys;
 
-    phyanim::CollisionDetection* _collisionSys;
-
-    phyanim::Mesh* _mesh;
+    phyanim::MeshPtr _mesh;
+    phyanim::HierarchicalAABBPtr _haabb;
     std::string _file;
 
-    phyanim::Meshes _staticMeshes;
+    phyanim::HierarchicalAABBs _dynamics;
+    phyanim::HierarchicalAABBs _statics;
 
     phyanim::Meshes _meshes;
     std::vector<std::string> _files;
 
     bool _anim;
+    bool _stepByStep;
 
     std::chrono::time_point<std::chrono::steady_clock> _startTime;
 
@@ -47,6 +48,7 @@ private:
     double _poissonRatio;
     double _collisionStiffness;
     double _dt;
+    uint64_t _cellSize;
 };
 
 }  // namespace examples

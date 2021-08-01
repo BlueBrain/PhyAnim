@@ -27,7 +27,7 @@ void AnimMeshApp::init(int argc, char** argv)
 
     double stiffness = 1000.0;
     double poisson = 0.499;
-    double collisionStiffness = 100.0;
+    _collisionStiffness = 100.0;
     double dt = 0.01;
     double damping = 1.0;
     double density = 1.0;
@@ -50,7 +50,7 @@ void AnimMeshApp::init(int argc, char** argv)
         else if (option.compare("-kc") == 0)
         {
             ++i;
-            collisionStiffness = std::atof(argv[i]);
+            _collisionStiffness = std::atof(argv[i]);
         }
         else if (option.compare("-dt") == 0)
         {
@@ -113,9 +113,7 @@ void AnimMeshApp::init(int argc, char** argv)
         _animSys = new phyanim::ImplicitFEMSystem(dt);
         break;
     }
-    _collisionSys = new phyanim::CollisionDetection(collisionStiffness);
 
-    phyanim::AABB limits;
     for (uint64_t i = 0; i < files.size(); ++i)
     {
         auto mesh =
@@ -139,19 +137,19 @@ void AnimMeshApp::init(int argc, char** argv)
         }
 
         _meshes.push_back(mesh);
+        auto dynamic = new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+        _dynamics.push_back(dynamic);
         mesh->upload();
-        limits.update(mesh->aabb->root->aabb);
+        _limits.unite(*dynamic);
         _scene->addMesh(mesh);
     }
 
     _animSys->preprocessMesh(_meshes);
-    _collisionSys->dynamicMeshes(_meshes);
 
-    phyanim::Vec3 halfSides = limits.upperLimit - limits.center();
-    limits.lowerLimit -= halfSides;
-    limits.upperLimit += halfSides;
-    _setCameraPos(limits);
-    _collisionSys->aabb = limits;
+    phyanim::Vec3 halfSides = _limits.upperLimit() - _limits.center();
+    _limits.lowerLimit(_limits.lowerLimit() - halfSides);
+    _limits.upperLimit(_limits.upperLimit() + halfSides);
+    _setCameraPos(_limits);
 }
 
 void AnimMeshApp::loop()
@@ -164,13 +162,14 @@ void AnimMeshApp::loop()
             {
                 mesh->nodesForceZero();
             }
-            _collisionSys->update();
+            phyanim::CollisionDetection::computeCollisions(_dynamics,
+                                                           _collisionStiffness);
             _animSys->step(_meshes);
-            for (auto mesh : _meshes)
+            for (auto dynamic : _dynamics)
             {
-                mesh->aabb->update();
+                dynamic->update();
             }
-            _collisionSys->checkLimitsCollision();
+            phyanim::CollisionDetection::computeCollisions(_dynamics, _limits);
             for (auto mesh : _meshes)
             {
                 auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(mesh);

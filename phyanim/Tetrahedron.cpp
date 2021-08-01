@@ -31,8 +31,6 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     invBasis = E.inverse().eval();
 }
 
-Tetrahedron::~Tetrahedron(void) {}
-
 double Tetrahedron::volume() const
 {
     Vec3 x0 = node0->position;
@@ -45,7 +43,16 @@ double Tetrahedron::volume() const
     return std::abs(basis.determinant() / 6.0);
 }
 
-Edges Tetrahedron::edges(void)
+Nodes Tetrahedron::nodes() const
+{
+    Nodes nodes(4);
+    nodes[0] = node0;
+    nodes[1] = node1;
+    nodes[2] = node2;
+    nodes[3] = node3;
+    return nodes;
+}
+Edges Tetrahedron::edges() const
 {
     Edges edges(6);
     edges[0] = new Edge(node0, node1);

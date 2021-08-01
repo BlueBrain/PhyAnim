@@ -1,7 +1,10 @@
-#include <ExplicitFEMSystem.h>
+#include "ExplicitFEMSystem.h"
 
 #include <Eigen/Dense>
 #include <iostream>
+
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 namespace phyanim
 {
@@ -22,7 +25,7 @@ void ExplicitFEMSystem::_step(Mesh* mesh)
 #endif
     for (unsigned int i = 0; i < mesh->tetrahedra.size(); i++)
     {
-        auto tet = mesh->tetrahedra[i];
+        auto tet = dynamic_cast<TetrahedronPtr>(mesh->tetrahedra[i]);
         Mat3 x, f, q, fTilde, strain, stress;
 
         Mat3 xdot, fdot, fdotTilde, strainrate, stressrate;

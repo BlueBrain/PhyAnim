@@ -1,6 +1,5 @@
 #include "OverlapApp.h"
 
-#include <ExplicitFEMSystem.h>
 #include <ImplicitFEMSystem.h>
 
 #include <iostream>
@@ -17,6 +16,9 @@ OverlapApp::OverlapApp()
     , _poissonRatio(0.49)
     , _collisionStiffness(100.0)
     , _dt(0.01)
+    , _stepByStep(true)
+    , _cellSize(6)
+
 {
 }
 
@@ -77,6 +79,15 @@ void OverlapApp::init(int argc, char** argv)
                 _collisionStiffness = std::atof(argv[i + 1]);
                 ++i;
             }
+            else if (option.compare("-cont") == 0)
+            {
+                _stepByStep = false;
+            }
+            else if (option.compare("-cellSize") == 0)
+            {
+                _cellSize = std::atoi(argv[i + 1]);
+                ++i;
+            }
             else if (option.compare("--help") == 0)
             {
                 std::cout << usage << std::endl;
@@ -97,9 +108,6 @@ void OverlapApp::init(int argc, char** argv)
     _scene = new Scene();
     _animSys = new phyanim::ImplicitFEMSystem(_dt);
     _animSys->gravity = false;
-    _collisionSys = new phyanim::CollisionDetection(_collisionStiffness);
-
-    phyanim::AABB limits;
 
     for (uint32_t i = 0; i < files.size(); ++i)
     {
@@ -130,12 +138,12 @@ void OverlapApp::init(int argc, char** argv)
             _files.push_back(outFile);
             _meshes.push_back(mesh);
             mesh->upload();
-            limits.update(mesh->aabb->root->aabb);
+            _limits.unite(
+                phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
         }
     }
 
-    _setCameraPos(limits);
-    _collisionSys->aabb = limits;
+    _setCameraPos(_limits);
     _startTime = std::chrono::steady_clock::now();
 }
 
@@ -148,7 +156,8 @@ void OverlapApp::loop()
             if (_mesh)
             {
                 _mesh->nodesForceZero();
-                if (_collisionSys->update())
+                if (phyanim::CollisionDetection::computeCollisions(
+                        _dynamics, _statics, _collisionStiffness))
                 {
                     if (_mesh->kMatrix.data().size() == 0)
                     {
@@ -156,8 +165,9 @@ void OverlapApp::loop()
                     }
 
                     _animSys->step(_mesh);
-                    _mesh->aabb->update();
-                    _collisionSys->checkLimitsCollision();
+                    _haabb->update();
+                    phyanim::CollisionDetection::computeCollisions(
+                        _dynamics, _limits, _collisionStiffness);
                     auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
                     drawMesh->uploadNodes();
                 }
@@ -174,7 +184,7 @@ void OverlapApp::loop()
                               << " max: " << max << " min: " << min
                               << " rms: " << rms << std::endl;
 
-                    _staticMeshes.push_back(_mesh);
+                    _statics.push_back(_haabb);
                     _mesh->write(_file);
                     std::cout << "Writed file " << _file << std::endl;
                     _mesh = nullptr;
@@ -185,19 +195,21 @@ void OverlapApp::loop()
                 if (!_meshes.empty())
                 {
                     _mesh = _meshes[0];
+                    _haabb = new phyanim::HierarchicalAABB(
+                        _mesh->surfaceTriangles, _cellSize);
                     _file = _files[0];
                     _meshes.erase(_meshes.begin());
                     _files.erase(_files.begin());
                     auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
                     _scene->addMesh(drawMesh);
 
-                    phyanim::Meshes dynamicMeshes;
-                    dynamicMeshes.push_back(_mesh);
+                    _dynamics.clear();
+                    _dynamics.push_back(_haabb);
 
-                    _collisionSys->dynamicMeshes(dynamicMeshes);
-                    _collisionSys->staticMeshes(_staticMeshes);
-
-                    _anim = false;
+                    if (_stepByStep)
+                    {
+                        _anim = false;
+                    }
                 }
                 else
                 {

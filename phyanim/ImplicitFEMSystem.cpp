@@ -1,7 +1,10 @@
-#include <ImplicitFEMSystem.h>
+#include "ImplicitFEMSystem.h"
 
 #include <Eigen/Dense>
 #include <iostream>
+
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 namespace phyanim
 {
@@ -99,14 +102,14 @@ void ImplicitFEMSystem::_conformKMatrix(Mesh* mesh)
     mesh->AMatrixSolver.compute(mesh->AMatrix);
 }
 
-void ImplicitFEMSystem::_buildKTriplets(const Tetrahedra& tets,
+void ImplicitFEMSystem::_buildKTriplets(const Primitives& tets,
                                         double dt2,
                                         Triplets& kTriplets,
                                         Triplets& aTriplets)
 {
     for (uint64_t i = 0; i < tets.size(); ++i)
     {
-        auto tet = tets[i];
+        auto tet = dynamic_cast<TetrahedronPtr>(tets[i]);
         uint64_t id0 = tet->node0->id;
         uint64_t id1 = tet->node1->id;
         uint64_t id2 = tet->node2->id;
@@ -200,7 +203,7 @@ void ImplicitFEMSystem::_buildKTriplets(const Tetrahedra& tets,
     }
 }
 
-void ImplicitFEMSystem::_computeTetsK(const Tetrahedra& tets,
+void ImplicitFEMSystem::_computeTetsK(const Primitives& tets,
                                       double D0,
                                       double D1,
                                       double D2)
@@ -215,7 +218,7 @@ void ImplicitFEMSystem::_computeTetsK(const Tetrahedra& tets,
 #endif
     for (uint64_t i = 0; i < tets.size(); ++i)
     {
-        auto tet = tets[i];
+        auto tet = dynamic_cast<TetrahedronPtr>(tets[i]);
         Vec3 b1 = tet->invBasis.row(0);
         Vec3 b2 = tet->invBasis.row(1);
         Vec3 b3 = tet->invBasis.row(2);

@@ -8,14 +8,16 @@ namespace phyanim
 {
 class Tetrahedron;
 
-typedef std::vector<Tetrahedron*> Tetrahedra;
+typedef Tetrahedron* TetrahedronPtr;
 
-class Tetrahedron
+typedef std::vector<TetrahedronPtr> Tetrahedra;
+
+class Tetrahedron : public Primitive
 {
 public:
     Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_);
 
-    virtual ~Tetrahedron(void);
+    ~Tetrahedron() {}
 
     Node* node0;
 
@@ -50,11 +52,13 @@ public:
 
     double initVolume;
 
-    double volume(void) const;
+    double volume() const;
 
-    Edges edges(void);
+    Nodes nodes() const;
 
-    Triangles triangles(void);
+    Edges edges() const;
+
+    Triangles triangles();
 
 private:
     double _volume;

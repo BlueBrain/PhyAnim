@@ -1,45 +1,39 @@
 #ifndef __PHYANIM_COLLISIONDETECTION__
 #define __PHYANIM_COLLISIONDETECTION__
 
-#include <Mesh.h>
+#include "Mesh.h"
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 namespace phyanim
 {
 class CollisionDetection
 {
 public:
-    CollisionDetection(double stiffness_ = 1000.0);
+    static bool computeCollisions(HierarchicalAABBs& dynamics,
+                                  double stiffness = 1000.0);
 
-    virtual ~CollisionDetection(void);
+    static bool computeCollisions(HierarchicalAABBs& dynamics,
+                                  HierarchicalAABBs& statics,
+                                  double stiffness = 1000.0);
 
-    void dynamicMeshes(Meshes meshes_);
-
-    void staticMeshes(Meshes meshes_);
-
-    void clear(void);
-
-    bool update(void);
-
-    void checkLimitsCollision(void);
-
-    AABB aabb;
-
-    double stiffness;
+    static void computeCollisions(HierarchicalAABBs& dynamics,
+                                  const AxisAlignedBoundingBox& aabb,
+                                  double stiffness = 1000.0);
 
 protected:
-    bool _checkMeshesCollision(Mesh* m0_, Mesh* m1_);
+    static bool _checkMeshesCollision(HierarchicalAABBPtr haabb0,
+                                      HierarchicalAABBPtr haabb1,
+                                      double stiffness);
 
-    bool _checkTrianglesCollision(Triangle* t0_, Triangle* t1_);
+    static bool _checkTrianglesCollision(TrianglePtr t0,
+                                         TrianglePtr t1,
+                                         double stiffness);
 
-    void _checkAndSetForce(Node* node_, Vec3 normal_, double dist_);
-
-    Meshes _dynamicMeshes;
-
-    Meshes _staticMeshes;
-
-#ifdef PHYANIM_USES_OPENMP
-    omp_lock_t* _writelock;
-#endif
+    static void _checkAndSetForce(NodePtr node,
+                                  Vec3 normal,
+                                  double dist,
+                                  double stiffness);
 };
 
 }  // namespace phyanim

@@ -1,7 +1,7 @@
 #ifndef __PHYANIM_EXPLICITFEMSYSTEM__
 #define __PHYANIM_EXPLICITFEMSYSTEM__
 
-#include <AnimSystem.h>
+#include "AnimSystem.h"
 
 namespace phyanim
 {

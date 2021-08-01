@@ -1,7 +1,11 @@
-#include <DrawableMesh.h>
+#include "DrawableMesh.h"
+
 #include <GL/glew.h>
 
 #include <iostream>
+
+#include "Tetrahedron.h"
+#include "Triangle.h"
 
 namespace phyanim
 {
@@ -79,7 +83,7 @@ void DrawableMesh::upload()
     unsigned int surfaceIndices[_surfaceIndicesSize];
     for (size_t i = 0; i < trianglesSize; ++i)
     {
-        auto triangle = surfaceTriangles[i];
+        auto triangle = dynamic_cast<TrianglePtr>(surfaceTriangles[i]);
         surfaceIndices[i * 3] = triangle->node0->id;
         surfaceIndices[i * 3 + 1] = triangle->node1->id;
         surfaceIndices[i * 3 + 2] = triangle->node2->id;

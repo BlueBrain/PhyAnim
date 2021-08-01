@@ -1,5 +1,7 @@
 #include "Icosphere.h"
 
+#include <Triangle.h>
+
 #include <iostream>
 #include <unordered_set>
 
@@ -23,8 +25,9 @@ std::vector<Spring*> Icosphere::springs(double stiffness)
 {
     UniqueSprings uSprings;
 
-    for (auto triangle : _mesh->triangles)
+    for (auto primitive : _mesh->triangles)
     {
+        auto triangle = dynamic_cast<phyanim::TrianglePtr>(primitive);
         auto node0 = nodes[triangle->node0->id];
         auto node1 = nodes[triangle->node1->id];
         auto node2 = nodes[triangle->node2->id];
