@@ -21,7 +21,7 @@ typedef std::vector<PrimitivePair> PrimitivePairs;
 class Primitive
 {
 public:
-    Primitive(){};
+    Primitive() : _lowerLimit(maxVec3), _upperLimit(minVec3){};
 
     virtual ~Primitive(){};
 

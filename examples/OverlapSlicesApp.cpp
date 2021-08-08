@@ -1,4 +1,4 @@
-#include "OverlapApp.h"
+#include "OverlapSlicesApp.h"
 
 #include <ImplicitFEMSystem.h>
 
@@ -6,23 +6,21 @@
 
 namespace examples
 {
-OverlapApp::OverlapApp()
+OverlapSlicesApp::OverlapSlicesApp()
     : GLFWApp()
     , _anim(true)
-    , _mesh(nullptr)
-    , _stiffness(1000.0)
+    , _stiffness(500.0)
     , _damping(1.0)
     , _density(1.0)
-    , _poissonRatio(0.49)
-    , _collisionStiffness(100.0)
+    , _poissonRatio(0.3)
+    , _collisionStiffness(500.0)
     , _dt(0.01)
     , _stepByStep(true)
-    , _cellSize(6)
 
 {
 }
 
-void OverlapApp::init(int argc, char** argv)
+void OverlapSlicesApp::init(int argc, char** argv)
 {
     std::string usage =
         std::string("SYNOPSIS\n\t") + std::string(argv[0]) +
@@ -114,6 +112,7 @@ void OverlapApp::init(int argc, char** argv)
         phyanim::DrawableMesh* mesh = nullptr;
         std::string file = files[i];
 
+        std::string outFile;
         size_t extPos = 0;
         if ((extPos = file.find(".node")) != std::string::npos)
         {
@@ -138,79 +137,81 @@ void OverlapApp::init(int argc, char** argv)
             _meshes.push_back(mesh);
             mesh->upload();
             mesh->compute();
+            _setSurfaceNodes(mesh);
             mesh->boundingBox =
                 new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
             _limits.unite(*mesh->boundingBox);
+            _scene->addMesh(mesh);
         }
     }
 
     _setCameraPos(_limits);
+
     _startTime = std::chrono::steady_clock::now();
+
+    _aabbs = phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, 10);
+    if (_stepByStep)
+    {
+        _anim = false;
+    }
 }
 
-void OverlapApp::loop()
+void OverlapSlicesApp::loop()
 {
     while (!glfwWindowShouldClose(_window))
     {
         if (_anim)
         {
-            if (_mesh)
+            if (_collisionMeshes.size() > 0)
             {
-                _mesh->nodesForceZero();
-                if (phyanim::CollisionDetection::computeCollisions(
-                        _dynamics, _statics, _collisionStiffness, true))
+                for (auto mesh : _collisionMeshes)
                 {
-                    if (_mesh->kMatrix.data().size() == 0)
+                    mesh->nodesForceZero();
+                }
+                if (phyanim::CollisionDetection::computeCollisions(
+                        _collisionMeshes, _collisionStiffness, true))
+                {
+                    _animSys->step(_collisionMeshes);
+                    for (auto mesh : _collisionMeshes)
                     {
-                        _mesh->compute();
-                        _animSys->preprocessMesh(_mesh);
+                        mesh->boundingBox->update();
                     }
-
-                    _animSys->step(_mesh);
-                    _mesh->boundingBox->update();
-                    phyanim::CollisionDetection::computeCollisions(_dynamics,
-                                                                   _limits);
-                    auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-                    drawMesh->uploadPositions();
+                    phyanim::CollisionDetection::computeCollisions(
+                        _collisionMeshes, _limits);
+                    for (auto mesh : _meshes)
+                    {
+                        auto drawMesh =
+                            dynamic_cast<phyanim::DrawableMesh*>(mesh);
+                        drawMesh->uploadPositions();
+                    }
                 }
                 else
                 {
-                    double mean, max, min, rms;
-                    _mesh->positionDifference(mean, max, min, rms);
-                    std::cout
-                        << "Mesh " << _inFile << ":\n"
-                        << "\t* Original volume: " << _mesh->initVolume
-                        << ". Volume difference: "
-                        << (_mesh->initVolume / _mesh->volume() - 1.0) * 100.0
-                        << "%" << std::endl;
-                    std::cout << "\t* Vertices distance mean: " << mean
-                              << " max: " << max << " min: " << min
-                              << " rms: " << rms << std::endl;
-
-                    _statics.push_back(_mesh);
-
-                    _mesh->write(_outFile);
-                    std::cout << "\t* Saved file " << _outFile << std::endl;
-                    _mesh = nullptr;
+                    for (auto mesh : _meshes)
+                    {
+                        auto drawMesh =
+                            dynamic_cast<phyanim::DrawableMesh*>(mesh);
+                    }
+                    _collisionMeshes.clear();
                 }
                 _scene->updateColors();
             }
             else
             {
-                if (!_meshes.empty())
+                if (!_aabbs.empty())
                 {
-                    _mesh = _meshes[0];
-                    _meshes.erase(_meshes.begin());
-                    _outFile = _outFiles[0];
-                    _outFiles.erase(_outFiles.begin());
-                    _inFile = _inFiles[0];
-                    _inFiles.erase(_inFiles.begin());
-                    auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-                    _scene->addMesh(drawMesh);
-
-                    _dynamics.clear();
-                    _dynamics.push_back(_mesh);
-
+                    auto aabb = _aabbs[0];
+                    _setCameraPos(*aabb);
+                    _aabbs.erase(_aabbs.begin());
+                    for (auto mesh : _meshes)
+                    {
+                        auto collisionMesh = _sliceMesh(mesh, *aabb);
+                        if (collisionMesh)
+                        {
+                            _collisionMeshes.push_back(collisionMesh);
+                        }
+                    }
+                    _animSys->preprocessMesh(_collisionMeshes);
                     if (_stepByStep)
                     {
                         _anim = false;
@@ -218,6 +219,25 @@ void OverlapApp::loop()
                 }
                 else
                 {
+                    double mean, max, min, rms;
+                    for (uint64_t i = 0; i < _meshes.size(); ++i)
+                    {
+                        auto mesh = _meshes[i];
+                        mesh->positionDifference(mean, max, min, rms);
+                        std::cout
+                            << "Mesh " << _inFiles[i] << ":\n"
+                            << "\t* Original volume: " << mesh->initVolume
+                            << ". Volume difference: "
+                            << (mesh->initVolume / mesh->volume() - 1.0) * 100.0
+                            << "%" << std::endl;
+                        std::cout << "\t* Vertices distance mean: " << mean
+                                  << " max: " << max << " min: " << min
+                                  << " rms: " << rms << std::endl;
+
+                        mesh->write(_outFiles[i]);
+                        std::cout << "\t* Saved file " << _outFiles[i]
+                                  << std::endl;
+                    }
                     auto endTime = std::chrono::steady_clock::now();
                     std::chrono::duration<double> elapsedTime =
                         endTime - _startTime;
@@ -227,19 +247,88 @@ void OverlapApp::loop()
                 }
             }
         }
-
         _scene->render();
         glfwSwapBuffers(_window);
         glfwPollEvents();
     }
     glfwTerminate();
+}  // namespace examples
+
+phyanim::MeshPtr OverlapSlicesApp::_sliceMesh(
+    phyanim::MeshPtr mesh,
+    const phyanim::AxisAlignedBoundingBox& aabb)
+{
+    phyanim::DrawableMesh* sliceMesh = nullptr;
+    auto tetsAABB = new phyanim::HierarchicalAABB(mesh->tetrahedra);
+    auto tets = tetsAABB->insidePrimitives(aabb);
+
+    delete tetsAABB;
+
+    if (tets.size() > 0)
+    {
+        sliceMesh = new phyanim::DrawableMesh(_stiffness, _density, _damping,
+                                              _poissonRatio);
+        sliceMesh->tetrahedra = tets;
+        sliceMesh->tetsToNodes();
+        sliceMesh->tetsToTriangles();
+        sliceMesh->boundingBox =
+            new phyanim::HierarchicalAABB(sliceMesh->surfaceTriangles);
+        sliceMesh->compute();
+
+        phyanim::UniqueTriangles uniqueTriangles;
+
+        for (auto triangle : sliceMesh->surfaceTriangles)
+        {
+            bool surface = true;
+            for (auto node : triangle->nodes())
+            {
+                surface &= node->surface;
+            }
+            if (!surface)
+            {
+                for (auto node : triangle->nodes())
+                {
+                    node->fix = true;
+                }
+            }
+        }
+
+        // for (auto triangle : mesh->surfaceTriangles)
+        // {
+        //     uniqueTriangles.insert(
+        //         dynamic_cast<phyanim::TrianglePtr>(triangle));
+        // }
+        // for (auto triangle : sliceMesh->surfaceTriangles)
+        // {
+        //     if (uniqueTriangles.find(dynamic_cast<phyanim::TrianglePtr>(
+        //             triangle)) != uniqueTriangles.end())
+        //     {
+        //         for (auto node : triangle->nodes())
+        //         {
+        //             node->fix = true;
+        //         }
+        //     }
+        // }
+    }
+    return sliceMesh;
 }
 
-void OverlapApp::_keyCallback(GLFWwindow* window,
-                              int key,
-                              int scancode,
-                              int action,
-                              int mods)
+void OverlapSlicesApp::_setSurfaceNodes(phyanim::MeshPtr mesh)
+{
+    for (auto triangle : mesh->surfaceTriangles)
+    {
+        for (auto node : triangle->nodes())
+        {
+            node->surface = true;
+        }
+    }
+}
+
+void OverlapSlicesApp::_keyCallback(GLFWwindow* window,
+                                    int key,
+                                    int scancode,
+                                    int action,
+                                    int mods)
 {
     GLFWApp::_keyCallback(window, key, scancode, action, mods);
     if (_scene)

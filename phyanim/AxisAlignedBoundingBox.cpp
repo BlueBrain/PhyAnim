@@ -80,7 +80,18 @@ bool AxisAlignedBoundingBox::isInside(const AxisAlignedBoundingBox& other) const
     return _isInside(other.lowerLimit(), other.upperLimit());
 }
 
-void AxisAlignedBoundingBox::unite(const Vec3& pos) { _unite(pos, pos); }
+void AxisAlignedBoundingBox::unite(const Vec3& lowerLimit,
+                                   const Vec3& upperLimit)
+{
+    _lowerLimit.x() = std::min(_lowerLimit.x(), lowerLimit.x());
+    _lowerLimit.y() = std::min(_lowerLimit.y(), lowerLimit.y());
+    _lowerLimit.z() = std::min(_lowerLimit.z(), lowerLimit.z());
+    _upperLimit.x() = std::max(_upperLimit.x(), upperLimit.x());
+    _upperLimit.y() = std::max(_upperLimit.y(), upperLimit.y());
+    _upperLimit.z() = std::max(_upperLimit.z(), upperLimit.z());
+}
+
+void AxisAlignedBoundingBox::unite(const Vec3& pos) { unite(pos, pos); }
 
 void AxisAlignedBoundingBox::unite(const Primitives& primitives)
 {
@@ -88,13 +99,13 @@ void AxisAlignedBoundingBox::unite(const Primitives& primitives)
     {
         Vec3 lowerLimit = primitive->lowerLimit();
         Vec3 upperLimit = primitive->upperLimit();
-        _unite(lowerLimit, upperLimit);
+        unite(lowerLimit, upperLimit);
     }
 }
 
 void AxisAlignedBoundingBox::unite(const AxisAlignedBoundingBox& other)
 {
-    _unite(other.lowerLimit(), other.upperLimit());
+    unite(other.lowerLimit(), other.upperLimit());
 }
 
 void AxisAlignedBoundingBox::update(const Nodes& nodes)
@@ -122,6 +133,18 @@ void AxisAlignedBoundingBox::update(const AxisAlignedBoundingBox& other)
     unite(other);
 }
 
+void AxisAlignedBoundingBox::resize(double resizeFactor)
+{
+    if (_lowerLimit != maxVec3 && _upperLimit != minVec3)
+    {
+        Vec3 center = this->center();
+        Vec3 axis = _upperLimit - center;
+
+        _lowerLimit -= axis * resizeFactor;
+        _upperLimit += axis * resizeFactor;
+    }
+}
+
 void AxisAlignedBoundingBox::_clear()
 {
     _lowerLimit = maxVec3;
@@ -147,17 +170,6 @@ bool AxisAlignedBoundingBox::_isInside(const Vec3& lowerLimit,
            (_upperLimit.y() >= upperLimit.y()) &&
            (_lowerLimit.z() <= lowerLimit.z()) &&
            (_upperLimit.z() >= upperLimit.z());
-}
-
-bool AxisAlignedBoundingBox::_unite(const Vec3& lowerLimit,
-                                    const Vec3& upperLimit)
-{
-    _lowerLimit.x() = std::min(_lowerLimit.x(), lowerLimit.x());
-    _lowerLimit.y() = std::min(_lowerLimit.y(), lowerLimit.y());
-    _lowerLimit.z() = std::min(_lowerLimit.z(), lowerLimit.z());
-    _upperLimit.x() = std::max(_upperLimit.x(), upperLimit.x());
-    _upperLimit.y() = std::max(_upperLimit.y(), upperLimit.y());
-    _upperLimit.z() = std::max(_upperLimit.z(), upperLimit.z());
 }
 
 }  // namespace phyanim

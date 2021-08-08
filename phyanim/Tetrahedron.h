@@ -19,6 +19,8 @@ public:
 
     ~Tetrahedron() {}
 
+    void compute();
+
     Node* node0;
 
     Node* node1;

@@ -32,6 +32,12 @@ public:
 
     void changeRenderMode();
 
+    void updateColors(phyanim::Vec3 staticColor = phyanim::Vec3(0.4, 0.4, 0.8),
+                      phyanim::Vec3 dynamicColor = phyanim::Vec3(0.8, 0.4, 0.4),
+                      phyanim::Vec3 collideColor = phyanim::Vec3(1.0,
+                                                                 0.0,
+                                                                 0.0));
+
 public:
     bool showFPS;
 

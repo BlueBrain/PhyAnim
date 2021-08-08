@@ -122,7 +122,7 @@ void ImplicitMassSpringSystem::_step(Mesh* mesh)
     for (uint64_t i = 0; i < n; ++i)
     {
         auto node = nodes[i];
-        if (!node->fixed)
+        if (!node->fix)
         {
             Vec3 vInc(vIncVec[i * 3], vIncVec[i * 3 + 1], vIncVec[i * 3 + 2]);
             Vec3 v = node->velocity + vInc;

@@ -48,7 +48,7 @@ void ImplicitFEMSystem::_step(Mesh* mesh)
     for (uint64_t i = 0; i < size / 3; ++i)
     {
         Node* node = mesh->nodes[i];
-        if (!node->fixed)
+        if (!node->fix)
         {
             Vec3 v(v_1[i * 3], v_1[i * 3 + 1], v_1[i * 3 + 2]);
             Vec3 x = node->position + v * _dt;

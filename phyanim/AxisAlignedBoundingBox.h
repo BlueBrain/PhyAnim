@@ -10,6 +10,8 @@ class AxisAlignedBoundingBox;
 
 typedef AxisAlignedBoundingBox* AxisAlignedBoundingBoxPtr;
 
+typedef std::vector<AxisAlignedBoundingBoxPtr> AxisAlignedBoundingBoxes;
+
 class AxisAlignedBoundingBox
 {
 public:
@@ -37,6 +39,7 @@ public:
     bool isInside(const Primitive& primitive) const;
     bool isInside(const AxisAlignedBoundingBox& other) const;
 
+    void unite(const Vec3& lowerLimit, const Vec3& upperLimit);
     void unite(const Vec3& pos);
     void unite(const Primitives& primitives);
     void unite(const AxisAlignedBoundingBox& other);
@@ -45,14 +48,14 @@ public:
     void update(const Primitives& primitives);
     void update(const AxisAlignedBoundingBox& other);
 
+    void resize(double resizeFactor);
+
 protected:
     void _clear();
 
     bool _isColliding(const Vec3& lowerLimit, const Vec3& upperLimit) const;
 
     bool _isInside(const Vec3& lowerLimit, const Vec3& upperLimit) const;
-
-    bool _unite(const Vec3& lowerLimit, const Vec3& upperLimit);
 
 protected:
     Vec3 _lowerLimit;

@@ -10,6 +10,10 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     , node2(n2_)
     , node3(n3_)
 {
+}
+
+void Tetrahedron::compute()
+{
     Vec3 x0 = node0->position;
     Vec3 x1 = node1->position;
     Vec3 x2 = node2->position;

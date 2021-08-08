@@ -2,22 +2,24 @@
 
 namespace phyanim
 {
-Node::Node(Vec3 position_,
-           unsigned int id_,
-           Vec3 velocity_,
-           Vec3 force_,
-           double mass_,
-           bool surface_,
-           bool fixed_)
-    : initPosition(position_)
-    , position(position_)
-    , id(id_)
-    , initVelocity(velocity_)
-    , velocity(velocity_)
-    , force(force_)
-    , mass(mass_)
-    , surface(surface_)
-    , fixed(fixed_)
+Node::Node(Vec3 position,
+           unsigned int id,
+           Vec3 velocity,
+           Vec3 force,
+           double mass,
+           bool surface,
+           bool fix)
+    : initPosition(position)
+    , position(position)
+    , id(id)
+    , initVelocity(velocity)
+    , velocity(velocity)
+    , force(force)
+    , mass(mass)
+    , surface(surface)
+    , fix(fix)
+    , anim(false)
+    , collide(false)
 {
 }
 

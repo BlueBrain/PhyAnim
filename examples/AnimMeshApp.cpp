@@ -9,7 +9,12 @@
 
 namespace examples
 {
-AnimMeshApp::AnimMeshApp() : GLFWApp(), _anim(false) {}
+AnimMeshApp::AnimMeshApp()
+    : _anim(false)
+    , _pauseColor(0.4, 0.4, 1.0)
+    , _animColor(1, 0.6, 0.6)
+{
+}
 
 void AnimMeshApp::init(int argc, char** argv)
 {
@@ -124,11 +129,13 @@ void AnimMeshApp::init(int argc, char** argv)
         {
             ++i;
             std::string file1 = files[i];
-            mesh->load(file, file1, createEdges);
+            mesh->load(file, file1);
+            mesh->compute(createEdges);
         }
         else if (file.find(".tet") != std::string::npos)
         {
-            mesh->load(file, createEdges);
+            mesh->load(file);
+            mesh->compute(createEdges);
         }
         else
         {
@@ -137,10 +144,11 @@ void AnimMeshApp::init(int argc, char** argv)
         }
 
         _meshes.push_back(mesh);
-        auto dynamic = new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-        _dynamics.push_back(dynamic);
-        mesh->upload();
-        _limits.unite(*dynamic);
+        mesh->boundingBox =
+            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+        mesh->upload(_pauseColor);
+
+        _limits.unite(*mesh->boundingBox);
         _scene->addMesh(mesh);
     }
 
@@ -158,23 +166,25 @@ void AnimMeshApp::loop()
     {
         if (_anim)
         {
-            for (auto mesh : _meshes)
+            for (uint32_t i = 0; i < _meshes.size(); ++i)
             {
+                auto mesh = dynamic_cast<phyanim::DrawableMesh*>(_meshes[i]);
                 mesh->nodesForceZero();
             }
-            phyanim::CollisionDetection::computeCollisions(_dynamics,
-                                                           _collisionStiffness);
+            phyanim::CollisionDetection::computeCollisions(
+                _meshes, _collisionStiffness, true);
             _animSys->step(_meshes);
-            for (auto dynamic : _dynamics)
+            for (auto mesh : _meshes)
             {
-                dynamic->update();
+                mesh->boundingBox->update();
             }
-            phyanim::CollisionDetection::computeCollisions(_dynamics, _limits);
+            phyanim::CollisionDetection::computeCollisions(_meshes, _limits);
             for (auto mesh : _meshes)
             {
                 auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(mesh);
-                drawMesh->uploadNodes();
+                drawMesh->uploadPositions();
             }
+            _scene->updateColors();
         }
         _scene->render();
         glfwSwapBuffers(_window);
@@ -198,6 +208,20 @@ void AnimMeshApp::_keyCallback(GLFWwindow* window,
             {
             case GLFW_KEY_SPACE:
                 _anim = !_anim;
+                // phyanim::Vec3 color;
+                // if (_anim)
+                // {
+                //     color = _animColor;
+                // }
+                // else
+                // {
+                //     color = _pauseColor;
+                // }
+                // for (auto mesh : _meshes)
+                // {
+                //     dynamic_cast<phyanim::DrawableMesh*>(mesh)->uploadColors(
+                //         color);
+                // }
                 break;
             }
         }

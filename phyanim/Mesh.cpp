@@ -18,7 +18,8 @@ Mesh::Mesh(double stiffness_,
            double density_,
            double damping_,
            double poissonRatio_)
-    : initArea(0.0)
+    : boundingBox(nullptr)
+    , initArea(0.0)
     , initVolume(0.0)
     , stiffness(stiffness_)
     , density(density_)
@@ -29,7 +30,7 @@ Mesh::Mesh(double stiffness_,
 
 Mesh::~Mesh(void) {}
 
-void Mesh::load(const std::string& file_, bool createEdges)
+void Mesh::load(const std::string& file_)
 {
     bool tetraLoaded = false;
     if (file_.empty())
@@ -63,23 +64,14 @@ void Mesh::load(const std::string& file_, bool createEdges)
     if (tetraLoaded)
     {
         tetsToTriangles();
-        initVolume = volume();
     }
     else
     {
         surfaceTriangles = triangles;
     }
-    if (createEdges)
-    {
-        trianglesToEdges();
-    }
-    initArea = area();
-    computePerNodeMass();
 }
 
-void Mesh::load(const std::string& nodeFile_,
-                const std::string& eleFile_,
-                bool createEdges)
+void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
 {
     if (nodeFile_.empty() || eleFile_.empty())
     {
@@ -90,7 +82,18 @@ void Mesh::load(const std::string& nodeFile_,
     std::cout << "File load with " << tetrahedra.size() << " tetrahera and "
               << nodes.size() << " vertices" << std::endl;
     tetsToTriangles();
-    initVolume = volume();
+}
+
+void Mesh::compute(bool createEdges)
+{
+    if (tetrahedra.size() > 0)
+    {
+        for (auto tet : tetrahedra)
+        {
+            dynamic_cast<TetrahedronPtr>(tet)->compute();
+        }
+        initVolume = volume();
+    }
     if (createEdges)
     {
         trianglesToEdges();

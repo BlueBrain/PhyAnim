@@ -4,19 +4,48 @@
 
 namespace phyanim
 {
-bool CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
-                                           double stiffness)
+const Vec3 CollisionDetection::_color = Vec3(1, 0.6, 0.6);
+
+const Vec3 CollisionDetection::_collisionColor = Vec3(1, 0, 0);
+
+bool CollisionDetection::computeCollisions(Meshes& dynamics,
+                                           double stiffness,
+                                           bool setColor)
 {
-    HierarchicalAABBs statics;
-    return computeCollisions(dynamics, statics, stiffness);
+    Meshes statics;
+    return computeCollisions(dynamics, statics, stiffness, setColor);
 }
 
-bool CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
-                                           HierarchicalAABBs& statics,
-                                           double stiffness)
+bool CollisionDetection::computeCollisions(Meshes& dynamics,
+                                           Meshes& statics,
+                                           double stiffness,
+                                           bool setColor)
 {
     unsigned int size = dynamics.size();
     bool detectedCollision = false;
+    bool (*checkMeshesCollision)(MeshPtr, MeshPtr, double);
+    if (setColor)
+    {
+        checkMeshesCollision = _checkMeshesCollisionAndSetColor;
+        for (auto mesh : dynamics)
+        {
+            for (auto node : mesh->nodes)
+            {
+                node->collide = false;
+            }
+        }
+        for (auto mesh : statics)
+        {
+            for (auto node : mesh->nodes)
+            {
+                node->collide = false;
+            }
+        }
+    }
+    else
+    {
+        checkMeshesCollision = _checkMeshesCollision;
+    }
     for (unsigned int i = 0; i < size; ++i)
     {
         auto dynamic0 = dynamics[i];
@@ -24,25 +53,24 @@ bool CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
         {
             auto dynamic1 = dynamics[j];
             detectedCollision |=
-                _checkMeshesCollision(dynamic0, dynamic1, stiffness);
+                checkMeshesCollision(dynamic0, dynamic1, stiffness);
         }
         for (unsigned int j = 0; j < statics.size(); j++)
         {
             auto dynamic1 = statics[j];
             detectedCollision |=
-                _checkMeshesCollision(dynamic0, dynamic1, stiffness);
+                checkMeshesCollision(dynamic0, dynamic1, stiffness);
         }
     }
     return detectedCollision;
 }
 
-void CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
-                                           const AxisAlignedBoundingBox& aabb,
-                                           double stiffness)
+void CollisionDetection::computeCollisions(Meshes& meshes,
+                                           const AxisAlignedBoundingBox& aabb)
 {
-    for (auto dynamic : dynamics)
+    for (auto mesh : meshes)
     {
-        auto nodes = dynamic->outterNodes(aabb);
+        auto nodes = mesh->boundingBox->outterNodes(aabb);
 
         Vec3 lowerLimit = aabb.lowerLimit();
         Vec3 upperLimit = aabb.upperLimit();
@@ -94,12 +122,58 @@ void CollisionDetection::computeCollisions(HierarchicalAABBs& dynamics,
     }
 }
 
-bool CollisionDetection::_checkMeshesCollision(HierarchicalAABBPtr haabb0,
-                                               HierarchicalAABBPtr haabb1,
+AxisAlignedBoundingBoxes CollisionDetection::collisionBoundingBoxes(
+    Meshes& meshes,
+    double sizeFactor)
+{
+    AxisAlignedBoundingBoxes boundingBoxes;
+
+    for (uint64_t i = 0; i < meshes.size(); ++i)
+    {
+        for (uint64_t j = i + 1; j < meshes.size(); ++j)
+        {
+            auto mesh0 = meshes[i];
+            auto mesh1 = meshes[j];
+            auto trianglesPairs =
+                mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
+            UniqueTriangles uTriangles;
+            for (auto tPair : trianglesPairs)
+            {
+                auto t0 = dynamic_cast<TrianglePtr>(tPair.first);
+                auto t1 = dynamic_cast<TrianglePtr>(tPair.second);
+                if (_checkTrianglesCollision(t0, t1, 1000, false))
+                {
+                    uTriangles.insert(t0);
+                    uTriangles.insert(t1);
+                }
+            }
+            for (auto t : uTriangles)
+            {
+                auto bb = new AxisAlignedBoundingBox(t->lowerLimit(),
+                                                     t->upperLimit());
+                bb->resize(10);
+                boundingBoxes.push_back(bb);
+            }
+        }
+    }
+
+    _mergeBoundingBoxes(boundingBoxes);
+
+    // for (auto bb : boundingBoxes)
+    // {
+    //     bb->resize(sizeFactor);
+    // }
+
+    return boundingBoxes;
+}
+
+bool CollisionDetection::_checkMeshesCollision(MeshPtr mesh0,
+                                               MeshPtr mesh1,
                                                double stiffness)
 {
     bool detectedCollision = false;
-    auto trianglePairs = haabb0->collidingPrimitives(haabb1);
+    auto trianglePairs =
+        mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
 #ifdef PHYANIM_USES_OPENMP
     omp_lock_t writelock;
     omp_init_lock(&writelock);
@@ -125,9 +199,53 @@ bool CollisionDetection::_checkMeshesCollision(HierarchicalAABBPtr haabb0,
     return detectedCollision;
 }
 
+bool CollisionDetection::_checkMeshesCollisionAndSetColor(MeshPtr mesh0,
+                                                          MeshPtr mesh1,
+                                                          double stiffness)
+{
+    bool detectedCollision = false;
+    auto trianglePairs =
+        mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
+#ifdef PHYANIM_USES_OPENMP
+    omp_lock_t writelock;
+    omp_init_lock(&writelock);
+#pragma omp parallel for
+#endif
+    for (unsigned int i = 0; i < trianglePairs.size(); i++)
+    {
+        auto tPair = trianglePairs[i];
+        bool collision = _checkTrianglesCollision(
+            dynamic_cast<TrianglePtr>(tPair.first),
+            dynamic_cast<TrianglePtr>(tPair.second), stiffness);
+        if (collision)
+        {
+            for (auto node : tPair.first->nodes())
+            {
+                node->collide = true;
+            }
+            for (auto node : tPair.second->nodes())
+            {
+                node->collide = true;
+            }
+        }
+#ifdef PHYANIM_USES_OPENMP
+        omp_set_lock(&writelock);
+#endif
+        detectedCollision |= collision;
+#ifdef PHYANIM_USES_OPENMP
+        omp_unset_lock(&writelock);
+#endif
+    }
+#ifdef PHYANIM_USES_OPENMP
+    omp_destroy_lock(&writelock);
+#endif
+    return detectedCollision;
+}
+
 bool CollisionDetection::_checkTrianglesCollision(TrianglePtr t0_,
                                                   TrianglePtr t1_,
-                                                  double stiffness)
+                                                  double stiffness,
+                                                  bool setForces)
 {
     Vec3 vt0[3], vt1[3];
     vt0[0] = t0_->node0->position;
@@ -246,15 +364,17 @@ bool CollisionDetection::_checkTrianglesCollision(TrianglePtr t0_,
         return false;
     }
 
-    n0.normalize();
-    n1.normalize();
-    _checkAndSetForce(t0_->node0, n1, dt0[0], stiffness);
-    _checkAndSetForce(t0_->node1, n1, dt0[1], stiffness);
-    _checkAndSetForce(t0_->node2, n1, dt0[2], stiffness);
-    _checkAndSetForce(t1_->node0, n0, dt1[0], stiffness);
-    _checkAndSetForce(t1_->node1, n0, dt1[1], stiffness);
-    _checkAndSetForce(t1_->node2, n0, dt1[2], stiffness);
-
+    if (setForces)
+    {
+        n0.normalize();
+        n1.normalize();
+        _checkAndSetForce(t0_->node0, n1, dt0[0], stiffness);
+        _checkAndSetForce(t0_->node1, n1, dt0[1], stiffness);
+        _checkAndSetForce(t0_->node2, n1, dt0[2], stiffness);
+        _checkAndSetForce(t1_->node0, n0, dt1[0], stiffness);
+        _checkAndSetForce(t1_->node1, n0, dt1[1], stiffness);
+        _checkAndSetForce(t1_->node2, n0, dt1[2], stiffness);
+    }
     return true;
 }
 
@@ -266,6 +386,31 @@ void CollisionDetection::_checkAndSetForce(NodePtr node_,
     if (dist_ < 0.0)
     {
         node_->force += -dist_ * stiffness * normal_;
+    }
+}
+
+void CollisionDetection::_mergeBoundingBoxes(AxisAlignedBoundingBoxes& aabbs)
+{
+    bool merge = true;
+    while (merge)
+    {
+        merge = false;
+        for (uint64_t i = 0; i < aabbs.size(); ++i)
+        {
+            auto aabb0 = aabbs[i];
+            for (uint64_t j = i + 1; j < aabbs.size(); ++j)
+            {
+                auto aabb1 = aabbs[j];
+                if (aabb0->isColliding(*aabb1))
+                {
+                    merge = true;
+                    aabb0->unite(*aabb1);
+                    delete aabb1;
+                    aabbs.erase(aabbs.begin() + j);
+                    --j;
+                }
+            }
+        }
     }
 }
 

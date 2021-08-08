@@ -1,5 +1,5 @@
-#ifndef __EXAMPLES_OVERLAP_APP__
-#define __EXAMPLES_OVERLAP_APP__
+#ifndef __EXAMPLES_OVERLAP_SLICES_APP__
+#define __EXAMPLES_OVERLAP_SLICES_APP__
 
 #include <AnimSystem.h>
 #include <GLFWApp.h>
@@ -8,16 +8,21 @@
 
 namespace examples
 {
-class OverlapApp : public GLFWApp
+class OverlapSlicesApp : public GLFWApp
 {
 public:
-    OverlapApp();
+    OverlapSlicesApp();
 
     void init(int argc, char** argv);
 
     void loop();
 
 protected:
+    phyanim::MeshPtr _sliceMesh(phyanim::MeshPtr mesh,
+                                const phyanim::AxisAlignedBoundingBox& aabb);
+
+    void _setSurfaceNodes(phyanim::MeshPtr mesh);
+
     void _keyCallback(GLFWwindow* window,
                       int key,
                       int scancode,
@@ -27,16 +32,13 @@ protected:
 private:
     phyanim::AnimSystem* _animSys;
 
-    phyanim::MeshPtr _mesh;
-    std::string _inFile;
-    std::string _outFile;
-
-    phyanim::Meshes _dynamics;
-    phyanim::Meshes _statics;
-
     phyanim::Meshes _meshes;
+    phyanim::Meshes _collisionMeshes;
+
     std::vector<std::string> _inFiles;
     std::vector<std::string> _outFiles;
+
+    phyanim::AxisAlignedBoundingBoxes _aabbs;
 
     bool _anim;
     bool _stepByStep;

@@ -28,6 +28,13 @@ if(GLFW3_FOUND)
     ${GLFW3_INCLUDE_DIR})
   target_link_libraries(overlap PUBLIC ${GLFW3_LIBRARY} phyanim)
 
+
+  add_executable(overlapSlices overlapSlices.cpp OverlapSlicesApp.cpp 
+    GLFWApp.cpp Scene.cpp Camera.cpp RenderProgram.cpp)
+  target_include_directories(overlapSlices PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    ${GLFW3_INCLUDE_DIR})
+  target_link_libraries(overlapSlices PUBLIC ${GLFW3_LIBRARY} phyanim)
+
   add_executable(renderMesh renderMesh.cpp GLFWApp.cpp Scene.cpp Camera.cpp
     RenderProgram.cpp)
   target_include_directories(renderMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}

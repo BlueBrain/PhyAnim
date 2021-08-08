@@ -35,11 +35,13 @@ private:
     phyanim::AnimSystem* _animSys;
 
     phyanim::Meshes _meshes;
-    phyanim::HierarchicalAABBs _dynamics;
 
     double _collisionStiffness;
 
     bool _anim;
+
+    phyanim::Vec3 _pauseColor;
+    phyanim::Vec3 _animColor;
 };
 
 }  // namespace examples

@@ -10,10 +10,13 @@ namespace examples
 const std::string vshaderSource(
     "#version 400\n"
     "in vec3 inPos;"
+    "in vec3 inColor;"
     "out vec3 position;"
+    "out vec3 vColor;"
     "uniform mat4 projViewModel;"
     "uniform mat4 viewModel;"
     "void main(void) {"
+    "vColor = inColor;"
     "position = (viewModel*vec4(inPos, 1.0)).xyz;"
     "gl_Position = projViewModel * vec4(inPos, 1.0);}");
 
@@ -22,19 +25,24 @@ const std::string gshaderSource(
     "layout(triangles) in;"
     "layout(triangle_strip, max_vertices = 3) out;"
     "in vec3 position[3];"
+    "in vec3 vColor[3];"
     "out vec3 normal;"
+    "out vec3 color;"
     "out vec3 gposition;"
     "void main(void) {"
     "vec3 axis0 = normalize(position[1]-position[0]);"
     "vec3 axis1 = normalize(position[2]-position[0]);"
     "normal = cross(axis0, axis1);"
     "gposition = position[0];"
+    "color = vColor[0];"
     "gl_Position = gl_in[0].gl_Position;"
     "EmitVertex();"
     "gposition = position[1];"
+    "color = vColor[1];"
     "gl_Position = gl_in[1].gl_Position;"
     "EmitVertex();"
     "gposition = position[2];"
+    "color = vColor[2];"
     "gl_Position = gl_in[2].gl_Position;"
     "EmitVertex();"
     "EndPrimitive();}");
@@ -42,6 +50,7 @@ const std::string gshaderSource(
 const std::string fshaderSource(
     "#version 400\n"
     "in vec3 normal;"
+    "in vec3 color;"
     "in vec3 gposition;"
     "out vec4 oColor;"
     "void main(void){"
@@ -49,7 +58,7 @@ const std::string fshaderSource(
     "vec3 L = normalize( -gposition );"
     "float diff = dot( N, L );"
     "diff = clamp( diff, 0.0, 1.0 );"
-    "vec3 color = vec3( 0.5, 0.8, 0.2 );"
+    // "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
 Scene::Scene() : showFPS(false), _renderMode(SOLID), _framesCount(0)
@@ -143,6 +152,38 @@ void Scene::changeRenderMode()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glCullFace(GL_FRONT);
         break;
+    }
+}
+
+void Scene::updateColors(phyanim::Vec3 staticColor,
+                         phyanim::Vec3 dynamicColor,
+                         phyanim::Vec3 collideColor)
+{
+    for (auto mesh : _meshes)
+    {
+        size_t nodesSize = mesh->nodes.size();
+        std::vector<double> colorBuffer(nodesSize * 3);
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (uint64_t i = 0; i < nodesSize; ++i)
+        {
+            auto node = mesh->nodes[i];
+            phyanim::Vec3 color = staticColor;
+            if (node->collide)
+            {
+                color = collideColor;
+            }
+            else if (node->anim)
+            {
+                color = dynamicColor;
+            }
+            colorBuffer[i * 3] = color.x();
+            colorBuffer[i * 3 + 1] = color.y();
+            colorBuffer[i * 3 + 2] = color.z();
+        }
+        mesh->uploadColors(colorBuffer);
     }
 }
 

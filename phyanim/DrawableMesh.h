@@ -15,17 +15,22 @@ public:
 
     virtual ~DrawableMesh(void);
 
-    void render(void);
+    void render();
 
-    void renderSurface(void);
+    void renderSurface();
 
-    void upload(void);
+    void upload(Vec3 color = Vec3(0.4, 0.4, 0.8));
 
-    void uploadNodes(void);
+    void uploadPositions();
+
+    void uploadColors(Vec3 color = Vec3(0.4, 0.4, 0.8));
+
+    void uploadColors(std::vector<double> colors);
 
 private:
     std::vector<unsigned int> _vao;
     unsigned int _posVbo;
+    unsigned int _colorVbo;
     size_t _indicesSize;
     size_t _surfaceIndicesSize;
 };

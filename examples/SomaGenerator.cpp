@@ -138,7 +138,7 @@ void SomaGenerator::_updateNodes()
     {
         _mesh->nodes[i]->position = _ico->nodes[i]->position;
     }
-    _mesh->uploadNodes();
+    _mesh->uploadPositions();
 }
 
 }  // namespace examples

@@ -24,8 +24,16 @@ void AnimSystem::step(Mesh* mesh)
             node->force += g * node->mass;
         }
     }
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i = 0; i < mesh->nodes.size(); i++)
+    {
+        auto node = mesh->nodes[i];
+        node->anim = true;
+    }
     _step(mesh);
-}
+}  // namespace phyanim
 
 void AnimSystem::step(Meshes meshes)
 {
@@ -47,15 +55,25 @@ void AnimSystem::step(Meshes meshes)
     }
     for (auto mesh : meshes)
     {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned int i = 0; i < mesh->nodes.size(); i++)
+        {
+            auto node = mesh->nodes[i];
+            node->anim = true;
+        }
+
         _step(mesh);
     }
 }
+
 void AnimSystem::preprocessMesh(Meshes meshes)
 {
     for (auto mesh : meshes)
     {
         preprocessMesh(mesh);
     }
-};
+}
 
 }  // namespace phyanim

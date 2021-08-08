@@ -127,7 +127,7 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window,
             node->position += dxyz;
         }
         auto mesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-        mesh->uploadNodes();
+        mesh->uploadPositions();
     }
     if (action == GLFW_PRESS)
     {

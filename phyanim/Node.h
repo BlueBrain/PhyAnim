@@ -46,7 +46,11 @@ public:
 
     bool surface;
 
-    bool fixed;
+    bool fix;
+
+    bool anim;
+
+    bool collide;
 };
 
 }  // namespace phyanim

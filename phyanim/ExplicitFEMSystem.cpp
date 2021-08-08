@@ -67,7 +67,7 @@ void ExplicitFEMSystem::_step(Mesh* mesh)
     for (unsigned int i = 0; i < mesh->nodes.size(); i++)
     {
         auto node = mesh->nodes[i];
-        if (!node->fixed)
+        if (!node->fix)
         {
             Vec3 a = node->force / node->mass;
             Vec3 v = node->velocity + a * _dt;

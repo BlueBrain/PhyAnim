@@ -32,14 +32,14 @@ void DrawableMesh::renderSurface()
     glDrawElements(GL_TRIANGLES, _surfaceIndicesSize, GL_UNSIGNED_INT, 0);
 }
 
-void DrawableMesh::upload()
+void DrawableMesh::upload(Vec3 color)
 {
     glGenVertexArrays(2, _vao.data());
-    unsigned int vbos[3];
-    glGenBuffers(3, vbos);
-    _posVbo = vbos[0];
+    unsigned int vbos[4];
+    glGenBuffers(4, vbos);
 
     size_t nodesSize = nodes.size();
+    _posVbo = vbos[0];
     double posBuffer[nodesSize * 3];
     for (size_t i = 0; i < nodesSize; ++i)
     {
@@ -51,6 +51,19 @@ void DrawableMesh::upload()
 
     glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(double) * nodesSize * 3, &posBuffer,
+                 GL_STATIC_DRAW);
+
+    _colorVbo = vbos[1];
+    double colorBuffer[nodesSize * 3];
+    for (size_t i = 0; i < nodesSize; ++i)
+    {
+        colorBuffer[i * 3] = color.x();
+        colorBuffer[i * 3 + 1] = color.y();
+        colorBuffer[i * 3 + 2] = color.z();
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(double) * nodesSize * 3, &colorBuffer,
                  GL_STATIC_DRAW);
 
     // glBindVertexArray(_vao[0]);
@@ -69,7 +82,8 @@ void DrawableMesh::upload()
     //     indices[i*3+2] = triangle->node2->id;
     // }
     // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[1]);
-    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_indicesSize,
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned
+    // int)*_indicesSize,
     //              &indices, GL_STATIC_DRAW);
 
     glBindVertexArray(_vao[1]);
@@ -77,6 +91,10 @@ void DrawableMesh::upload()
     glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
     glVertexAttribPointer(0, 3, GL_DOUBLE, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
+    glVertexAttribPointer(1, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
 
     size_t trianglesSize = surfaceTriangles.size();
     _surfaceIndicesSize = trianglesSize * 3;
@@ -88,7 +106,7 @@ void DrawableMesh::upload()
         surfaceIndices[i * 3 + 1] = triangle->node1->id;
         surfaceIndices[i * 3 + 2] = triangle->node2->id;
     }
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  sizeof(unsigned int) * _surfaceIndicesSize, &surfaceIndices,
                  GL_STATIC_DRAW);
@@ -96,7 +114,7 @@ void DrawableMesh::upload()
     glBindVertexArray(0);
 }
 
-void DrawableMesh::uploadNodes()
+void DrawableMesh::uploadPositions()
 {
     size_t nodesSize = nodes.size();
     double posBuffer[nodesSize * 3];
@@ -109,6 +127,28 @@ void DrawableMesh::uploadNodes()
     }
     glBindBuffer(GL_ARRAY_BUFFER, _posVbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(double) * nodesSize * 3, &posBuffer,
+                 GL_STATIC_DRAW);
+}
+
+void DrawableMesh::uploadColors(Vec3 color)
+{
+    size_t nodesSize = nodes.size();
+    double colorBuffer[nodesSize * 3];
+    for (size_t i = 0; i < nodesSize; ++i)
+    {
+        colorBuffer[i * 3] = color.x();
+        colorBuffer[i * 3 + 1] = color.y();
+        colorBuffer[i * 3 + 2] = color.z();
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(double) * nodesSize * 3, &colorBuffer,
+                 GL_STATIC_DRAW);
+}
+
+void DrawableMesh::uploadColors(std::vector<double> colors)
+{
+    glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(double) * colors.size(), colors.data(),
                  GL_STATIC_DRAW);
 }
 
