@@ -13,6 +13,11 @@ add_custom_command( TARGET  tetrahedralizeMesh POST_BUILD COMMAND
 add_executable(checkCollision checkCollision.cpp)
 target_include_directories(checkCollision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(checkCollision PUBLIC phyanim)
+
+
+add_executable(formatConvert formatConvert.cpp)
+target_include_directories(formatConvert PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(formatConvert PUBLIC phyanim)
   
 if(GLFW3_FOUND)
   
