@@ -49,9 +49,12 @@ private:
     double _damping;
     double _density;
     double _poissonRatio;
+    double _initCollisionStiffness;
     double _collisionStiffness;
+    double _collisionStiffnessMultiplier;
     double _dt;
     uint64_t _cellSize;
+    double _bbFactor;
 };
 
 }  // namespace examples

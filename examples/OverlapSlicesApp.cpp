@@ -9,14 +9,16 @@ namespace examples
 OverlapSlicesApp::OverlapSlicesApp()
     : GLFWApp()
     , _anim(true)
-    , _stiffness(500.0)
+    , _stiffness(100.0)
     , _damping(1.0)
     , _density(1.0)
     , _poissonRatio(0.3)
-    , _collisionStiffness(500.0)
+    , _initCollisionStiffness(2.0)
+    , _collisionStiffness(2.0)
+    , _collisionStiffnessMultiplier(0.1)
     , _dt(0.01)
     , _stepByStep(true)
-
+    , _bbFactor(20)
 {
 }
 
@@ -52,6 +54,11 @@ void OverlapSlicesApp::init(int argc, char** argv)
                 _dt = std::atof(argv[i + 1]);
                 ++i;
             }
+            if (option.compare("-bb") == 0)
+            {
+                _bbFactor = std::atof(argv[i + 1]);
+                ++i;
+            }
             else if (option.compare("-ks") == 0)
             {
                 _stiffness = std::atof(argv[i + 1]);
@@ -75,6 +82,11 @@ void OverlapSlicesApp::init(int argc, char** argv)
             else if (option.compare("-kc") == 0)
             {
                 _collisionStiffness = std::atof(argv[i + 1]);
+                ++i;
+            }
+            else if (option.compare("-kcm") == 0)
+            {
+                _collisionStiffnessMultiplier = std::atof(argv[i + 1]);
                 ++i;
             }
             else if (option.compare("-cont") == 0)
@@ -102,6 +114,8 @@ void OverlapSlicesApp::init(int argc, char** argv)
             exit(-1);
         }
     }
+
+    _initCollisionStiffness = _collisionStiffness;
 
     _scene = new Scene();
     _animSys = new phyanim::ImplicitFEMSystem(_dt);
@@ -149,7 +163,8 @@ void OverlapSlicesApp::init(int argc, char** argv)
 
     _startTime = std::chrono::steady_clock::now();
 
-    _aabbs = phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, 10);
+    _aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
     if (_stepByStep)
     {
         _anim = false;
@@ -184,6 +199,8 @@ void OverlapSlicesApp::loop()
                             dynamic_cast<phyanim::DrawableMesh*>(mesh);
                         drawMesh->uploadPositions();
                     }
+                    _collisionStiffness +=
+                        _initCollisionStiffness * _collisionStiffnessMultiplier;
                 }
                 else
                 {
@@ -212,6 +229,7 @@ void OverlapSlicesApp::loop()
                         }
                     }
                     _animSys->preprocessMesh(_collisionMeshes);
+                    _collisionStiffness = _initCollisionStiffness;
                     if (_stepByStep)
                     {
                         _anim = false;

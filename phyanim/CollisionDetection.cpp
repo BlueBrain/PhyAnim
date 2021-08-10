@@ -151,7 +151,7 @@ AxisAlignedBoundingBoxes CollisionDetection::collisionBoundingBoxes(
             {
                 auto bb = new AxisAlignedBoundingBox(t->lowerLimit(),
                                                      t->upperLimit());
-                bb->resize(10);
+                bb->resize(sizeFactor);
                 boundingBoxes.push_back(bb);
             }
         }
