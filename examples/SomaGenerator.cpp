@@ -7,33 +7,45 @@ namespace examples
 SomaGenerator::SomaGenerator(NeuriteStarts starts,
                              phyanim::Vec3 pos,
                              double radius,
-                             double outterStiff,
-                             double innerStiff,
-                             double pullStiff,
-                             double damping,
-                             double fixedThreshold,
-                             double pullResThreshold)
+                             double dt,
+                             double stiffness,
+                             double fixedThreshold)
     : _center(pos)
     , _radius(radius)
-    , _damping(damping)
+    , _dt(dt)
 {
+    _stiffness = (1 / (_dt / (2 * M_PI))) * 0.01 * stiffness;
+    // //(std::pow(_dt));
+    // stiffness *= stiffness;
+    // stiffness = 1 / stiffness;
+
+    std::cout << "stiffness " << _stiffness << std::endl;
+    _damping = _stiffness * 0.001;
+    // _damping = 0;
+    std::cout << "damping " << _damping << std::endl;
     _ico = new Icosphere(_center, _radius);
+
     _nodes = _ico->nodes;
     _mesh = _ico->mesh();
-    _springs = _ico->springs(outterStiff);
-    _pullSprings(starts, pullStiff, pullResThreshold);
+
+    _springs = _ico->springs(_stiffness);
+    _pullSprings(starts, _stiffness * 0.01, 0.01);
     _fixCenterNodes(fixedThreshold);
 }
 
-void SomaGenerator::simulate(double dt, uint64_t iters)
+void SomaGenerator::simulate(uint64_t iters)
 {
-    for (uint64_t i = 0; i < iters; ++i) anim(dt);
+    for (uint64_t i = 0; i < iters; ++i)
+    {
+        anim();
+    }
     _updateNodes();
 }
 
-void SomaGenerator::anim(double dt, bool updateNodes)
+void SomaGenerator::anim(bool updateNodes)
 {
     double kd = _damping;
+
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -48,6 +60,7 @@ void SomaGenerator::anim(double dt, bool updateNodes)
     {
         auto spring = _springs[i];
         double ks = spring->stiffness;
+        double m = (spring->node0->mass + spring->node1->mass) * 0.5;
         phyanim::Vec3 d = spring->node1->position - spring->node0->position;
         double r = spring->resLength;
         double l = d.norm();
@@ -73,8 +86,8 @@ void SomaGenerator::anim(double dt, bool updateNodes)
         auto node = _nodes[i];
         if (!node->fixed)
         {
-            phyanim::Vec3 v = node->velocity + node->force * dt;
-            phyanim::Vec3 x = node->position + v * dt;
+            phyanim::Vec3 v = node->velocity + node->force / node->mass * _dt;
+            phyanim::Vec3 x = node->position + v * _dt;
 
             node->velocity = v;
             node->position = x;

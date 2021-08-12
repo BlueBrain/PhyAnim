@@ -18,6 +18,8 @@ public:
 
     std::vector<Spring*> springs(double stiffness = 100.0);
 
+    std::vector<Spring*> surfaceSprings(double stiffness = 100.0);
+
     std::vector<Node*> nodes;
 
     std::vector<Triangle*> triangles;

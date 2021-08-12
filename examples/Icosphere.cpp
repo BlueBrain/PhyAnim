@@ -39,6 +39,24 @@ std::vector<Spring*> Icosphere::springs(double stiffness)
     return springs;
 }
 
+std::vector<Spring*> Icosphere::surfaceSprings(double stiffness)
+{
+    UniqueSprings uSprings;
+
+    for (auto primitive : _mesh->surfaceTriangles)
+    {
+        auto triangle = dynamic_cast<phyanim::TrianglePtr>(primitive);
+        auto node0 = nodes[triangle->node0->id];
+        auto node1 = nodes[triangle->node1->id];
+        auto node2 = nodes[triangle->node2->id];
+        _insert(new Spring(node0, node1, stiffness), uSprings);
+        _insert(new Spring(node0, node2, stiffness), uSprings);
+        _insert(new Spring(node1, node2, stiffness), uSprings);
+    }
+    std::vector<Spring*> springs(uSprings.begin(), uSprings.end());
+    return springs;
+}
+
 void Icosphere::_insert(Spring* spring, UniqueSprings& springs)
 {
     std::pair<UniqueSprings::iterator, bool> insertion = springs.insert(spring);

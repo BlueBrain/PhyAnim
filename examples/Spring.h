@@ -15,7 +15,8 @@ public:
         , velocity(phyanim::Vec3::Zero())
         , force(phyanim::Vec3::Zero())
         , id(id)
-        , fixed(fixed){};
+        , fixed(fixed)
+        , mass(1.0){};
 
     ~Node(){};
 
@@ -24,6 +25,8 @@ public:
     phyanim::Vec3 velocity;
 
     phyanim::Vec3 force;
+
+    double mass;
 
     uint64_t id;
 

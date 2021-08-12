@@ -13,19 +13,16 @@ class SomaGenerator
 public:
     SomaGenerator(NeuriteStarts starts,
                   phyanim::Vec3 pos = phyanim::Vec3::Zero(),
-                  double radius = 1.0f,
-                  double outterStiff = 1000.0,
-                  double innerStiff = 100.0,
-                  double pullStiff = 100.0,
-                  double damping = 0.2,
-                  double fixedThreshold = 0.8,
-                  double pullResThreshold = 0.2);
+                  double radius = 1.0,
+                  double dt = 0.01,
+                  double stiffness = 1.0,
+                  double fixedThreshold = 0.5);
 
     ~SomaGenerator(){};
 
-    void simulate(double dt = 0.01, uint64_t iters = 1000);
+    void simulate(uint64_t iters = 1000);
 
-    void anim(double dt = 0.01, bool updateNodes = false);
+    void anim(bool updateNodes = false);
 
     phyanim::DrawableMesh* mesh();
 
@@ -49,7 +46,8 @@ private:
 
     phyanim::Vec3 _center;
     double _radius;
-
+    double _dt;
+    double _stiffness;
     double _damping;
 };
 

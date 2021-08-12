@@ -8,11 +8,8 @@ namespace examples
 {
 SomaApp::SomaApp()
     : GLFWApp()
-    , _dt(0.003)
-    , _kso(1000.0)
-    , _ksi(10.0)
-    , _ksp(100.0)
-    , _kd(1.0)
+    , _dt(0.01)
+    , _ks(0.5)
     , _iters(1000)
     , _anim(false)
     , _iter(0)
@@ -33,24 +30,9 @@ void SomaApp::init(int argc, char** argv)
                 _dt = std::atof(argv[i + 1]);
                 ++i;
             }
-            else if (option.compare("-kso") == 0)
+            else if (option.compare("-ks") == 0)
             {
-                _kso = std::atof(argv[i + 1]);
-                ++i;
-            }
-            else if (option.compare("-ksi") == 0)
-            {
-                _ksi = std::atof(argv[i + 1]);
-                ++i;
-            }
-            else if (option.compare("-ksp") == 0)
-            {
-                _ksp = std::atof(argv[i + 1]);
-                ++i;
-            }
-            else if (option.compare("-kd") == 0)
-            {
-                _kd = std::atof(argv[i + 1]);
+                _ks = std::atof(argv[i + 1]);
                 ++i;
             }
             else if (option.compare("-it") == 0)
@@ -67,14 +49,15 @@ void SomaApp::init(int argc, char** argv)
     }
 
     NeuriteStarts starts;
-    starts.push_back(std::make_pair(phyanim::Vec3(2.2, 0.0, 0.0), 0.4));
-    starts.push_back(std::make_pair(phyanim::Vec3(-1.2, 0.0, 0.0), 0.3));
-    starts.push_back(std::make_pair(phyanim::Vec3(0.0, 3.0, 1.0), 0.4));
-    somaGen = new SomaGenerator(starts, phyanim::Vec3::Zero(), 1.0, _kso, _ksi,
-                                _ksp, _kd);
+    starts.push_back(std::make_pair(phyanim::Vec3(3.2, -3.0, 0.0), 0.04));
+    starts.push_back(std::make_pair(phyanim::Vec3(-3.0, -3.0, 0.0), 0.03));
+    starts.push_back(std::make_pair(phyanim::Vec3(0.0, 3.0, 0.0), 0.04));
+    starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, 3.0), 0.04));
+    starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, -3.0), 0.04));
+    somaGen =
+        new SomaGenerator(starts, phyanim::Vec3::Zero(), 0.1, _dt, _ks, 0.7);
     // somaGen->simulate(_dt, _iters);
-    std::cout << "dt: " << _dt << "\nkso: " << _kso << "\nksi: " << _ksi
-              << "\nksp: " << _ksp << "\nkd: " << _kd << std::endl;
+    std::cout << "dt: " << _dt << "\nks: " << _ks << std::endl;
     phyanim::DrawableMesh* mesh;
     phyanim::AxisAlignedBoundingBox limits;
     mesh = somaGen->mesh();
@@ -92,7 +75,7 @@ void SomaApp::loop()
         {
             ++_iter;
             std::cout << "\rIteration: " << _iter << std::flush;
-            somaGen->anim(_dt, true);
+            somaGen->anim(true);
         }
         _scene->render();
         glfwSwapBuffers(_window);

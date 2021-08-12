@@ -28,10 +28,7 @@ protected:
     bool _anim;
 
     double _dt;
-    double _kso;
-    double _ksi;
-    double _ksp;
-    double _kd;
+    double _ks;
     uint16_t _iters;
     uint16_t _iter;
 };
