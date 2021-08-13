@@ -2,7 +2,6 @@
 #define __EXAMPLES_SCENE__
 
 #include <Camera.h>
-#include <DrawableMesh.h>
 #include <RenderProgram.h>
 
 #include <chrono>

@@ -1,8 +1,6 @@
 #ifndef __EXAMPLES_NODE__
 #define __EXAMPLES_NODE__
 
-#include <Node.h>
-
 #include <unordered_set>
 
 namespace examples
@@ -32,6 +30,12 @@ public:
 
     bool fixed;
 };
+
+class Spring;
+
+typedef Spring* SpringPtr;
+
+typedef std::vector<SpringPtr> Springs;
 
 class Spring
 {

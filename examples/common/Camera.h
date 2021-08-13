@@ -1,7 +1,7 @@
 #ifndef __EXAMPLES_CAMERA__
 #define __EXAMPLES_CAMERA__
 
-#include <Node.h>
+#include <Phyanim.h>
 
 namespace examples
 {

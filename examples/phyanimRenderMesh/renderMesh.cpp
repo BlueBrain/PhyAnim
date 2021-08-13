@@ -1,11 +1,9 @@
-#include "OverlapSlicesApp.h"
+#include <GLFWApp.h>
 
 int main(int argc, char* argv[])
 {
-    examples::OverlapSlicesApp app;
-
+    examples::GLFWApp app;
     app.init(argc, argv);
-
     app.loop();
 
     return 0;

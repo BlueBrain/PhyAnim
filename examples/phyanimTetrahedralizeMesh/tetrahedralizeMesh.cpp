@@ -12,7 +12,7 @@ void tetrahedralizeMesh(const std::string& file)
 {
     Eigen::MatrixXd sourceVertices;
     Eigen::MatrixXi sourceFacets;
-
+// 
     Eigen::MatrixXd destVertices;
     Eigen::MatrixXi destTets;
     Eigen::MatrixXi destFacets;

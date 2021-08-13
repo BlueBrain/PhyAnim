@@ -1,6 +1,8 @@
 #ifndef __PHYANIM_SPARSE_MATRIX__
 #define __PHYANIM_SPARSE_MATRIX__
 
+#include <unordered_map>
+
 namespace phyanim
 {
 typedef std::pair<uint32_t, uint32_t> Index;

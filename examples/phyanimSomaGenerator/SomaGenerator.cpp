@@ -15,37 +15,30 @@ SomaGenerator::SomaGenerator(NeuriteStarts starts,
     , _dt(dt)
 {
     _stiffness = (1 / (_dt / (2 * M_PI))) * 0.01 * stiffness;
-    // //(std::pow(_dt));
-    // stiffness *= stiffness;
-    // stiffness = 1 / stiffness;
+    _pullStiffness = 0;
 
-    std::cout << "stiffness " << _stiffness << std::endl;
-    _damping = _stiffness * 0.001;
-    // _damping = 0;
-    std::cout << "damping " << _damping << std::endl;
     _ico = new Icosphere(_center, _radius);
 
     _nodes = _ico->nodes;
     _mesh = _ico->mesh();
 
     _springs = _ico->springs(_stiffness);
-    _pullSprings(starts, _stiffness * 0.01, 0.01);
-    _fixCenterNodes(fixedThreshold);
+    _computePullSprings(starts, _stiffness, 0.01);
 }
 
 void SomaGenerator::simulate(uint64_t iters)
 {
+    double incStiffness = _stiffness / iters;
     for (uint64_t i = 0; i < iters; ++i)
     {
-        anim();
+        _pullStiffness += incStiffness;
+        anim(false);
     }
     _updateNodes();
 }
 
 void SomaGenerator::anim(bool updateNodes)
 {
-    double kd = _damping;
-
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -58,22 +51,23 @@ void SomaGenerator::anim(bool updateNodes)
 #endif
     for (uint64_t i = 0; i < _springs.size(); ++i)
     {
-        auto spring = _springs[i];
-        double ks = spring->stiffness;
-        double m = (spring->node0->mass + spring->node1->mass) * 0.5;
-        phyanim::Vec3 d = spring->node1->position - spring->node0->position;
-        double r = spring->resLength;
-        double l = d.norm();
-        phyanim::Vec3 v = spring->node1->velocity - spring->node0->velocity;
-        phyanim::Vec3 f0 = phyanim::Vec3::Zero();
-        if (l > 0.0)
-        {
-            // f0 = (ks * (l/r - 1.0))*d/l;
-            f0 = (ks * (l / r - 1.0) + kd * (v.dot(d) / (l * r))) * d / l;
-        }
-        spring->force = f0;
+        _computeForce(_springs[i]);
     }
     for (auto spring : _springs)
+    {
+        spring->node0->force += spring->force;
+        spring->node1->force -= spring->force;
+    }
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint64_t i = 0; i < _pullSprings.size(); ++i)
+    {
+        _pullSprings[i]->stiffness = _pullStiffness;
+        _computeForce(_pullSprings[i]);
+    }
+    for (auto spring : _pullSprings)
     {
         spring->node0->force += spring->force;
         spring->node1->force -= spring->force;
@@ -99,9 +93,9 @@ void SomaGenerator::anim(bool updateNodes)
 
 phyanim::DrawableMesh* SomaGenerator::mesh() { return _mesh; }
 
-void SomaGenerator::_pullSprings(NeuriteStarts starts,
-                                 double stiffness,
-                                 double resThreshold)
+void SomaGenerator::_computePullSprings(NeuriteStarts starts,
+                                        double stiffness,
+                                        double resThreshold)
 {
     for (auto start : starts)
     {
@@ -123,7 +117,7 @@ void SomaGenerator::_pullSprings(NeuriteStarts starts,
             {
                 auto linkNode = new Node(node->position + direction, 0, true);
                 _pullNodes.push_back(linkNode);
-                _springs.push_back(
+                _pullSprings.push_back(
                     new Spring(node, linkNode, stiffness, diff * resThreshold));
             }
         }
@@ -143,6 +137,23 @@ void SomaGenerator::_fixCenterNodes(double threshold)
     {
         node->fixed = ((node->position - _center).norm() < _radius * threshold);
     }
+}
+
+void SomaGenerator::_computeForce(SpringPtr spring)
+{
+    double ks = spring->stiffness;
+    double kd = ks * 0.1;
+    double m = (spring->node0->mass + spring->node1->mass) * 0.5;
+    phyanim::Vec3 d = spring->node1->position - spring->node0->position;
+    double r = spring->resLength;
+    double l = d.norm();
+    phyanim::Vec3 v = spring->node1->velocity - spring->node0->velocity;
+    phyanim::Vec3 f0 = phyanim::Vec3::Zero();
+    if (l > 0.0)
+    {
+        f0 = (ks * (l / r - 1.0) + kd * (v.dot(d) / (l * r))) * d / l;
+    }
+    spring->force = f0;
 }
 
 void SomaGenerator::_updateNodes()

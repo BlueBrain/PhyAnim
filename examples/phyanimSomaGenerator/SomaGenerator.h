@@ -27,13 +27,15 @@ public:
     phyanim::DrawableMesh* mesh();
 
 private:
-    void _pullSprings(NeuriteStarts starts,
-                      double stiffness,
-                      double resThreshold = 0.1);
+    void _computePullSprings(NeuriteStarts starts,
+                             double stiffness,
+                             double resThreshold = 0.1);
 
     void _innerSprings(double stiffness);
 
     void _fixCenterNodes(double threshold = 0.7);
+
+    void _computeForce(SpringPtr spring);
 
     void _updateNodes();
 
@@ -42,13 +44,14 @@ private:
     std::vector<Node*> _nodes;
     std::vector<Node*> _pullNodes;
     Node* _centerNode;
-    std::vector<Spring*> _springs;
+    Springs _springs;
+    Springs _pullSprings;
 
     phyanim::Vec3 _center;
     double _radius;
     double _dt;
     double _stiffness;
-    double _damping;
+    double _pullStiffness;
 };
 
 }  // namespace examples

@@ -1,17 +1,16 @@
-#ifndef __EXAMPLES_OVERLAP_SLICES_APP__
-#define __EXAMPLES_OVERLAP_SLICES_APP__
+#ifndef __EXAMPLES_OVERLAP_COLLISIONS_APP__
+#define __EXAMPLES_OVERLAP_COLLISIONS_APP__
 
-#include <AnimSystem.h>
 #include <GLFWApp.h>
 
 #include <chrono>
 
 namespace examples
 {
-class OverlapSlicesApp : public GLFWApp
+class OverlapCollisionsApp : public GLFWApp
 {
 public:
-    OverlapSlicesApp();
+    OverlapCollisionsApp();
 
     void init(int argc, char** argv);
 

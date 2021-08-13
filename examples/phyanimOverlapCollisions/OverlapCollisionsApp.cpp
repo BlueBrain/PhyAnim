@@ -1,12 +1,10 @@
-#include "OverlapSlicesApp.h"
-
-#include <ImplicitFEMSystem.h>
+#include "OverlapCollisionsApp.h"
 
 #include <iostream>
 
 namespace examples
 {
-OverlapSlicesApp::OverlapSlicesApp()
+OverlapCollisionsApp::OverlapCollisionsApp()
     : GLFWApp()
     , _anim(true)
     , _stiffness(100.0)
@@ -22,7 +20,7 @@ OverlapSlicesApp::OverlapSlicesApp()
 {
 }
 
-void OverlapSlicesApp::init(int argc, char** argv)
+void OverlapCollisionsApp::init(int argc, char** argv)
 {
     std::string usage =
         std::string("SYNOPSIS\n\t") + std::string(argv[0]) +
@@ -171,7 +169,7 @@ void OverlapSlicesApp::init(int argc, char** argv)
     }
 }
 
-void OverlapSlicesApp::loop()
+void OverlapCollisionsApp::loop()
 {
     while (!glfwWindowShouldClose(_window))
     {
@@ -272,7 +270,7 @@ void OverlapSlicesApp::loop()
     glfwTerminate();
 }  // namespace examples
 
-phyanim::MeshPtr OverlapSlicesApp::_sliceMesh(
+phyanim::MeshPtr OverlapCollisionsApp::_sliceMesh(
     phyanim::MeshPtr mesh,
     const phyanim::AxisAlignedBoundingBox& aabb)
 {
@@ -331,7 +329,7 @@ phyanim::MeshPtr OverlapSlicesApp::_sliceMesh(
     return sliceMesh;
 }
 
-void OverlapSlicesApp::_setSurfaceNodes(phyanim::MeshPtr mesh)
+void OverlapCollisionsApp::_setSurfaceNodes(phyanim::MeshPtr mesh)
 {
     for (auto triangle : mesh->surfaceTriangles)
     {
@@ -342,11 +340,11 @@ void OverlapSlicesApp::_setSurfaceNodes(phyanim::MeshPtr mesh)
     }
 }
 
-void OverlapSlicesApp::_keyCallback(GLFWwindow* window,
-                                    int key,
-                                    int scancode,
-                                    int action,
-                                    int mods)
+void OverlapCollisionsApp::_keyCallback(GLFWwindow* window,
+                                        int key,
+                                        int scancode,
+                                        int action,
+                                        int mods)
 {
     GLFWApp::_keyCallback(window, key, scancode, action, mods);
     if (_scene)
