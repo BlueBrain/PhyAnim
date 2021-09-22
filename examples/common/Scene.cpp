@@ -7,7 +7,22 @@
 
 namespace examples
 {
-const std::string vshaderSource(
+const std::string vPickingSource(
+    "#version 400\n"
+    "in vec3 inPos;"
+    "uniform mat4 projViewModel;"
+    "void main(void) {"
+    "gl_Position = projViewModel * vec4(inPos, 1.0);}");
+
+const std::string fPickingSource(
+    "#version 400\n"
+    "out vec4 color;"
+    "uniform vec4 pickingColor;"
+    "void main(void){"
+    //     "color = vec4(1.0, 0.0, 0.0, 1.0);}");
+    "color = pickingColor;}");
+
+const std::string vRenderSource(
     "#version 400\n"
     "in vec3 inPos;"
     "in vec3 inColor;"
@@ -20,7 +35,7 @@ const std::string vshaderSource(
     "position = (viewModel*vec4(inPos, 1.0)).xyz;"
     "gl_Position = projViewModel * vec4(inPos, 1.0);}");
 
-const std::string gshaderSource(
+const std::string gRenderSource(
     "#version 400\n"
     "layout(triangles) in;"
     "layout(triangle_strip, max_vertices = 3) out;"
@@ -47,7 +62,7 @@ const std::string gshaderSource(
     "EmitVertex();"
     "EndPrimitive();}");
 
-const std::string fshaderSource(
+const std::string fRenderSource(
     "#version 400\n"
     "in vec3 normal;"
     "in vec3 color;"
@@ -58,28 +73,34 @@ const std::string fshaderSource(
     "vec3 L = normalize( -gposition );"
     "float diff = dot( N, L );"
     "diff = clamp( diff, 0.0, 1.0 );"
-    // "vec3 color = vec3( 0.5, 0.8, 0.2 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-Scene::Scene() : showFPS(false), _renderMode(SOLID), _framesCount(0)
+Scene::Scene()
+    : showFPS(false)
+    , _renderMode(SOLID)
+    , _framesCount(0)
+    , _width(600)
+    , _height(600)
 {
-    glClearColor(1.0, 1.0, 1.0, 1.0);
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_FRONT);
     _camera = new Camera();
-    _program = new RenderProgram(vshaderSource, gshaderSource, fshaderSource);
+    _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
+    _pickingProgram =
+        new RenderProgram(vPickingSource, std::string(""), fPickingSource);
     _previousTime = std::chrono::steady_clock::now();
 }
 
 Scene::~Scene()
 {
-    clear();
+    meshes.clear();
     delete _program;
 }
 
 void Scene::render()
 {
     ++_framesCount;
+    glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     _program->use();
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
@@ -87,7 +108,7 @@ void Scene::render()
     glUniformMatrix4fv(_program->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
     glUniformMatrix4fv(_program->viewmodelIndex, 1, GL_FALSE, view.data());
-    for (auto mesh : _meshes)
+    for (auto mesh : meshes)
     {
         mesh->renderSurface();
     }
@@ -103,14 +124,52 @@ void Scene::render()
     }
 }
 
-void Scene::addMesh(phyanim::DrawableMesh* mesh) { _meshes.push_back(mesh); }
+uint32_t Scene::picking(uint32_t x, uint32_t y)
+{
+    if (_renderMode == WIREFRAME)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glCullFace(GL_FRONT);
+    }
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-void Scene::clear() { _meshes.clear(); }
+    _pickingProgram->use();
+    Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
+    glUniformMatrix4fv(_pickingProgram->projviewmodelIndex, 1, GL_FALSE,
+                       projView.data());
+    for (uint32_t id = 0; id < meshes.size(); ++id)
+    {
+        auto mesh = meshes[id];
+        float* idColor = _idToColor4f(id + 1);
+        glUniform4fv(_pickingProgram->pickingColor, 1, idColor);
+        mesh->renderSurface();
+    }
+
+    glFlush();
+    glFinish();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    unsigned char data[4];
+    glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    uint32_t pickedId = (float)data[0] + (float)data[1] * (float)256 +
+                        (float)data[2] * 256 * 256;
+
+    if (_renderMode == WIREFRAME)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glCullFace(GL_FRONT_AND_BACK);
+    }
+    return pickedId;
+}
 
 void Scene::cameraRatio(uint32_t width, uint32_t height)
 {
-    _camera->ratio((double)width / height);
-    glViewport(0, 0, width, height);
+    _width = width;
+    _height = height;
+    _camera->ratio((double)_width / _height);
+    glViewport(0, 0, _width, _height);
 }
 
 void Scene::cameraPosition(phyanim::Vec3 position)
@@ -159,7 +218,7 @@ void Scene::updateColors(phyanim::Vec3 staticColor,
                          phyanim::Vec3 dynamicColor,
                          phyanim::Vec3 collideColor)
 {
-    for (auto mesh : _meshes)
+    for (auto mesh : meshes)
     {
         size_t nodesSize = mesh->nodes.size();
         std::vector<double> colorBuffer(nodesSize * 3);
@@ -185,6 +244,16 @@ void Scene::updateColors(phyanim::Vec3 staticColor,
         }
         mesh->uploadColors(colorBuffer);
     }
+}
+
+float* Scene::_idToColor4f(uint32_t id)
+{
+    float* value = (float*)malloc(sizeof(float) * 4);
+    value[0] = ((id & 0x000000FF) >> 0) / 255.0f;
+    value[1] = ((id & 0x0000FF00) >> 8) / 255.0f;
+    value[2] = ((id & 0x00FF0000) >> 16) / 255.0f;
+    value[3] = 1.0f;
+    return value;
 }
 
 }  // namespace examples

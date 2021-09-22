@@ -17,9 +17,7 @@ public:
 
     void render();
 
-    void addMesh(phyanim::DrawableMesh* mesh);
-
-    void clear();
+    uint32_t picking(uint32_t x, uint32_t y);
 
     void cameraRatio(uint32_t width, uint32_t height);
 
@@ -37,7 +35,12 @@ public:
                                                                  0.0,
                                                                  0.0));
 
+private:
+    float* _idToColor4f(uint32_t id);
+
 public:
+    std::vector<phyanim::DrawableMesh*> meshes;
+
     bool showFPS;
 
 private:
@@ -49,11 +52,13 @@ private:
 
     Camera* _camera;
 
-    std::vector<phyanim::DrawableMesh*> _meshes;
-
     RenderMode _renderMode;
 
     RenderProgram* _program;
+    RenderProgram* _pickingProgram;
+
+    uint32_t _width;
+    uint32_t _height;
 
     uint64_t _framesCount;
 

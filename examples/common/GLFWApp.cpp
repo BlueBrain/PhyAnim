@@ -46,7 +46,7 @@ void GLFWApp::init(int argc, char** argv)
         mesh->load(file);
         mesh->upload();
         _limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
-        _scene->addMesh(mesh);
+        _scene->meshes.push_back(mesh);
     }
     _setCameraPos(_limits);
 }
@@ -134,6 +134,10 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                 break;
             case 'F':
                 _scene->showFPS = !_scene->showFPS;
+                break;
+            case GLFW_KEY_SPACE:
+                std::cout << "Picking id: " << _scene->picking(300, 300)
+                          << std::endl;
                 break;
             }
         }
@@ -255,6 +259,18 @@ void GLFWApp::_mousePositionCallback(GLFWwindow* window,
                 phyanim::Vec3(-diffX * 0.01, diffY * 0.01, 0.0);
             _scene->displaceCamera(dxyz);
         }
+
+        uint32_t pickedId = _scene->picking(xpos, ypos);
+
+        if (pickedId > 0)
+            for (uint32_t id = 0; id < _scene->meshes.size(); ++id)
+            {
+                auto mesh = _scene->meshes[id];
+                phyanim::Vec3 color(0.1, 0.1, 0.8);
+                if (id + 1 == pickedId) color = phyanim::Vec3(1.0, 0.0, 0.0);
+                dynamic_cast<phyanim::DrawableMesh*>(mesh)->uploadColors(color);
+            }
+        std::cout << xpos << " " << ypos << std::endl;
     }
 }
 

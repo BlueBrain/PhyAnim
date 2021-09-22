@@ -12,6 +12,7 @@ RenderProgram::RenderProgram(const std::string& vShaderSource,
     : _id(0)
     , projviewmodelIndex(-1)
     , viewmodelIndex(-1)
+    , pickingColor(-1)
     , _vshader(0)
     , _gshader(0)
     , _fshader(0)
@@ -81,6 +82,7 @@ void RenderProgram::_createProgram(const std::string& vSource,
         }
         projviewmodelIndex = glGetUniformLocation(_id, "projViewModel");
         viewmodelIndex = glGetUniformLocation(_id, "viewModel");
+        pickingColor = glGetUniformLocation(_id, "pickingColor");
     }
 }
 

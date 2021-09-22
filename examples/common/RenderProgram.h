@@ -28,6 +28,7 @@ private:
 public:
     int64_t projviewmodelIndex;
     int64_t viewmodelIndex;
+    int64_t pickingColor;
 
 private:
     uint64_t _id;
