@@ -13,26 +13,33 @@ public:
                  double damping_ = 1.0,
                  double poissonRatio_ = 0.499);
 
-    virtual ~DrawableMesh(void);
+    virtual ~DrawableMesh();
+
+    void load(const std::string& file_);
+
+    void load(const std::string& nodeFile_, const std::string& eleFile_);
 
     void render();
 
-    void renderSurface();
+    void upload();
 
-    void upload(Vec3 color = Vec3(0.4, 0.4, 0.8));
+    void updateColor(phyanim::Vec3 color = phyanim::Vec3(0.4, 0.4, 0.8));
 
-    void uploadPositions();
+    void updateColors(phyanim::Vec3 staticColor = phyanim::Vec3(0.4, 0.4, 0.8),
+                      phyanim::Vec3 dynamicColor = phyanim::Vec3(0.8, 0.4, 0.4),
+                      phyanim::Vec3 collideColor = phyanim::Vec3(1.0, .0, .0));
 
-    void uploadColors(Vec3 color = Vec3(0.4, 0.4, 0.8));
-
-    void uploadColors(std::vector<double> colors);
+    bool updatedPositions;
+    bool updatedColors;
 
 private:
-    std::vector<unsigned int> _vao;
+    void _uploadPositions();
+    void _uploadColors();
+
+    unsigned int _vao;
     unsigned int _posVbo;
     unsigned int _colorVbo;
     size_t _indicesSize;
-    size_t _surfaceIndicesSize;
 };
 
 }  // namespace phyanim

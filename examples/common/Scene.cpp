@@ -97,6 +97,13 @@ Scene::~Scene()
     delete _program;
 }
 
+void Scene::addMesh(phyanim::DrawableMesh* mesh)
+{
+    _meshesMutex.lock();
+    meshes.push_back(mesh);
+    _meshesMutex.unlock();
+}
+
 void Scene::render()
 {
     ++_framesCount;
@@ -108,10 +115,12 @@ void Scene::render()
     glUniformMatrix4fv(_program->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
     glUniformMatrix4fv(_program->viewmodelIndex, 1, GL_FALSE, view.data());
+    _meshesMutex.lock();
     for (auto mesh : meshes)
     {
-        mesh->renderSurface();
+        mesh->render();
     }
+    _meshesMutex.unlock();
     auto currentTime = std::chrono::steady_clock::now();
     double elapsed_seconds =
         (std::chrono::duration<double>(currentTime - _previousTime)).count();
@@ -138,13 +147,15 @@ uint32_t Scene::picking(uint32_t x, uint32_t y)
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     glUniformMatrix4fv(_pickingProgram->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
+    _meshesMutex.lock();
     for (uint32_t id = 0; id < meshes.size(); ++id)
     {
         auto mesh = meshes[id];
         float* idColor = _idToColor4f(id + 1);
         glUniform4fv(_pickingProgram->pickingColor, 1, idColor);
-        mesh->renderSurface();
+        mesh->render();
     }
+    _meshesMutex.unlock();
 
     glFlush();
     glFinish();
@@ -152,7 +163,7 @@ uint32_t Scene::picking(uint32_t x, uint32_t y)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     unsigned char data[4];
-    glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glReadPixels(x, _height - y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
     uint32_t pickedId = (float)data[0] + (float)data[1] * (float)256 +
                         (float)data[2] * 256 * 256;
 
@@ -214,37 +225,7 @@ void Scene::changeRenderMode()
     }
 }
 
-void Scene::updateColors(phyanim::Vec3 staticColor,
-                         phyanim::Vec3 dynamicColor,
-                         phyanim::Vec3 collideColor)
-{
-    for (auto mesh : meshes)
-    {
-        size_t nodesSize = mesh->nodes.size();
-        std::vector<double> colorBuffer(nodesSize * 3);
-
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-        for (uint64_t i = 0; i < nodesSize; ++i)
-        {
-            auto node = mesh->nodes[i];
-            phyanim::Vec3 color = staticColor;
-            if (node->collide)
-            {
-                color = collideColor;
-            }
-            else if (node->anim)
-            {
-                color = dynamicColor;
-            }
-            colorBuffer[i * 3] = color.x();
-            colorBuffer[i * 3 + 1] = color.y();
-            colorBuffer[i * 3 + 2] = color.z();
-        }
-        mesh->uploadColors(colorBuffer);
-    }
-}
+phyanim::Mat3 Scene::cameraRotation() const { return _camera->rotation(); }
 
 float* Scene::_idToColor4f(uint32_t id)
 {

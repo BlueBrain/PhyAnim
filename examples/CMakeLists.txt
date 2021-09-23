@@ -7,14 +7,13 @@ add_subdirectory(phyanimFormatConverter)
 add_subdirectory(phyanimTetrahedralizeMesh)
 
 if(GLFW3_FOUND)
-
-  # add_subdirectory(phyanimAnimMesh)
-  # add_subdirectory(phyanimMoveMesh)
+  add_subdirectory(phyanimAnimMesh)
+  add_subdirectory(phyanimMoveMesh)
   add_subdirectory(phyanimRenderMesh)
 
-  # add_subdirectory(phyanimOverlapCollisions)
-  # add_subdirectory(phyanimOverlapResolution)
-  # add_subdirectory(phyanimSomaGenerator)
+  add_subdirectory(phyanimOverlapCollisions)
+  add_subdirectory(phyanimOverlapResolution)
+  add_subdirectory(phyanimSomaGenerator)
 endif()
 
 #   add_executable(renderMesh renderMesh.cpp GLFWApp.cpp Scene.cpp Camera.cpp

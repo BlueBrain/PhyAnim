@@ -15,6 +15,7 @@ Node::Node(Vec3 position,
     , initVelocity(velocity)
     , velocity(velocity)
     , force(force)
+    , color(0.4, 0.4, 0.8)
     , mass(mass)
     , surface(surface)
     , fix(fix)

@@ -10,15 +10,23 @@ namespace examples
 class GLFWApp
 {
 public:
-    GLFWApp();
+    GLFWApp(int argc, char** argv);
 
     virtual ~GLFWApp();
 
-    void init(int argc, char** argv);
-
-    void loop();
+    void run();
 
 protected:
+    void _renderLoop();
+
+    virtual void _actionLoop();
+
+    static void _actionThread(GLFWApp* app);
+
+    bool _getAnim();
+
+    void _setAnim(bool anim);
+
     void _setCameraPos(phyanim::AxisAlignedBoundingBox limits);
 
     virtual void _keyCallback(GLFWwindow* window,
@@ -65,15 +73,19 @@ protected:
 
     Scene* _scene;
 
+    std::vector<std::string> _args;
+
     double _mouseX;
     double _mouseY;
 
     bool _leftButtonPressed;
+    bool _middleButtonPressed;
     bool _rightButtonPressed;
 
     double _cameraPosInc;
 
-    phyanim::AxisAlignedBoundingBox _limits;
+    bool _anim;
+    std::mutex _animMutex;
 };
 
 }  // namespace examples

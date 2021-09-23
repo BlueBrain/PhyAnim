@@ -5,41 +5,45 @@
 
 #include "Icosphere.h"
 
-namespace examples
+int main(int argc, char* argv[])
 {
-SomaApp::SomaApp()
-    : GLFWApp()
-    , _dt(0.01)
-    , _ks(1)
-    , _iters(2000)
-    , _anim(false)
-    , _iter(_iters)
-{
+    examples::SomaApp app(argc, argv);
+    app.run();
+
+    return 0;
 }
 
-void SomaApp::init(int argc, char** argv)
+namespace examples
 {
-    _scene = new Scene();
+SomaApp::SomaApp(int argc, char** argv) : GLFWApp(argc, argv), _anim(false) {}
 
-    for (int i = 1; i < argc; ++i)
+void SomaApp::_actionLoop()
+{
+    double dt = 0.01;
+    double ks = 1;
+    uint32_t iters = 2000;
+    uint32_t iter = 0;
+
+    for (int i = 0; i < _args.size(); ++i)
     {
-        std::string option(argv[i]);
+        std::string option(_args[i]);
         try
         {
             if (option.compare("-dt") == 0)
             {
-                _dt = std::atof(argv[i + 1]);
                 ++i;
+                dt = std::stof(_args[i]);
             }
             else if (option.compare("-ks") == 0)
             {
-                _ks = std::atof(argv[i + 1]);
                 ++i;
+                ks = std::stof(_args[i]);
             }
             else if (option.compare("-it") == 0)
             {
-                _iters = std::atof(argv[i + 1]);
-                _iter = _iters;
+                ++i;
+                iters = std::stof(_args[i]);
+                iter = iters;
                 ++i;
             }
         }
@@ -56,43 +60,47 @@ void SomaApp::init(int argc, char** argv)
     starts.push_back(std::make_pair(phyanim::Vec3(0.0, 3.0, 0.0), 0.4));
     starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, 3.0), 0.4));
     starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, -3.0), 0.4));
-    somaGen =
-        new SomaGenerator(starts, phyanim::Vec3::Zero(), 1, _dt, _ks, 0.7);
+    auto somaGen =
+        new SomaGenerator(starts, phyanim::Vec3::Zero(), 1, dt, ks, 0.7);
 
     std::chrono::time_point<std::chrono::steady_clock> startTime =
         std::chrono::steady_clock::now();
-    somaGen->simulate(_iters);
+    somaGen->simulate(iters);
 
     auto endTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsedTime = endTime - startTime;
-    std::cout << _iters << " run in: " << elapsedTime.count() << "seconds"
+    std::cout << iters << " run in: " << elapsedTime.count() << "seconds"
               << std::endl;
 
-    std::cout << "dt: " << _dt << "\nks: " << _ks << std::endl;
-    phyanim::DrawableMesh* mesh;
+    std::cout << "dt: " << dt << "\nks: " << ks << std::endl;
+    phyanim::DrawableMesh* mesh = somaGen->mesh();
     phyanim::AxisAlignedBoundingBox limits;
-    mesh = somaGen->mesh();
-    mesh->upload();
     limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
     _scene->addMesh(mesh);
     _setCameraPos(limits);
-}
 
-void SomaApp::loop()
-{
-    while (!glfwWindowShouldClose(_window))
+    while (true)
     {
-        if (_anim)
+        _animMutex.lock();
+        bool anim = _anim;
+        _animMutex.unlock();
+        if (anim)
         {
-            ++_iter;
-            std::cout << "\rIteration: " << _iter << std::flush;
-            somaGen->anim(true);
+            endTime = std::chrono::steady_clock::now();
+            elapsedTime = endTime - startTime;
+            if (elapsedTime.count() >= 0.005)
+            {
+                ++iter;
+                std::cout << "\rIteration: " << iter << std::flush;
+                somaGen->anim(true);
+                startTime = endTime;
+            }
         }
-        _scene->render();
-        glfwSwapBuffers(_window);
-        glfwPollEvents();
+        else
+        {
+            startTime = std::chrono::steady_clock::now();
+        }
     }
-    glfwTerminate();
 }
 
 void SomaApp::_keyCallback(GLFWwindow* window,
@@ -109,7 +117,9 @@ void SomaApp::_keyCallback(GLFWwindow* window,
             switch (key)
             {
             case GLFW_KEY_SPACE:
+                _animMutex.lock();
                 _anim = !_anim;
+                _animMutex.unlock();
                 if (_anim)
                     std::cout << "\nsimulation released" << std::endl;
                 else

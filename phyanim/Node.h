@@ -40,6 +40,8 @@ public:
 
     Vec3 force;
 
+    Vec3 color;
+
     double mass;
 
     unsigned int id;

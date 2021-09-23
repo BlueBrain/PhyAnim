@@ -5,6 +5,7 @@
 #include <RenderProgram.h>
 
 #include <chrono>
+#include <mutex>
 
 namespace examples
 {
@@ -14,6 +15,8 @@ public:
     Scene();
 
     ~Scene();
+
+    void addMesh(phyanim::DrawableMesh* mesh);
 
     void render();
 
@@ -29,19 +32,15 @@ public:
 
     void changeRenderMode();
 
-    void updateColors(phyanim::Vec3 staticColor = phyanim::Vec3(0.4, 0.4, 0.8),
-                      phyanim::Vec3 dynamicColor = phyanim::Vec3(0.8, 0.4, 0.4),
-                      phyanim::Vec3 collideColor = phyanim::Vec3(1.0,
-                                                                 0.0,
-                                                                 0.0));
+    phyanim::Mat3 cameraRotation() const;
 
 private:
     float* _idToColor4f(uint32_t id);
 
 public:
-    std::vector<phyanim::DrawableMesh*> meshes;
-
     bool showFPS;
+
+    std::vector<phyanim::DrawableMesh*> meshes;
 
 private:
     typedef enum RenderMode
@@ -53,6 +52,9 @@ private:
     Camera* _camera;
 
     RenderMode _renderMode;
+    bool _renderModeChanged;
+
+    std::mutex _meshesMutex;
 
     RenderProgram* _program;
     RenderProgram* _pickingProgram;

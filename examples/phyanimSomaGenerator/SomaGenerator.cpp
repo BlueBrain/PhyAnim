@@ -159,10 +159,8 @@ void SomaGenerator::_computeForce(SpringPtr spring)
 void SomaGenerator::_updateNodes()
 {
     for (uint64_t i = 0; i < _mesh->nodes.size(); ++i)
-    {
         _mesh->nodes[i]->position = _ico->nodes[i]->position;
-    }
-    _mesh->uploadPositions();
+    _mesh->updatedPositions = true;
 }
 
 }  // namespace examples

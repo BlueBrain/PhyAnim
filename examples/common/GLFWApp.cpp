@@ -5,18 +5,23 @@
 #include "GLFWApp.h"
 
 #include <iostream>
+#include <thread>
 
 namespace examples
 {
-GLFWApp::GLFWApp()
+GLFWApp::GLFWApp(int argc, char** argv)
     : _scene(nullptr)
     , _mouseX(0.0)
     , _mouseY(0.0)
     , _leftButtonPressed(false)
+    , _middleButtonPressed(false)
     , _rightButtonPressed(false)
     , _cameraPosInc(0.1)
+    , _anim(false)
 {
     _initGLFW();
+    _scene = new Scene();
+    for (uint32_t i = 1; i < argc; ++i) _args.push_back(std::string(argv[i]));
 }
 
 GLFWApp::~GLFWApp()
@@ -24,42 +29,57 @@ GLFWApp::~GLFWApp()
     if (_scene) delete _scene;
 }
 
-void GLFWApp::init(int argc, char** argv)
+void GLFWApp::run()
 {
-    _scene = new Scene();
+    std::thread actionTask(_actionThread, this);
 
-    std::string usage = std::string("Usage error: Use ") +
-                        std::string(argv[0]) +
-                        std::string(" mesh_file[.obj|.off]");
-    if (argc < 2)
-    {
-        std::cerr << usage << std::endl;
-        exit(-1);
-    }
-
-    phyanim::DrawableMesh* mesh;
-    for (uint32_t i = 1; i < argc; ++i)
-    {
-        std::string file(argv[i]);
-        mesh = new phyanim::DrawableMesh();
-        std::cout << "Loading file " << file << std::endl;
-        mesh->load(file);
-        mesh->upload();
-        _limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
-        _scene->meshes.push_back(mesh);
-    }
-    _setCameraPos(_limits);
+    // _actionLoop();
+    _renderLoop();
+    // actionTask.detach();
 }
 
-void GLFWApp::loop()
+void GLFWApp::_renderLoop()
 {
     while (!glfwWindowShouldClose(_window))
     {
+        glfwMakeContextCurrent(_window);
         _scene->render();
         glfwSwapBuffers(_window);
         glfwPollEvents();
     }
     glfwTerminate();
+}
+
+void GLFWApp::_actionLoop()
+{
+    phyanim::AxisAlignedBoundingBox limits;
+
+    for (auto file : _args)
+    {
+        auto mesh = new phyanim::DrawableMesh();
+        std::cout << "Loading file " << file << std::endl;
+        mesh->load(file);
+        limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
+        _scene->addMesh(mesh);
+        _setCameraPos(limits);
+    }
+}
+
+void GLFWApp::_actionThread(GLFWApp* app) { app->_actionLoop(); }
+
+bool GLFWApp::_getAnim()
+{
+    _animMutex.lock();
+    bool anim = _anim;
+    _animMutex.unlock();
+    return anim;
+}
+
+void GLFWApp::_setAnim(bool anim)
+{
+    _animMutex.lock();
+    _anim = anim;
+    _animMutex.unlock();
 }
 
 void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
@@ -68,7 +88,7 @@ void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
     phyanim::Vec3 dist = limits.upperLimit() - cameraPos;
     double max = std::max(std::max(dist.x(), dist.y()), dist.z());
     cameraPos.z() = limits.upperLimit().z() + max;
-    _cameraPosInc = max * 0.01;
+    _cameraPosInc = max * 0.001;
     _scene->cameraPosition(cameraPos);
 }
 
@@ -90,6 +110,7 @@ void GLFWApp::_initGLFW()
     }
 
     glfwMakeContextCurrent(_window);
+    // glfwSwapInterval(0);
 
     glewExperimental = GL_TRUE;
     glewInit();
@@ -121,7 +142,6 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        double dx = _cameraPosInc;
         phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
         bool cameraDisplaced = false;
 
@@ -136,33 +156,37 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                 _scene->showFPS = !_scene->showFPS;
                 break;
             case GLFW_KEY_SPACE:
-                std::cout << "Picking id: " << _scene->picking(300, 300)
-                          << std::endl;
+                _setAnim(!_anim);
+                if (_anim)
+                    std::cout << "release" << std::endl;
+                else
+                    std::cout << "pause" << std::endl;
                 break;
             }
         }
-
         switch (key)
         {
         case 'W':
-            dxyz += phyanim::Vec3(0.0, 0.0, -dx);
+            dxyz += phyanim::Vec3(0.0, 0.0, -1.0);
             cameraDisplaced = true;
             break;
         case 'S':
-            dxyz += phyanim::Vec3(0.0, 0.0, dx);
+            dxyz += phyanim::Vec3(0.0, 0.0, 1.0);
             cameraDisplaced = true;
             break;
         case 'A':
-            dxyz += phyanim::Vec3(-dx, 0.0, 0.0);
+            dxyz += phyanim::Vec3(-1.0, 0.0, 0.0);
             cameraDisplaced = true;
             break;
         case 'D':
-            dxyz += phyanim::Vec3(dx, 0.0, 0.0);
+            dxyz += phyanim::Vec3(1.0, 0.0, 0.0);
             cameraDisplaced = true;
             break;
         }
+
         if (cameraDisplaced)
         {
+            dxyz *= _cameraPosInc * 10.0;
             _scene->displaceCamera(dxyz);
         }
     }
@@ -205,10 +229,35 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
                 _leftButtonPressed = true;
 
                 glfwGetCursorPos(window, &_mouseX, &_mouseY);
+
+                uint32_t pickedId = _scene->picking(_mouseX, _mouseY);
+
+                for (uint32_t id = 0; id < _scene->meshes.size(); ++id)
+                {
+                    auto mesh = _scene->meshes[id];
+                    phyanim::Vec3 color(0.4, 0.4, 0.8);
+                    if (id + 1 == pickedId)
+                        color = phyanim::Vec3(0.8, 0.4, 0.4);
+                    dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColor(
+                        color);
+                }
             }
             else if (action == GLFW_RELEASE)
             {
                 _leftButtonPressed = false;
+            }
+        }
+        if (button == GLFW_MOUSE_BUTTON_MIDDLE)
+        {
+            if (action == GLFW_PRESS)
+            {
+                _middleButtonPressed = true;
+
+                glfwGetCursorPos(window, &_mouseX, &_mouseY);
+            }
+            else if (action == GLFW_RELEASE)
+            {
+                _middleButtonPressed = false;
             }
         }
         if (button == GLFW_MOUSE_BUTTON_RIGHT)
@@ -241,36 +290,23 @@ void GLFWApp::_mousePositionCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        if (_rightButtonPressed)
-        {
-            double diffX = xpos - _mouseX;
-            double diffY = ypos - _mouseY;
-            _mouseX = xpos;
-            _mouseY = ypos;
-            _scene->rotateCamera(-diffY * 0.005, -diffX * 0.005);
-        }
+        double diffX = xpos - _mouseX;
+        double diffY = ypos - _mouseY;
+        _mouseX = xpos;
+        _mouseY = ypos;
+        phyanim::Vec3 dxyz =
+            phyanim::Vec3(-diffX * _cameraPosInc, diffY * _cameraPosInc, 0.0);
         if (_leftButtonPressed)
         {
-            double diffX = xpos - _mouseX;
-            double diffY = ypos - _mouseY;
-            _mouseX = xpos;
-            _mouseY = ypos;
-            phyanim::Vec3 dxyz =
-                phyanim::Vec3(-diffX * 0.01, diffY * 0.01, 0.0);
+        }
+        if (_middleButtonPressed)
+        {
             _scene->displaceCamera(dxyz);
         }
-
-        uint32_t pickedId = _scene->picking(xpos, ypos);
-
-        if (pickedId > 0)
-            for (uint32_t id = 0; id < _scene->meshes.size(); ++id)
-            {
-                auto mesh = _scene->meshes[id];
-                phyanim::Vec3 color(0.1, 0.1, 0.8);
-                if (id + 1 == pickedId) color = phyanim::Vec3(1.0, 0.0, 0.0);
-                dynamic_cast<phyanim::DrawableMesh*>(mesh)->uploadColors(color);
-            }
-        std::cout << xpos << " " << ypos << std::endl;
+        if (_rightButtonPressed)
+        {
+            _scene->rotateCamera(-diffY * 0.005, -diffX * 0.005);
+        }
     }
 }
 

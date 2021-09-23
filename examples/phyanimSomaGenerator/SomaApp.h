@@ -10,15 +10,11 @@ namespace examples
 class SomaApp : public GLFWApp
 {
 public:
-    SomaApp();
-
-    void init(int argc, char** argv);
-
-    void loop();
-
-    SomaGenerator* somaGen;
+    SomaApp(int argc, char** argv);
 
 protected:
+    void _actionLoop();
+
     void _keyCallback(GLFWwindow* window,
                       int key,
                       int scancode,
@@ -27,10 +23,7 @@ protected:
 
     bool _anim;
 
-    double _dt;
-    double _ks;
-    uint16_t _iters;
-    uint16_t _iter;
+    std::mutex _animMutex;
 };
 
 }  // namespace examples

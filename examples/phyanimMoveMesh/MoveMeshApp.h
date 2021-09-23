@@ -8,25 +8,31 @@ namespace examples
 class MoveMeshApp : public GLFWApp
 {
 public:
-    MoveMeshApp();
-
-    void init(int argc, char** argv);
-
-    void loop();
+    MoveMeshApp(int argc, char** argv);
 
 protected:
+    void _actionLoop();
+
+    void _coloredMeshes();
+
     void _keyCallback(GLFWwindow* window,
                       int key,
                       int scancode,
                       int action,
                       int mods);
 
-    phyanim::Meshes _meshes;
-    phyanim::Mesh* _mesh;
-    uint32_t _meshId;
+    void _mouseButtonCallback(GLFWwindow* window,
+                              int button,
+                              int action,
+                              int mods);
 
-    bool _editing;
-    bool _finished;
+    void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
+
+    phyanim::Meshes _meshes;
+    std::vector<std::string> _fileNames;
+    phyanim::Mesh* _mesh;
+
+    std::chrono::steady_clock::time_point _pickingTime;
 };
 
 }  // namespace examples

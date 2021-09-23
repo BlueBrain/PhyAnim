@@ -10,50 +10,19 @@ namespace examples
 class OverlapCollisionsApp : public GLFWApp
 {
 public:
-    OverlapCollisionsApp();
-
-    void init(int argc, char** argv);
-
-    void loop();
+    OverlapCollisionsApp(int argc, char** argv);
 
 protected:
+    void _actionLoop();
+
     phyanim::MeshPtr _sliceMesh(phyanim::MeshPtr mesh,
-                                const phyanim::AxisAlignedBoundingBox& aabb);
+                                const phyanim::AxisAlignedBoundingBox& aabb,
+                                double stiffness,
+                                bool density,
+                                bool damping,
+                                bool poissonRatio);
 
     void _setSurfaceNodes(phyanim::MeshPtr mesh);
-
-    void _keyCallback(GLFWwindow* window,
-                      int key,
-                      int scancode,
-                      int action,
-                      int mods);
-
-private:
-    phyanim::AnimSystem* _animSys;
-
-    phyanim::Meshes _meshes;
-    phyanim::Meshes _collisionMeshes;
-
-    std::vector<std::string> _inFiles;
-    std::vector<std::string> _outFiles;
-
-    phyanim::AxisAlignedBoundingBoxes _aabbs;
-
-    bool _anim;
-    bool _stepByStep;
-
-    std::chrono::time_point<std::chrono::steady_clock> _startTime;
-
-    double _stiffness;
-    double _damping;
-    double _density;
-    double _poissonRatio;
-    double _initCollisionStiffness;
-    double _collisionStiffness;
-    double _collisionStiffnessMultiplier;
-    double _dt;
-    uint64_t _cellSize;
-    double _bbFactor;
 };
 
 }  // namespace examples

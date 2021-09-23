@@ -4,89 +4,84 @@
 
 #include <iostream>
 
-namespace examples
+int main(int argc, char* argv[])
 {
-OverlapApp::OverlapApp()
-    : GLFWApp()
-    , _anim(true)
-    , _mesh(nullptr)
-    , _stiffness(1000.0)
-    , _damping(1.0)
-    , _density(1.0)
-    , _poissonRatio(0.49)
-    , _collisionStiffness(100.0)
-    , _dt(0.01)
-    , _stepByStep(true)
-    , _cellSize(6)
+    examples::OverlapApp app(argc, argv);
+    app.run();
 
-{
+    return 0;
 }
 
-void OverlapApp::init(int argc, char** argv)
+namespace examples
 {
-    std::string usage =
-        std::string("SYNOPSIS\n\t") + std::string(argv[0]) +
-        std::string(
-            " mesh_file[.tet|.node .ele] [-dt double] [-d double] "
-            "[-ks double] [-kd double] [-kp double] "
-            "[--help]"
-            "\nThe following options are available:"
-            "\n\t-dt double    Set time increment"
-            "\n\t-d double     Set density"
-            "\n\t-ks double    Set stiffness constant/Young modulus"
-            "\n\t-kd double    Set damping constant"
-            "\n\t-kp double    Set poisson ratio"
-            "\n\t--help        Print help message");
-    if (argc < 2)
+OverlapApp::OverlapApp(int argc, char** argv) : GLFWApp(argc, argv) {}
+
+void OverlapApp::_actionLoop()
+{
+    std::string usage(
+        "SYNOPSIS\n\t"
+        " mesh_file[.tet|.node .ele] [-dt double] [-d double] "
+        "[-ks double] [-kd double] [-kp double] "
+        "[--help]"
+        "\nThe following options are available:"
+        "\n\t-dt double    Set time increment"
+        "\n\t-d double     Set density"
+        "\n\t-ks double    Set stiffness constant/Young modulus"
+        "\n\t-kp double    Set poisson ratio"
+        "\n\t--help        Print help message");
+    if (_args.size() < 1)
     {
         std::cerr << "Usage error:\n" << usage << std::endl;
         exit(-1);
     }
 
+    double stiffness = 1000.0;
+    double density = 1.0;
+    double damping = 1.0;
+    double poissonRatio = 0.3;
+    double collisionStiffness = 100.0;
+    double dt = 0.01;
+    bool stepByStep = true;
+
     std::vector<std::string> files;
-    for (int i = 1; i < argc; ++i)
+    for (int i = 0; i < _args.size(); ++i)
     {
-        std::string option(argv[i]);
+        std::string option(_args[i]);
         try
         {
             if (option.compare("-dt") == 0)
             {
-                _dt = std::atof(argv[i + 1]);
+                dt = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-ks") == 0)
             {
-                _stiffness = std::atof(argv[i + 1]);
+                stiffness = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-d") == 0)
             {
-                _density = std::atof(argv[i + 1]);
-                ++i;
-            }
-            else if (option.compare("-kd") == 0)
-            {
-                _damping = std::atof(argv[i + 1]);
+                density = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-kp") == 0)
             {
-                _poissonRatio = std::atof(argv[i + 1]);
+                poissonRatio = std::stof(_args[i + 1]);
+                ++i;
+            }
+            else if (option.compare("-kd") == 0)
+            {
+                damping = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-kc") == 0)
             {
-                _collisionStiffness = std::atof(argv[i + 1]);
+                collisionStiffness = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-cont") == 0)
             {
-                _stepByStep = false;
-            }
-            else if (option.compare("-cellSize") == 0)
-            {
-                _cellSize = std::atoi(argv[i + 1]);
-                ++i;
+                stepByStep = false;
             }
             else if (option.compare("--help") == 0)
             {
@@ -95,7 +90,7 @@ void OverlapApp::init(int argc, char** argv)
             }
             else
             {
-                files.push_back(std::string(argv[i]));
+                files.push_back(std::string(_args[i]));
             }
         }
         catch (...)
@@ -105,9 +100,22 @@ void OverlapApp::init(int argc, char** argv)
         }
     }
 
-    _scene = new Scene();
-    _animSys = new phyanim::ImplicitFEMSystem(_dt);
-    _animSys->gravity = false;
+    std::cout << "stiffness: " << stiffness
+              << "\ncollision stiffness: " << collisionStiffness
+              << "\npoisson ratio: " << poissonRatio << "\ndt: " << dt
+              << std::endl;
+    auto animSys = new phyanim::ImplicitFEMSystem(dt);
+    animSys->gravity = false;
+
+    if (!stepByStep)
+    {
+        _setAnim(true);
+    }
+
+    auto startTime = std::chrono::steady_clock::now();
+
+    phyanim::Meshes meshes;
+    phyanim::AxisAlignedBoundingBox limits;
 
     for (uint32_t i = 0; i < files.size(); ++i)
     {
@@ -119,145 +127,71 @@ void OverlapApp::init(int argc, char** argv)
         {
             std::string file1 = files[i + 1];
             ++i;
-            mesh = new phyanim::DrawableMesh(_stiffness, _density, _damping,
-                                             _poissonRatio);
+            mesh = new phyanim::DrawableMesh(stiffness, density, damping,
+                                             poissonRatio);
             mesh->load(file, file1);
         }
         else if ((extPos = file.find(".tet")) != std::string::npos)
         {
-            mesh = new phyanim::DrawableMesh(_stiffness, _density, _damping,
-                                             _poissonRatio);
+            mesh = new phyanim::DrawableMesh(stiffness, density, 0.1,
+                                             poissonRatio);
             mesh->load(file);
         }
 
         if (mesh)
         {
             std::string outFile = file.substr(0, extPos) + "_sol.tet";
-            _inFiles.push_back(file);
-            _outFiles.push_back(outFile);
-            _meshes.push_back(mesh);
-            mesh->upload();
             mesh->compute();
             mesh->boundingBox =
                 new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-            _limits.unite(*mesh->boundingBox);
-        }
-    }
+            limits.unite(*mesh->boundingBox);
+            _setCameraPos(*mesh->boundingBox);
+            _scene->addMesh(mesh);
 
-    _setCameraPos(_limits);
-    _startTime = std::chrono::steady_clock::now();
-}
+            phyanim::Meshes dynamics(1);
+            dynamics[0] = mesh;
 
-void OverlapApp::loop()
-{
-    while (!glfwWindowShouldClose(_window))
-    {
-        if (_anim)
-        {
-            if (_mesh)
+            bool collision = true;
+            while (collision)
             {
-                _mesh->nodesForceZero();
-                if (phyanim::CollisionDetection::computeCollisions(
-                        _dynamics, _statics, _collisionStiffness, true))
+                if (_getAnim())
                 {
-                    if (_mesh->kMatrix.data().size() == 0)
+                    mesh->nodesForceZero();
+
+                    collision = phyanim::CollisionDetection::computeCollisions(
+                        dynamics, meshes, collisionStiffness, true);
+                    if (collision)
                     {
-                        _mesh->compute();
-                        _animSys->preprocessMesh(_mesh);
+                        if (mesh->kMatrix.data().size() == 0)
+                            animSys->preprocessMesh(mesh);
+
+                        animSys->step(mesh);
+                        mesh->boundingBox->update();
+                        phyanim::CollisionDetection::computeCollisions(dynamics,
+                                                                       limits);
+                        mesh->updatedPositions = true;
                     }
-
-                    _animSys->step(_mesh);
-                    _mesh->boundingBox->update();
-                    phyanim::CollisionDetection::computeCollisions(_dynamics,
-                                                                   _limits);
-                    auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-                    drawMesh->uploadPositions();
-                }
-                else
-                {
-                    double mean, max, min, rms;
-                    _mesh->positionDifference(mean, max, min, rms);
-                    std::cout
-                        << "Mesh " << _inFile << ":\n"
-                        << "\t* Original volume: " << _mesh->initVolume
-                        << ". Volume difference: "
-                        << (_mesh->initVolume / _mesh->volume() - 1.0) * 100.0
-                        << "%" << std::endl;
-                    std::cout << "\t* Vertices distance mean: " << mean
-                              << " max: " << max << " min: " << min
-                              << " rms: " << rms << std::endl;
-
-                    _statics.push_back(_mesh);
-
-                    _mesh->write(_outFile);
-                    std::cout << "\t* Saved file " << _outFile << std::endl;
-                    _mesh = nullptr;
-                }
-                _scene->updateColors();
-            }
-            else
-            {
-                if (!_meshes.empty())
-                {
-                    _mesh = _meshes[0];
-                    _meshes.erase(_meshes.begin());
-                    _outFile = _outFiles[0];
-                    _outFiles.erase(_outFiles.begin());
-                    _inFile = _inFiles[0];
-                    _inFiles.erase(_inFiles.begin());
-                    auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(_mesh);
-                    _scene->addMesh(drawMesh);
-
-                    _dynamics.clear();
-                    _dynamics.push_back(_mesh);
-
-                    if (_stepByStep)
+                    else
                     {
-                        _anim = false;
+                        mesh->write(outFile);
+                        std::cout << "\t* Saved file " << outFile << std::endl;
+
+                        meshes.push_back(mesh);
+                        if (stepByStep)
+                        {
+                            _setAnim(false);
+                        }
                     }
-                }
-                else
-                {
-                    auto endTime = std::chrono::steady_clock::now();
-                    std::chrono::duration<double> elapsedTime =
-                        endTime - _startTime;
-                    std::cout << "Overlap solved in: " << elapsedTime.count()
-                              << "seconds" << std::endl;
-                    _anim = false;
+                    mesh->updateColors();
                 }
             }
         }
-
-        _scene->render();
-        glfwSwapBuffers(_window);
-        glfwPollEvents();
     }
-    glfwTerminate();
-}
 
-void OverlapApp::_keyCallback(GLFWwindow* window,
-                              int key,
-                              int scancode,
-                              int action,
-                              int mods)
-{
-    GLFWApp::_keyCallback(window, key, scancode, action, mods);
-    if (_scene)
-    {
-        if (action == GLFW_RELEASE)
-        {
-            switch (key)
-            {
-            case GLFW_KEY_SPACE:
-                _anim = !_anim;
-                if (_anim)
-                    std::cout << "Release" << std::endl;
-                else
-                    std::cout << "Pause" << std::endl;
-                break;
-            }
-        }
-    }
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "Overlap solved in: " << elapsedTime.count() << " seconds"
+              << std::endl;
 }
 
 }  // namespace examples
