@@ -14,10 +14,10 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
 
 void Tetrahedron::compute()
 {
-    Vec3 x0 = node0->position;
-    Vec3 x1 = node1->position;
-    Vec3 x2 = node2->position;
-    Vec3 x3 = node3->position;
+    Vec3 x0 = node0->initPosition;
+    Vec3 x1 = node1->initPosition;
+    Vec3 x2 = node2->initPosition;
+    Vec3 x3 = node3->initPosition;
 
     normal0 = (x3 - x1).cross(x2 - x1).normalized();
     normal1 = (x2 - x0).cross(x3 - x0).normalized();

@@ -122,6 +122,7 @@ void GLFWApp::_initGLFW()
     glfwSetWindowSizeCallback(_window, GLFWApp::_wrapperResizeCallback);
     glfwSetMouseButtonCallback(_window, GLFWApp::_wrapperMouseButtonCallback);
     glfwSetCursorPosCallback(_window, GLFWApp::_wrapperMousePositionCallback);
+    glfwSetScrollCallback(_window, _wrapperMouseScrollCallback);
 }
 
 void GLFWApp::_wrapperKeyCallback(GLFWwindow* window,
@@ -307,6 +308,26 @@ void GLFWApp::_mousePositionCallback(GLFWwindow* window,
         {
             _scene->rotateCamera(-diffY * 0.005, -diffX * 0.005);
         }
+    }
+}
+
+void GLFWApp::_wrapperMouseScrollCallback(GLFWwindow* window,
+                                          double xoffset,
+                                          double yoffset)
+{
+    GLFWApp* app = static_cast<GLFWApp*>(glfwGetWindowUserPointer(window));
+    app->_mouseScrollCallback(window, xoffset, yoffset);
+}
+
+void GLFWApp::_mouseScrollCallback(GLFWwindow* window,
+                                   double xoffset,
+                                   double yoffset)
+{
+    if (_scene)
+    {
+        phyanim::Vec3 dxyz =
+            phyanim::Vec3(0.0, 0.0, -yoffset * _cameraPosInc * 20);
+        _scene->displaceCamera(dxyz);
     }
 }
 

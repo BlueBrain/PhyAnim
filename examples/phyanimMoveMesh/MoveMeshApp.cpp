@@ -53,6 +53,7 @@ void MoveMeshApp::_actionLoop()
             limits.unite(*mesh->boundingBox);
             _meshes.push_back(mesh);
             _scene->addMesh(mesh);
+            _setCameraPos(limits);
         }
     }
 
@@ -66,7 +67,7 @@ void MoveMeshApp::_coloredMeshes()
     phyanim::Vec3 baseColor(0.4, 0.4, 0.8);
     phyanim::Vec3 baseSelectedColor(0.0, 0.0, 1.0);
 
-    phyanim::Vec3 collisionColor(0.8, 0.4, 0.4);
+    phyanim::Vec3 collisionColor(1.0, 0.0, 0.0);
     phyanim::Vec3 collisionSelectedColor(1.0, 0.0, 0.0);
 
     for (auto mesh : _meshes)

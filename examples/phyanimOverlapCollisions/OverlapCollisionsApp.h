@@ -18,11 +18,16 @@ protected:
     phyanim::MeshPtr _sliceMesh(phyanim::MeshPtr mesh,
                                 const phyanim::AxisAlignedBoundingBox& aabb,
                                 double stiffness,
-                                bool density,
-                                bool damping,
-                                bool poissonRatio);
+                                double density,
+                                double damping,
+                                double poissonRatio);
 
     void _setSurfaceNodes(phyanim::MeshPtr mesh);
+
+    void _mouseButtonCallback(GLFWwindow* window,
+                              int button,
+                              int action,
+                              int mods);
 };
 
 }  // namespace examples

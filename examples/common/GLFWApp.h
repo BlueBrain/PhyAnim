@@ -46,6 +46,10 @@ protected:
                                         double xpos,
                                         double ypos);
 
+    virtual void _mouseScrollCallback(GLFWwindow* window,
+                                      double xoffset,
+                                      double yoffset);
+
 private:
     void _initGLFW();
 
@@ -67,6 +71,10 @@ private:
     static void _wrapperMousePositionCallback(GLFWwindow* window,
                                               double xpos,
                                               double ypos);
+
+    static void _wrapperMouseScrollCallback(GLFWwindow* window,
+                                            double xoffset,
+                                            double yoffset);
 
 protected:
     GLFWwindow* _window;

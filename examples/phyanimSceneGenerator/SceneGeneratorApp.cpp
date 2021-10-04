@@ -26,6 +26,7 @@ void SceneGeneratorApp::_actionLoop()
     phyanim::Meshes meshes;
     phyanim::AxisAlignedBoundingBox limits;
     uint32_t numOutMeshes = 10;
+    double bbFactor = 1.0;
 
     std::cout << std::fixed << std::setprecision(2);
     std::cout << "Loading files 0.00%" << std::flush;
@@ -36,6 +37,11 @@ void SceneGeneratorApp::_actionLoop()
         {
             ++i;
             numOutMeshes = std::stoi(_args[i]);
+        }
+        else if (_args[i].compare("-bb") == 0)
+        {
+            ++i;
+            bbFactor = std::stod(_args[i]);
         }
         else
         {
@@ -68,6 +74,11 @@ void SceneGeneratorApp::_actionLoop()
     }
     std::cout << std::endl;
     _setCameraPos(limits);
+
+    phyanim::Vec3 center = limits.center();
+    phyanim::Vec3 axis = (limits.upperLimit() - center) * bbFactor;
+    limits.lowerLimit(center - axis);
+    limits.upperLimit(center + axis);
 
     auto sceneMeshes =
         examples::SceneGenerator::generate(meshes, numOutMeshes, limits);

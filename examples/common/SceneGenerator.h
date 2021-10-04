@@ -31,7 +31,7 @@ public:
 
             phyanim::Vec3 range(aabb.upperLimit() - aabb.lowerLimit());
 
-            std::cout << "Genrating process 0.00%" << std::flush;
+            std::cout << "Generating process 0.00%" << std::flush;
             for (uint32_t i = 0; i < numOutMeshes; ++i)
             {
                 uint32_t meshId = std::rand() % numMeshes;
@@ -51,7 +51,7 @@ public:
                 }
                 sceneMeshes.push_back(mesh);
 
-                std::cout << "\rGenrating process "
+                std::cout << "\rGenerating process "
                           << (i + 1) * 100.0 / numOutMeshes << "%"
                           << std::flush;
             }
