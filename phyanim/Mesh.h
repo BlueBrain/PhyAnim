@@ -53,10 +53,10 @@ public:
 
     void nodesForceZero(void);
 
-    Mesh* copy(bool surfaceTriangles_ = true,
-               bool triangles_ = true,
-               bool tetrahedra_ = true,
-               bool edges_ = true);
+    virtual Mesh* copy(bool surfaceTriangles_ = true,
+                       bool triangles_ = true,
+                       bool tetrahedra_ = true,
+                       bool edges_ = true);
 
     void positionDifference(double& mean_,
                             double& max_,

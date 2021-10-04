@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 
 #include <iostream>
+#include <unordered_map>
 
 #include "Tetrahedron.h"
 #include "Triangle.h"
@@ -148,6 +149,66 @@ void DrawableMesh::_uploadColors()
     glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(double) * nodesSize * 3, &colorBuffer,
                  GL_STATIC_DRAW);
+}
+
+Mesh* DrawableMesh::copy(bool surfaceTriangles_,
+                         bool triangles_,
+                         bool tetrahedra_,
+                         bool edges_)
+{
+    auto mesh = new DrawableMesh();
+    std::unordered_map<Node*, Node*> nodesDicc;
+    for (auto node : nodes)
+    {
+        auto newNode = new Node(node->position, node->id);
+        mesh->nodes.push_back(newNode);
+        nodesDicc[node] = newNode;
+    }
+    if (surfaceTriangles_)
+    {
+        for (auto primitive : surfaceTriangles)
+        {
+            auto triangle = dynamic_cast<TrianglePtr>(primitive);
+            auto newTriangle = new Triangle(nodesDicc[triangle->node0],
+                                            nodesDicc[triangle->node1],
+                                            nodesDicc[triangle->node2]);
+            mesh->surfaceTriangles.push_back(newTriangle);
+        }
+    }
+    if (triangles_)
+    {
+        for (auto primitive : triangles)
+        {
+            auto triangle = dynamic_cast<TrianglePtr>(primitive);
+            auto newTriangle = new Triangle(nodesDicc[triangle->node0],
+                                            nodesDicc[triangle->node1],
+                                            nodesDicc[triangle->node2]);
+            mesh->triangles.push_back(newTriangle);
+        }
+    }
+    if (tetrahedra_)
+    {
+        for (auto primitive : tetrahedra)
+        {
+            auto tet = dynamic_cast<TetrahedronPtr>(primitive);
+            PrimitivePtr newTet =
+                new Tetrahedron(nodesDicc[tet->node0], nodesDicc[tet->node1],
+                                nodesDicc[tet->node2], nodesDicc[tet->node3]);
+            mesh->tetrahedra.push_back(newTet);
+        }
+    }
+    if (edges_)
+    {
+        for (auto edge : edges)
+        {
+            auto newEdge =
+                new Edge(nodesDicc[edge->node0], nodesDicc[edge->node1]);
+            mesh->edges.push_back(newEdge);
+        }
+    }
+    updatedColors = true;
+    updatedPositions = true;
+    return mesh;
 }
 
 }  // namespace phyanim

@@ -29,6 +29,11 @@ public:
                       phyanim::Vec3 dynamicColor = phyanim::Vec3(0.8, 0.4, 0.4),
                       phyanim::Vec3 collideColor = phyanim::Vec3(1.0, .0, .0));
 
+    Mesh* copy(bool surfaceTriangles_ = true,
+               bool triangles_ = true,
+               bool tetrahedra_ = true,
+               bool edges_ = true);
+
     bool updatedPositions;
     bool updatedColors;
 

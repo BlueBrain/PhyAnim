@@ -10,6 +10,7 @@ if(GLFW3_FOUND)
   add_subdirectory(phyanimAnimMesh)
   add_subdirectory(phyanimMoveMesh)
   add_subdirectory(phyanimRenderMesh)
+  add_subdirectory(phyanimSceneGenerator) 
 
   add_subdirectory(phyanimOverlapCollisions)
   add_subdirectory(phyanimOverlapResolution)
