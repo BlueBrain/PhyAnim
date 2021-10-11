@@ -12,7 +12,6 @@ Node::Node(Vec3 position,
     : initPosition(position)
     , position(position)
     , id(id)
-    , initVelocity(velocity)
     , velocity(velocity)
     , force(force)
     , color(0.4, 0.4, 0.8)

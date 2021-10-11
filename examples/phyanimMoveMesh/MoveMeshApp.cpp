@@ -1,5 +1,6 @@
 #include "MoveMeshApp.h"
 
+#include <iomanip>
 #include <iostream>
 
 int main(int argc, char* argv[])
@@ -20,46 +21,66 @@ MoveMeshApp::MoveMeshApp(int argc, char** argv)
 
 void MoveMeshApp::_actionLoop()
 {
-    phyanim::AxisAlignedBoundingBox limits;
+    _bbFactor = 1.0001;
+    std::vector<std::string> files;
+
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
-        phyanim::DrawableMesh* mesh;
-        std::string file(_args[i]);
-
         size_t extensionPos;
-
-        if ((extensionPos = file.find(".node")) != std::string::npos)
+        if (_args[i].compare("-bb") == 0)
         {
-            std::string file1(_args[i + 1]);
-            mesh = new phyanim::DrawableMesh();
-            mesh->load(file, file1);
             ++i;
+            _bbFactor = std::stoi(_args[i]);
         }
-        else if ((extensionPos = file.find(".tet")) != std::string::npos)
+        else if ((extensionPos = _args[i].find(".tet")) != std::string::npos)
         {
-            mesh = new phyanim::DrawableMesh();
-            mesh->load(file);
+            files.push_back(_args[i]);
+            auto fileName = _args[i].substr(0, extensionPos);
+            _fileNames.push_back(fileName);
         }
         else
-            std::cerr << "Unknown file format: " << file << std::endl;
+            std::cerr << "Unknown file format: " << _args[i] << std::endl;
+    }
 
+    std::cout << std::fixed << std::setprecision(2);
+    double progress = 0.0;
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < files.size(); ++i)
+    {
+        phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh();
+        mesh->load(files[i]);
         if (mesh)
         {
-            auto fileName = file.substr(0, extensionPos);
-            _fileNames.push_back(fileName);
             mesh->boundingBox =
                 new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
 
-            limits.unite(*mesh->boundingBox);
+            _limits.unite(*mesh->boundingBox);
             _meshes.push_back(mesh);
             _scene->addMesh(mesh);
-            _setCameraPos(limits);
+            _setCameraPos(_limits);
+        }
+#pragma omp critical
+        {
+            progress += 100.0f / files.size();
+            std::cout << "\rLoading files " << progress << "%" << std::flush;
         }
     }
+    std::cout << std::endl;
 
+    _aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
     _coloredMeshes();
-    _setCameraPos(limits);
+    _collisionId = 0;
+    if (_aabbs.size() > 0)
+    {
+        std::cout << "Collision id: " << _collisionId << std::endl;
+        _setCameraPos(*_aabbs[0], false);
+    }
 }
 
 void MoveMeshApp::_coloredMeshes()
@@ -123,6 +144,15 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window,
                     std::string fileName(_fileNames[i] + ".tet");
                     std::cout << "\t Saved " << fileName << std::endl;
                     _meshes[i]->write(fileName);
+                }
+                break;
+            case GLFW_KEY_SPACE:
+                uint32_t aabbsSize = _aabbs.size();
+                if (aabbsSize > 0)
+                {
+                    _collisionId = (_collisionId + 1) % aabbsSize;
+                    std::cout << "Collision id: " << _collisionId << std::endl;
+                    _setCameraPos(*_aabbs[_collisionId], false);
                 }
                 break;
             }
@@ -197,6 +227,11 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
                 if (_mesh)
                 {
                     _mesh->boundingBox->update();
+                    _aabbs =
+                        phyanim::CollisionDetection::collisionBoundingBoxes(
+                            _meshes, _bbFactor);
+                    std::cout << "Number of collisions: " << _aabbs.size()
+                              << std::endl;
                     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
                                                                    true);
                     _mesh = nullptr;
@@ -254,18 +289,20 @@ void MoveMeshApp::_mousePositionCallback(GLFWwindow* window,
                 dynamic_cast<phyanim::DrawableMesh*>(_mesh)->updatedPositions =
                     true;
 
-                auto currentTime = std::chrono::steady_clock::now();
-                auto elapsedTime =
-                    (std::chrono::duration<double>(currentTime - _pickingTime))
-                        .count();
-                if (elapsedTime > 0.1)
-                {
-                    _mesh->boundingBox->update();
-                    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
-                                                                   true);
-                    _coloredMeshes();
-                    _pickingTime = currentTime;
-                }
+                // auto currentTime = std::chrono::steady_clock::now();
+                // auto elapsedTime =
+                //     (std::chrono::duration<double>(currentTime -
+                //     _pickingTime))
+                //         .count();
+                // if (elapsedTime > 0.1)
+                // {
+                //     _mesh->boundingBox->update();
+                //     phyanim::CollisionDetection::computeCollisions(_meshes,
+                //     0.0,
+                //                                                    true);
+                //     _coloredMeshes();
+                //     _pickingTime = currentTime;
+                // }
             }
         }
         if (_middleButtonPressed)

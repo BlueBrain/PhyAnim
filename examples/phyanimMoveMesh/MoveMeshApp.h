@@ -32,6 +32,10 @@ protected:
     std::vector<std::string> _fileNames;
     phyanim::Mesh* _mesh;
 
+    phyanim::AxisAlignedBoundingBoxes _aabbs;
+    uint32_t _collisionId;
+    uint32_t _bbFactor;
+    phyanim::AxisAlignedBoundingBox _limits;
     std::chrono::steady_clock::time_point _pickingTime;
 };
 

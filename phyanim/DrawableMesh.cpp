@@ -206,6 +206,7 @@ Mesh* DrawableMesh::copy(bool surfaceTriangles_,
             mesh->edges.push_back(newEdge);
         }
     }
+    nodesDicc.clear();
     updatedColors = true;
     updatedPositions = true;
     return mesh;

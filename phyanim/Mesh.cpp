@@ -84,6 +84,20 @@ void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
     tetsToTriangles();
 }
 
+void Mesh::clearData()
+{
+    for (auto node : nodes) delete node;
+    nodes.clear();
+    for (auto triangle : triangles) delete triangle;
+    triangles.clear();
+    surfaceTriangles.clear();
+    for (auto tet : tetrahedra) delete tet;
+    tetrahedra.clear();
+    for (auto edge : edges) delete edge;
+    edges.clear();
+    if (boundingBox) delete boundingBox;
+}
+
 void Mesh::compute(bool createEdges)
 {
     if (tetrahedra.size() > 0)
@@ -282,7 +296,6 @@ void Mesh::nodesToInitPos()
     {
         auto node = nodes[i];
         node->position = node->initPosition;
-        node->velocity = node->initVelocity;
     }
 }
 
@@ -353,6 +366,7 @@ Mesh* Mesh::copy(bool surfaceTriangles_,
             mesh->edges.push_back(newEdge);
         }
     }
+    nodesDicc.clear();
     return mesh;
 }
 

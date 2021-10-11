@@ -1,5 +1,6 @@
 #include "OverlapCollisionsApp.h"
 
+#include <iomanip>
 #include <iostream>
 
 int main(int argc, char* argv[])
@@ -19,7 +20,7 @@ OverlapCollisionsApp::OverlapCollisionsApp(int argc, char** argv)
 
 void OverlapCollisionsApp::_actionLoop()
 {
-    double stiffness = 100.0;
+    double stiffness = 50.0;
     double damping = 1.0;
     double density = 1.0;
     double poissonRatio = 0.3;
@@ -27,7 +28,7 @@ void OverlapCollisionsApp::_actionLoop()
     double collisionStiffness = 2.0;
     double collisionStiffnessMultiplier = 0.1;
     double dt = 0.01;
-    double bbFactor = 10;
+    double bbFactor = 15;
     bool stepByStep = true;
 
     std::chrono::time_point<std::chrono::steady_clock> startTime;
@@ -127,6 +128,10 @@ void OverlapCollisionsApp::_actionLoop()
 
     phyanim::AxisAlignedBoundingBox limits;
 
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Loading files 0.00%" << std::flush;
+
+    startTime = std::chrono::steady_clock::now();
     for (uint32_t i = 0; i < files.size(); ++i)
     {
         phyanim::DrawableMesh* mesh = nullptr;
@@ -162,42 +167,111 @@ void OverlapCollisionsApp::_actionLoop()
             _scene->addMesh(mesh);
             _setCameraPos(limits);
         }
+        std::cout << "\rLoading files " << (i + 1) * 100.0 / _args.size() << "%"
+                  << std::flush;
     }
+    std::cout << "\rLoading files 100.00%" << std::endl;
 
     _setCameraPos(limits);
 
-    startTime = std::chrono::steady_clock::now();
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
+              << std::endl;
+
+    startTime = endTime;
 
     phyanim::AxisAlignedBoundingBoxes aabbs =
         phyanim::CollisionDetection::collisionBoundingBoxes(meshes, bbFactor);
+    std::cout << "Number of collisions: " << aabbs.size() << std::endl;
+    uint32_t collisionId = 0;
 
-    for (auto aabb : aabbs)
+    if (stepByStep)
     {
-        _setCameraPos(*aabb);
-
-        phyanim::Meshes slicedMeshes;
-        phyanim::Meshes completeMeshes;
-        for (auto mesh : meshes)
+        for (uint32_t i = 0; i < aabbs.size(); ++i)
         {
-            auto slicedMesh = _sliceMesh(mesh, *aabb, stiffness, density,
-                                         damping, poissonRatio);
-            if (slicedMesh)
+            auto aabb = aabbs[i];
+            std::cout << "Collision id: " << collisionId << std::endl;
+            ++collisionId;
+            _setCameraPos(*aabb, false);
+
+            phyanim::Meshes slicedMeshes;
+            phyanim::Meshes completeMeshes;
+            for (auto mesh : meshes)
             {
-                slicedMeshes.push_back(slicedMesh);
-                completeMeshes.push_back(mesh);
+                auto slicedMesh = _sliceMesh(mesh, *aabb, stiffness, density,
+                                             damping, poissonRatio);
+                if (slicedMesh)
+                {
+                    slicedMeshes.push_back(slicedMesh);
+                    completeMeshes.push_back(mesh);
+                }
+            }
+
+            animSys->preprocessMesh(slicedMeshes);
+
+            _setAnim(!stepByStep);
+
+            collisionStiffness = initCollisionStiffness;
+
+            bool collision = phyanim::CollisionDetection::computeCollisions(
+                slicedMeshes, collisionStiffness, true);
+            for (auto mesh : completeMeshes)
+                dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColors();
+            while (collision)
+            {
+                if (_getAnim())
+                {
+                    for (auto mesh : slicedMeshes) mesh->nodesForceZero();
+                    collision = phyanim::CollisionDetection::computeCollisions(
+                        slicedMeshes, collisionStiffness, true);
+                    if (collision)
+                    {
+                        animSys->step(slicedMeshes);
+                        for (auto mesh : slicedMeshes)
+                            mesh->boundingBox->update();
+                        phyanim::CollisionDetection::computeCollisions(
+                            slicedMeshes, limits);
+                        for (auto mesh : completeMeshes)
+                            dynamic_cast<phyanim::DrawableMesh*>(mesh)
+                                ->updatedPositions = true;
+                        collisionStiffness += initCollisionStiffness *
+                                              collisionStiffnessMultiplier;
+                    }
+                    for (auto mesh : completeMeshes)
+                        dynamic_cast<phyanim::DrawableMesh*>(mesh)
+                            ->updateColors();
+                }
             }
         }
-
-        animSys->preprocessMesh(slicedMeshes);
-
-        _setAnim(!stepByStep);
-
-        collisionStiffness = initCollisionStiffness;
-
-        bool collision = true;
-        while (collision)
+    }
+    else
+    {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (uint32_t i = 0; i < aabbs.size(); ++i)
         {
-            if (_getAnim())
+            auto aabb = aabbs[i];
+
+            phyanim::Meshes slicedMeshes;
+            phyanim::Meshes completeMeshes;
+            for (auto mesh : meshes)
+            {
+                auto slicedMesh = _sliceMesh(mesh, *aabb, stiffness, density,
+                                             damping, poissonRatio);
+                if (slicedMesh)
+                {
+                    slicedMeshes.push_back(slicedMesh);
+                    completeMeshes.push_back(mesh);
+                }
+            }
+
+            animSys->preprocessMesh(slicedMeshes);
+            collisionStiffness = initCollisionStiffness;
+
+            bool collision = true;
+            while (collision)
             {
                 for (auto mesh : slicedMeshes) mesh->nodesForceZero();
                 collision = phyanim::CollisionDetection::computeCollisions(
@@ -219,9 +293,10 @@ void OverlapCollisionsApp::_actionLoop()
             }
         }
     }
+
     _setCameraPos(limits);
-    auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    endTime = std::chrono::steady_clock::now();
+    elapsedTime = endTime - startTime;
     std::cout << "Overlap solved in: " << elapsedTime.count() << " seconds"
               << std::endl;
 }

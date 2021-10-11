@@ -27,7 +27,8 @@ protected:
 
     void _setAnim(bool anim);
 
-    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits);
+    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits,
+                       bool increment = true);
 
     virtual void _keyCallback(GLFWwindow* window,
                               int key,
@@ -75,6 +76,11 @@ private:
     static void _wrapperMouseScrollCallback(GLFWwindow* window,
                                             double xoffset,
                                             double yoffset);
+
+    static void glfwError(int id, const char* description)
+    {
+        std::cout << description << std::endl;
+    }
 
 protected:
     GLFWwindow* _window;

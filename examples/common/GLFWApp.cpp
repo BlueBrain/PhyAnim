@@ -35,7 +35,7 @@ void GLFWApp::run()
 
     // _actionLoop();
     _renderLoop();
-    // actionTask.detach();
+    actionTask.detach();
 }
 
 void GLFWApp::_renderLoop()
@@ -82,18 +82,21 @@ void GLFWApp::_setAnim(bool anim)
     _animMutex.unlock();
 }
 
-void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
+void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits,
+                            bool increment)
 {
     phyanim::Vec3 cameraPos = limits.center();
     phyanim::Vec3 dist = limits.upperLimit() - cameraPos;
     double max = std::max(std::max(dist.x(), dist.y()), dist.z());
     cameraPos.z() = limits.upperLimit().z() + max;
-    _cameraPosInc = max * 0.001;
+    if (increment) _cameraPosInc = max * 0.001;
     _scene->cameraPosition(cameraPos);
 }
 
 void GLFWApp::_initGLFW()
 {
+    glfwSetErrorCallback(&glfwError);
+
     if (!glfwInit()) throw std::runtime_error("GLFW could not be init");
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);

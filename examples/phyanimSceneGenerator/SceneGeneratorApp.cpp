@@ -23,13 +23,11 @@ SceneGeneratorApp::SceneGeneratorApp(int argc, char** argv)
 
 void SceneGeneratorApp::_actionLoop()
 {
-    phyanim::Meshes meshes;
-    phyanim::AxisAlignedBoundingBox limits;
     uint32_t numOutMeshes = 10;
     double bbFactor = 1.0;
+    uint32_t maxCollisions = 5;
 
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "Loading files 0.00%" << std::flush;
+    std::vector<std::string> files;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -38,50 +36,58 @@ void SceneGeneratorApp::_actionLoop()
             ++i;
             numOutMeshes = std::stoi(_args[i]);
         }
+        if (_args[i].compare("-c") == 0)
+        {
+            ++i;
+            maxCollisions = std::stoi(_args[i]);
+        }
         else if (_args[i].compare("-bb") == 0)
         {
             ++i;
             bbFactor = std::stod(_args[i]);
         }
+        else if (_args[i].find(".tet") != std::string::npos)
+            files.push_back(_args[i]);
         else
+            std::cerr << "Unknown file format: " << _args[i] << std::endl;
+    }
+
+    phyanim::Meshes meshes;
+    phyanim::AxisAlignedBoundingBox limits;
+
+    std::cout << std::fixed << std::setprecision(2);
+    double progress = 0.0;
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint64_t i = 0; i < files.size(); ++i)
+    {
+        phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh();
+        mesh->load(files[i]);
+        if (mesh)
         {
-            phyanim::DrawableMesh* mesh;
-            std::string file(_args[i]);
-
-            size_t extensionPos;
-
-            if ((extensionPos = file.find(".node")) != std::string::npos)
-            {
-                std::string file1(_args[i + 1]);
-                mesh = new phyanim::DrawableMesh();
-                mesh->load(file, file1);
-                ++i;
-            }
-            else if ((extensionPos = file.find(".tet")) != std::string::npos)
-            {
-                mesh = new phyanim::DrawableMesh();
-                mesh->load(file);
-            }
-            else
-                std::cerr << "Unknown file format: " << file << std::endl;
-
-            if (mesh) meshes.push_back(mesh);
+            meshes.push_back(mesh);
             limits.unite(
                 phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
         }
-        std::cout << "\rLoading files " << (i + 1) * 100.0 / _args.size() << "%"
-                  << std::flush;
+#pragma omp critical
+        {
+            progress += 100.0f / files.size();
+            std::cout << "\rLoading files " << progress << "%" << std::flush;
+        }
     }
     std::cout << std::endl;
-    _setCameraPos(limits);
 
+    _setCameraPos(limits);
     phyanim::Vec3 center = limits.center();
     phyanim::Vec3 axis = (limits.upperLimit() - center) * bbFactor;
     limits.lowerLimit(center - axis);
     limits.upperLimit(center + axis);
 
-    auto sceneMeshes =
-        examples::SceneGenerator::generate(meshes, numOutMeshes, limits);
+    auto sceneMeshes = examples::SceneGenerator::generate(
+        meshes, numOutMeshes, limits, maxCollisions);
 
     for (auto mesh : sceneMeshes)
     {
@@ -91,6 +97,14 @@ void SceneGeneratorApp::_actionLoop()
         _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
         limits.unite(*mesh->boundingBox);
     }
+
+    for (auto mesh : meshes)
+    {
+        mesh->clearData();
+        delete mesh;
+    }
+    meshes.clear();
+
     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
     _coloredMeshes();
     _setCameraPos(limits);

@@ -29,6 +29,8 @@ public:
     virtual void load(const std::string& nodeFile_,
                       const std::string& eleFile_);
 
+    void clearData();
+
     void compute(bool createEdges = false);
 
     void write(const std::string& file_);
