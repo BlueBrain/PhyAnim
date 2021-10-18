@@ -24,7 +24,7 @@ SceneGeneratorApp::SceneGeneratorApp(int argc, char** argv)
 void SceneGeneratorApp::_actionLoop()
 {
     uint32_t numOutMeshes = 10;
-    double bbFactor = 1.0;
+    _bbFactor = 1.0;
     uint32_t maxCollisions = 5;
 
     std::vector<std::string> files;
@@ -44,7 +44,7 @@ void SceneGeneratorApp::_actionLoop()
         else if (_args[i].compare("-bb") == 0)
         {
             ++i;
-            bbFactor = std::stod(_args[i]);
+            _bbFactor = std::stod(_args[i]);
         }
         else if (_args[i].find(".tet") != std::string::npos)
             files.push_back(_args[i]);
@@ -66,14 +66,15 @@ void SceneGeneratorApp::_actionLoop()
     {
         phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh();
         mesh->load(files[i]);
-        if (mesh)
-        {
-            meshes.push_back(mesh);
-            limits.unite(
-                phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
-        }
 #pragma omp critical
         {
+            if (mesh)
+            {
+                meshes.push_back(mesh);
+                limits.unite(
+                    phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
+            }
+
             progress += 100.0f / files.size();
             std::cout << "\rLoading files " << progress << "%" << std::flush;
         }
@@ -82,7 +83,7 @@ void SceneGeneratorApp::_actionLoop()
 
     _setCameraPos(limits);
     phyanim::Vec3 center = limits.center();
-    phyanim::Vec3 axis = (limits.upperLimit() - center) * bbFactor;
+    phyanim::Vec3 axis = (limits.upperLimit() - center) * _bbFactor;
     limits.lowerLimit(center - axis);
     limits.upperLimit(center + axis);
 
@@ -107,7 +108,16 @@ void SceneGeneratorApp::_actionLoop()
 
     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
     _coloredMeshes();
-    _setCameraPos(limits);
+
+    _aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, 1.001);
+    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
+    _collisionId = 0;
+    if (_aabbs.size() > 0)
+    {
+        std::cout << "Collision id: " << _collisionId << std::endl;
+        _setCameraPos(*_aabbs[0], false);
+    }
 }
 
 void SceneGeneratorApp::_coloredMeshes()
@@ -147,69 +157,33 @@ void SceneGeneratorApp::_keyCallback(GLFWwindow* window,
                                      int action,
                                      int mods)
 {
+    GLFWApp::_keyCallback(window, key, scancode, action, mods);
     if (_scene)
     {
-        double dx = _cameraPosInc * 10.0;
-        phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
-        bool cameraDisplaced = false;
-
         if (action == GLFW_PRESS)
         {
             switch (key)
             {
-            case 'M':
-                _scene->changeRenderMode();
-                break;
-            case 'F':
-                _scene->showFPS = !_scene->showFPS;
-                break;
             case GLFW_KEY_ENTER:
-                std::cout << "Saving files:" << std::endl;
-
+                double progress = 0.0;
+                std::cout << "\rSaving files " << progress << "%" << std::flush;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
                 for (uint32_t i = 0; i < _meshes.size(); ++i)
                 {
                     std::string fileName(std::to_string(i) + "_gen.tet");
-                    std::cout << "\t Saved " << fileName << std::endl;
                     _meshes[i]->write(fileName);
+#pragma omp critical
+                    {
+                        progress += 100.0f / _meshes.size();
+                        std::cout << "\rSaving files " << progress << "%"
+                                  << std::flush;
+                    }
                 }
+                std::cout << std::endl;
                 break;
             }
-        }
-
-        switch (key)
-        {
-        case 'W':
-            dxyz += phyanim::Vec3(0.0, 0.0, -dx);
-            cameraDisplaced = true;
-            break;
-        case 'S':
-            dxyz += phyanim::Vec3(0.0, 0.0, dx);
-            cameraDisplaced = true;
-            break;
-        case 'A':
-            dxyz += phyanim::Vec3(-dx, 0.0, 0.0);
-            cameraDisplaced = true;
-            break;
-        case 'D':
-            dxyz += phyanim::Vec3(dx, 0.0, 0.0);
-            cameraDisplaced = true;
-            break;
-        }
-        if (cameraDisplaced)
-        {
-            if (_mesh)
-            {
-                dxyz = _scene->cameraRotation() * dxyz;
-                for (auto node : _mesh->nodes) node->position += dxyz;
-                dynamic_cast<phyanim::DrawableMesh*>(_mesh)->updatedPositions =
-                    true;
-                _mesh->boundingBox->update();
-                phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
-                                                               true);
-                _coloredMeshes();
-            }
-            else
-                _scene->displaceCamera(dxyz);
         }
     }
 }

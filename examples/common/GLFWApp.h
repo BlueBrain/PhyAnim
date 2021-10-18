@@ -23,6 +23,12 @@ protected:
 
     static void _actionThread(GLFWApp* app);
 
+    void _loadMeshes(std::vector<std::string> files);
+
+    void _writeMeshes(phyanim::Meshes meshes,
+                      std::vector<std::string> files,
+                      std::string extension = "");
+
     bool _getAnim();
 
     void _setAnim(bool anim);
@@ -100,6 +106,12 @@ protected:
 
     bool _anim;
     std::mutex _animMutex;
+
+    phyanim::AxisAlignedBoundingBox _limits;
+    phyanim::Meshes _meshes;
+    phyanim::AxisAlignedBoundingBoxes _aabbs;
+    int32_t _collisionId;
+    double _bbFactor;
 };
 
 }  // namespace examples

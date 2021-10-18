@@ -24,13 +24,6 @@ public:
 
         if (numMeshes > 0)
         {
-            std::vector<phyanim::Vec3> centers;
-            for (auto mesh : meshes)
-            {
-                phyanim::AxisAlignedBoundingBox aabb(mesh->surfaceTriangles);
-                centers.push_back(aabb.center());
-            }
-
             phyanim::Vec3 range(aabb.upperLimit() - aabb.lowerLimit());
 
             std::cout << std::fixed << std::setprecision(2);
@@ -54,7 +47,7 @@ public:
                     pos.y() = (double)std::rand() / RAND_MAX * range.y();
                     pos.z() = (double)std::rand() / RAND_MAX * range.z();
                     pos += aabb.lowerLimit();
-                    pos -= centers[meshId];
+                    pos -= mesh->boundingBox->center();
 
                     for (auto node : mesh->nodes)
                     {

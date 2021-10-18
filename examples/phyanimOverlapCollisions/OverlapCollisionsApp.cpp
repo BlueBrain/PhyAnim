@@ -25,13 +25,10 @@ void OverlapCollisionsApp::_actionLoop()
     double density = 1.0;
     double poissonRatio = 0.3;
     double initCollisionStiffness = 2.0;
-    double collisionStiffness = 2.0;
     double collisionStiffnessMultiplier = 0.1;
     double dt = 0.01;
     double bbFactor = 15;
     bool stepByStep = true;
-
-    std::chrono::time_point<std::chrono::steady_clock> startTime;
 
     std::string usage = std::string(
         "SYNOPSIS\n\t"
@@ -62,12 +59,12 @@ void OverlapCollisionsApp::_actionLoop()
                 dt = std::stof(_args[i + 1]);
                 ++i;
             }
-            if (option.compare("-bb") == 0)
+            else if (option.compare("-bb") == 0)
             {
                 bbFactor = std::stof(_args[i + 1]);
                 ++i;
             }
-            else if (option.compare("-ks") == 0)
+            else if (option.compare("-k") == 0)
             {
                 stiffness = std::stof(_args[i + 1]);
                 ++i;
@@ -89,7 +86,7 @@ void OverlapCollisionsApp::_actionLoop()
             }
             else if (option.compare("-kc") == 0)
             {
-                collisionStiffness = std::stof(_args[i + 1]);
+                initCollisionStiffness = std::stof(_args[i + 1]);
                 ++i;
             }
             else if (option.compare("-kcm") == 0)
@@ -106,10 +103,10 @@ void OverlapCollisionsApp::_actionLoop()
                 std::cout << usage << std::endl;
                 exit(0);
             }
+            else if (_args[i].find(".tet") != std::string::npos)
+                files.push_back(_args[i]);
             else
-            {
-                files.push_back(std::string(_args[i]));
-            }
+                std::cerr << "Unknown file format: " << _args[i] << std::endl;
         }
         catch (...)
         {
@@ -117,102 +114,68 @@ void OverlapCollisionsApp::_actionLoop()
             exit(-1);
         }
     }
-
-    initCollisionStiffness = collisionStiffness;
-
+    std::cout << "Overlap run with dt: " << dt << " stiffness: " << stiffness
+              << std::endl;
     phyanim::AnimSystem* animSys = new phyanim::ImplicitFEMSystem(dt);
     animSys->gravity = false;
 
-    phyanim::Meshes meshes;
-    std::vector<std::string> outFiles;
+    std::vector<phyanim::HierarchicalAABBPtr> tetAABBs;
 
-    phyanim::AxisAlignedBoundingBox limits;
+    _loadMeshes(files);
+    for (auto mesh : _meshes)
+        _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
+    tetAABBs.resize(_meshes.size());
 
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "Loading files 0.00%" << std::flush;
-
-    startTime = std::chrono::steady_clock::now();
-    for (uint32_t i = 0; i < files.size(); ++i)
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < _meshes.size(); ++i)
     {
-        phyanim::DrawableMesh* mesh = nullptr;
-        std::string file = files[i];
-
-        std::string outFile;
-        size_t extPos = 0;
-        if ((extPos = file.find(".node")) != std::string::npos)
-        {
-            std::string file1 = files[i + 1];
-            ++i;
-            mesh = new phyanim::DrawableMesh(stiffness, density, damping,
-                                             poissonRatio);
-            mesh->load(file, file1);
-        }
-        else if ((extPos = file.find(".tet")) != std::string::npos)
-        {
-            mesh = new phyanim::DrawableMesh(stiffness, density, damping,
-                                             poissonRatio);
-            mesh->load(file);
-        }
-
-        if (mesh)
-        {
-            std::string outFile = file.substr(0, extPos) + "_sol.tet";
-            outFiles.push_back(outFile);
-            meshes.push_back(mesh);
-            // mesh->compute();
-            _setSurfaceNodes(mesh);
-            mesh->boundingBox =
-                new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-            limits.unite(*mesh->boundingBox);
-            _scene->addMesh(mesh);
-            _setCameraPos(limits);
-        }
-        std::cout << "\rLoading files " << (i + 1) * 100.0 / _args.size() << "%"
-                  << std::flush;
+        auto mesh = _meshes[i];
+        mesh->stiffness = stiffness;
+        mesh->damping = damping;
+        mesh->density = density;
+        mesh->poissonRatio = poissonRatio;
+        auto tetAABB = new phyanim::HierarchicalAABB(mesh->tetrahedra);
+        tetAABBs[i] = tetAABB;
+        _setSurfaceNodes(mesh);
     }
-    std::cout << "\rLoading files 100.00%" << std::endl;
+    _setCameraPos(_limits);
+    auto startTime = std::chrono::steady_clock::now();
 
-    _setCameraPos(limits);
-
-    auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
-    std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
-              << std::endl;
-
-    startTime = endTime;
-
-    phyanim::AxisAlignedBoundingBoxes aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(meshes, bbFactor);
-    std::cout << "Number of collisions: " << aabbs.size() << std::endl;
-    uint32_t collisionId = 0;
+    _aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, bbFactor);
+    _sortAABBs(_aabbs);
+    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
+    _collisionId = 0;
 
     if (stepByStep)
     {
-        for (uint32_t i = 0; i < aabbs.size(); ++i)
+        for (uint32_t i = 0; i < _aabbs.size(); ++i)
         {
-            auto aabb = aabbs[i];
-            std::cout << "Collision id: " << collisionId << std::endl;
-            ++collisionId;
-            _setCameraPos(*aabb, false);
+            auto aabb = _aabbs[i];
+            _collisionId = i;
+            std::cout << "Collision id: " << _collisionId << std::endl;
 
             phyanim::Meshes slicedMeshes;
             phyanim::Meshes completeMeshes;
-            for (auto mesh : meshes)
+            for (uint32_t j = 0; j < _meshes.size(); ++j)
             {
-                auto slicedMesh = _sliceMesh(mesh, *aabb, stiffness, density,
-                                             damping, poissonRatio);
+                auto slicedMesh = _sliceMesh(tetAABBs[j], *aabb, stiffness,
+                                             density, damping, poissonRatio);
                 if (slicedMesh)
                 {
                     slicedMeshes.push_back(slicedMesh);
-                    completeMeshes.push_back(mesh);
+                    completeMeshes.push_back(_meshes[j]);
                 }
             }
+            _setCameraPos(*aabb, false);
 
             animSys->preprocessMesh(slicedMeshes);
 
             _setAnim(!stepByStep);
 
-            collisionStiffness = initCollisionStiffness;
+            double collisionStiffness = initCollisionStiffness;
 
             bool collision = phyanim::CollisionDetection::computeCollisions(
                 slicedMeshes, collisionStiffness, true);
@@ -231,7 +194,7 @@ void OverlapCollisionsApp::_actionLoop()
                         for (auto mesh : slicedMeshes)
                             mesh->boundingBox->update();
                         phyanim::CollisionDetection::computeCollisions(
-                            slicedMeshes, limits);
+                            slicedMeshes, _limits);
                         for (auto mesh : completeMeshes)
                             dynamic_cast<phyanim::DrawableMesh*>(mesh)
                                 ->updatedPositions = true;
@@ -247,62 +210,81 @@ void OverlapCollisionsApp::_actionLoop()
     }
     else
     {
+        double progress = 0.0;
+        std::cout << "\rSolving collisions " << progress << "%" << std::flush;
+        uint32_t id = 0;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-        for (uint32_t i = 0; i < aabbs.size(); ++i)
+        for (uint32_t i = 0; i < _aabbs.size(); ++i)
         {
-            auto aabb = aabbs[i];
+            uint32_t cId = i;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp critical
+            {
+                cId = id;
+                ++id;
+            }
+#endif
+            auto aabb = _aabbs[cId];
 
             phyanim::Meshes slicedMeshes;
             phyanim::Meshes completeMeshes;
-            for (auto mesh : meshes)
+            for (uint32_t j = 0; j < _meshes.size(); ++j)
             {
-                auto slicedMesh = _sliceMesh(mesh, *aabb, stiffness, density,
-                                             damping, poissonRatio);
+                auto slicedMesh = _sliceMesh(tetAABBs[j], *aabb, stiffness,
+                                             density, damping, poissonRatio);
                 if (slicedMesh)
                 {
                     slicedMeshes.push_back(slicedMesh);
-                    completeMeshes.push_back(mesh);
+                    completeMeshes.push_back(_meshes[j]);
                 }
             }
 
             animSys->preprocessMesh(slicedMeshes);
-            collisionStiffness = initCollisionStiffness;
+            double currentCollisionStiffness = initCollisionStiffness;
 
             bool collision = true;
             while (collision)
             {
                 for (auto mesh : slicedMeshes) mesh->nodesForceZero();
                 collision = phyanim::CollisionDetection::computeCollisions(
-                    slicedMeshes, collisionStiffness, true);
+                    slicedMeshes, currentCollisionStiffness, true);
                 if (collision)
                 {
                     animSys->step(slicedMeshes);
                     for (auto mesh : slicedMeshes) mesh->boundingBox->update();
                     phyanim::CollisionDetection::computeCollisions(slicedMeshes,
-                                                                   limits);
+                                                                   _limits);
                     for (auto mesh : completeMeshes)
                         dynamic_cast<phyanim::DrawableMesh*>(mesh)
                             ->updatedPositions = true;
-                    collisionStiffness +=
+                    currentCollisionStiffness +=
                         initCollisionStiffness * collisionStiffnessMultiplier;
                 }
                 for (auto mesh : completeMeshes)
                     dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColors();
             }
+#pragma omp critical
+            {
+                progress += 100.0f / _aabbs.size();
+                std::cout << "\rSolving collisions " << progress << "%"
+                          << std::flush;
+            }
         }
+        std::cout << std::endl;
     }
 
-    _setCameraPos(limits);
-    endTime = std::chrono::steady_clock::now();
-    elapsedTime = endTime - startTime;
+    _setCameraPos(_limits);
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
     std::cout << "Overlap solved in: " << elapsedTime.count() << " seconds"
               << std::endl;
-}
 
+    _writeMeshes(_meshes, files, "_no_overlap");
+}
 phyanim::MeshPtr OverlapCollisionsApp::_sliceMesh(
-    phyanim::MeshPtr mesh,
+    phyanim::HierarchicalAABBPtr tetAABB,
     const phyanim::AxisAlignedBoundingBox& aabb,
     double stiffness,
     double density,
@@ -310,11 +292,7 @@ phyanim::MeshPtr OverlapCollisionsApp::_sliceMesh(
     double poissonRatio)
 {
     phyanim::DrawableMesh* sliceMesh = nullptr;
-    auto tetsAABB = new phyanim::HierarchicalAABB(mesh->tetrahedra);
-    auto tets = tetsAABB->insidePrimitives(aabb);
-
-    delete tetsAABB;
-
+    auto tets = tetAABB->insidePrimitives(aabb);
     if (tets.size() > 0)
     {
         sliceMesh = new phyanim::DrawableMesh(stiffness, density, damping,

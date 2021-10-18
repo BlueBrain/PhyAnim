@@ -2,6 +2,8 @@
 #ifndef __PHYANIM_AXIS_ALIGNED_BOUNDING_BOX__
 #define __PHYANIM_AXIS_ALIGNED_BOUNDING_BOX__
 
+#include <set>
+
 #include "Primitive.h"
 
 namespace phyanim

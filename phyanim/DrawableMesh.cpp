@@ -62,6 +62,11 @@ void DrawableMesh::upload()
         glVertexAttribPointer(1, 3, GL_DOUBLE, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(1);
 
+        for (size_t i = 0; i < nodes.size(); ++i)
+        {
+            nodes[i]->id = i;
+        }
+
         size_t trianglesSize = surfaceTriangles.size();
         _indicesSize = trianglesSize * 3;
         unsigned int surfaceIndices[_indicesSize];

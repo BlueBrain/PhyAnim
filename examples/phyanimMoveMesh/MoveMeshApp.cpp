@@ -22,7 +22,6 @@ MoveMeshApp::MoveMeshApp(int argc, char** argv)
 void MoveMeshApp::_actionLoop()
 {
     _bbFactor = 1.0001;
-    std::vector<std::string> files;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -32,43 +31,17 @@ void MoveMeshApp::_actionLoop()
             ++i;
             _bbFactor = std::stoi(_args[i]);
         }
-        else if ((extensionPos = _args[i].find(".tet")) != std::string::npos)
+        else if (_args[i].find(".tet") != std::string::npos)
         {
-            files.push_back(_args[i]);
-            auto fileName = _args[i].substr(0, extensionPos);
-            _fileNames.push_back(fileName);
+            _fileNames.push_back(_args[i]);
         }
         else
             std::cerr << "Unknown file format: " << _args[i] << std::endl;
     }
 
-    std::cout << std::fixed << std::setprecision(2);
-    double progress = 0.0;
-    std::cout << "\rLoading files " << progress << "%" << std::flush;
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint32_t i = 0; i < files.size(); ++i)
-    {
-        phyanim::DrawableMesh* mesh = new phyanim::DrawableMesh();
-        mesh->load(files[i]);
-        if (mesh)
-        {
-            mesh->boundingBox =
-                new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-
-            _limits.unite(*mesh->boundingBox);
-            _meshes.push_back(mesh);
-            _scene->addMesh(mesh);
-            _setCameraPos(_limits);
-        }
-#pragma omp critical
-        {
-            progress += 100.0f / files.size();
-            std::cout << "\rLoading files " << progress << "%" << std::flush;
-        }
-    }
-    std::cout << std::endl;
+    _loadMeshes(_fileNames);
+    for (auto mesh : _meshes)
+        _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
 
     _aabbs =
         phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
@@ -120,78 +93,17 @@ void MoveMeshApp::_keyCallback(GLFWwindow* window,
                                int action,
                                int mods)
 {
+    GLFWApp::_keyCallback(window, key, scancode, action, mods);
     if (_scene)
     {
-        double dx = _cameraPosInc * 2.0;
-        phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
-        bool cameraDisplaced = false;
-
         if (action == GLFW_PRESS)
         {
             switch (key)
             {
-            case 'M':
-                _scene->changeRenderMode();
-                break;
-            case 'F':
-                _scene->showFPS = !_scene->showFPS;
-                break;
             case GLFW_KEY_ENTER:
-                std::cout << "Saving files:" << std::endl;
-
-                for (uint32_t i = 0; i < _meshes.size(); ++i)
-                {
-                    std::string fileName(_fileNames[i] + ".tet");
-                    std::cout << "\t Saved " << fileName << std::endl;
-                    _meshes[i]->write(fileName);
-                }
-                break;
-            case GLFW_KEY_SPACE:
-                uint32_t aabbsSize = _aabbs.size();
-                if (aabbsSize > 0)
-                {
-                    _collisionId = (_collisionId + 1) % aabbsSize;
-                    std::cout << "Collision id: " << _collisionId << std::endl;
-                    _setCameraPos(*_aabbs[_collisionId], false);
-                }
+                _writeMeshes(_meshes, _fileNames);
                 break;
             }
-        }
-
-        switch (key)
-        {
-        case 'W':
-            dxyz += phyanim::Vec3(0.0, 0.0, -dx);
-            cameraDisplaced = true;
-            break;
-        case 'S':
-            dxyz += phyanim::Vec3(0.0, 0.0, dx);
-            cameraDisplaced = true;
-            break;
-        case 'A':
-            dxyz += phyanim::Vec3(-dx, 0.0, 0.0);
-            cameraDisplaced = true;
-            break;
-        case 'D':
-            dxyz += phyanim::Vec3(dx, 0.0, 0.0);
-            cameraDisplaced = true;
-            break;
-        }
-        if (cameraDisplaced)
-        {
-            if (_mesh)
-            {
-                dxyz = _scene->cameraRotation() * dxyz;
-                for (auto node : _mesh->nodes) node->position += dxyz;
-                dynamic_cast<phyanim::DrawableMesh*>(_mesh)->updatedPositions =
-                    true;
-                _mesh->boundingBox->update();
-                phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
-                                                               true);
-                _coloredMeshes();
-            }
-            else
-                _scene->displaceCamera(dxyz);
         }
     }
 }
@@ -208,17 +120,9 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _leftButtonPressed = true;
-
                 glfwGetCursorPos(window, &_mouseX, &_mouseY);
-
                 uint32_t pickedId = _scene->picking(_mouseX, _mouseY);
-
-                if (pickedId != 0)
-                {
-                    _mesh = _meshes[pickedId - 1];
-                    _pickingTime = std::chrono::steady_clock::now();
-                };
-
+                if (pickedId != 0) _mesh = _meshes[pickedId - 1];
                 _coloredMeshes();
             }
             else if (action == GLFW_RELEASE)
@@ -288,21 +192,6 @@ void MoveMeshApp::_mousePositionCallback(GLFWwindow* window,
                 for (auto node : _mesh->nodes) node->position -= dxyz;
                 dynamic_cast<phyanim::DrawableMesh*>(_mesh)->updatedPositions =
                     true;
-
-                // auto currentTime = std::chrono::steady_clock::now();
-                // auto elapsedTime =
-                //     (std::chrono::duration<double>(currentTime -
-                //     _pickingTime))
-                //         .count();
-                // if (elapsedTime > 0.1)
-                // {
-                //     _mesh->boundingBox->update();
-                //     phyanim::CollisionDetection::computeCollisions(_meshes,
-                //     0.0,
-                //                                                    true);
-                //     _coloredMeshes();
-                //     _pickingTime = currentTime;
-                // }
             }
         }
         if (_middleButtonPressed)

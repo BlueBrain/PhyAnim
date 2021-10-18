@@ -460,7 +460,7 @@ void Mesh::_loadOFF(const std::string& file_)
     for (size_t i = 0; i < nFacets; ++i)
     {
         triangles[i] = new phyanim::Triangle(
-            nodes[facets(i, 0)], nodes[facets(i, 2)], nodes[facets(i, 1)]);
+            nodes[facets(i, 0)], nodes[facets(i, 1)], nodes[facets(i, 2)]);
         if (quads)
         {
             triangles[nFacets + i] = new phyanim::Triangle(

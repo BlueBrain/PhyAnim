@@ -1,6 +1,7 @@
 #include <Phyanim.h>
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 
 int main(int argc, char* argv[])
@@ -32,6 +33,12 @@ int main(int argc, char* argv[])
         }
     }
 
+    std::cout << std::fixed << std::setprecision(2);
+    double progress = 0.0;
+    std::cout << "\rConverting files " << progress << "%" << std::flush;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
     for (uint32_t i = 0; i < files.size(); ++i)
     {
         size_t extPos = 0;
@@ -72,17 +79,18 @@ int main(int argc, char* argv[])
             mesh->load(files[i]);
             baseFile = files[i].substr(0, extPos);
         }
-        else
-        {
-            std::cout << "unknown format file: " << files[i] << std::endl;
-        }
 
         if (mesh)
         {
             baseFile.append(ext);
             mesh->write(baseFile);
-            std::cout << "Saved file: " << baseFile << std::endl;
             delete mesh;
         }
+#pragma omp critical
+        {
+            progress += 100.0f / files.size();
+            std::cout << "\rConverting files " << progress << "%" << std::flush;
+        }
     }
+    std::cout << std::endl;
 }

@@ -5,6 +5,7 @@
 #include "GLFWApp.h"
 
 #include <iostream>
+#include <iomanip>
 #include <thread>
 
 namespace examples
@@ -18,6 +19,8 @@ GLFWApp::GLFWApp(int argc, char** argv)
     , _rightButtonPressed(false)
     , _cameraPosInc(0.1)
     , _anim(false)
+    , _collisionId(0)
+    , _bbFactor(15.0)
 {
     _initGLFW();
     _scene = new Scene();
@@ -33,7 +36,6 @@ void GLFWApp::run()
 {
     std::thread actionTask(_actionThread, this);
 
-    // _actionLoop();
     _renderLoop();
     actionTask.detach();
 }
@@ -54,18 +56,120 @@ void GLFWApp::_actionLoop()
 {
     phyanim::AxisAlignedBoundingBox limits;
 
-    for (auto file : _args)
+    std::cout << std::fixed << std::setprecision(2);
+    double progress = 0.0;
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
+
+    std::vector<std::string> files;
+    for (uint32_t i = 0; i < _args.size(); ++i)
+    {
+        if (_args[i].compare("-bb") == 0)
+        {
+            ++i;
+            _bbFactor = std::stoi(_args[i]);
+        }
+        else
+        {
+            files.push_back(_args[i]);
+        }
+    }
+
+    phyanim::Meshes meshes;
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < files.size(); ++i)
     {
         auto mesh = new phyanim::DrawableMesh();
-        std::cout << "Loading file " << file << std::endl;
-        mesh->load(file);
-        limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
-        _scene->addMesh(mesh);
-        _setCameraPos(limits);
+        mesh->load(files[i]);
+        mesh->boundingBox =
+            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+#pragma omp critical
+        {
+            limits.unite(*mesh->boundingBox);
+            meshes.push_back(mesh);
+            _scene->addMesh(mesh);
+            _setCameraPos(limits);
+            progress += 100.0f / files.size();
+            std::cout << "\rLoading files " << progress << "%" << std::flush;
+        }
     }
+    std::cout << std::endl;
+    _aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(meshes, _bbFactor);
+    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
 }
 
 void GLFWApp::_actionThread(GLFWApp* app) { app->_actionLoop(); }
+
+void GLFWApp::_loadMeshes(std::vector<std::string> files)
+{
+    _meshes.resize(files.size());
+    double progress = 0.0;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
+    auto startTime = std::chrono::steady_clock::now();
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < files.size(); ++i)
+    {
+        phyanim::DrawableMesh* mesh =
+            new phyanim::DrawableMesh(50.0, 1.0, 1.0, 0.3);
+        mesh->load(files[i]);
+        mesh->boundingBox =
+            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+        _meshes[i] = mesh;
+#pragma omp critical
+        {
+            _limits.unite(*mesh->boundingBox);
+            _setCameraPos(_limits);
+            progress += 100.0f / files.size();
+            std::cout << "\rLoading files " << progress << "%" << std::flush;
+        }
+    }
+    std::cout << std::endl;
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
+              << std::endl;
+}
+
+void GLFWApp::_writeMeshes(phyanim::Meshes meshes,
+                           std::vector<std::string> files,
+                           std::string extension)
+{
+    double progress = 0.0;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "\rSaving files " << progress << "%" << std::flush;
+    auto startTime = std::chrono::steady_clock::now();
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < meshes.size(); ++i)
+    {
+        auto outFile = files[i];
+        uint32_t pos = outFile.find_last_of('/');
+        if (pos != std::string::npos) outFile = outFile.substr(pos + 1);
+        pos = outFile.find(".tet");
+        if (pos != std::string::npos) outFile = outFile.substr(0, pos);
+        outFile += extension + ".tet";
+        meshes[i]->write(outFile);
+#pragma omp critical
+        {
+            progress += 100.0f / meshes.size();
+            std::cout << "\rSaving files " << progress << "%" << std::flush;
+        }
+    }
+    std::cout << std::endl;
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "Files saved in: " << elapsedTime.count() << " seconds"
+              << std::endl;
+}
 
 bool GLFWApp::_getAnim()
 {
@@ -151,6 +255,7 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
 
         if (action == GLFW_PRESS)
         {
+            uint32_t aabbsSize = _aabbs.size();
             switch (key)
             {
             case 'M':
@@ -165,6 +270,23 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                     std::cout << "release" << std::endl;
                 else
                     std::cout << "pause" << std::endl;
+                break;
+            case GLFW_KEY_LEFT:
+                if (aabbsSize > 0)
+                {
+                    _collisionId = (_collisionId - 1);
+                    if (_collisionId < 0) _collisionId = aabbsSize - 1;
+                    std::cout << "Collision id: " << _collisionId << std::endl;
+                    _setCameraPos(*_aabbs[_collisionId], false);
+                }
+                break;
+            case GLFW_KEY_RIGHT:
+                if (aabbsSize > 0)
+                {
+                    _collisionId = (_collisionId + 1) % aabbsSize;
+                    std::cout << "Collision id: " << _collisionId << std::endl;
+                    _setCameraPos(*_aabbs[_collisionId], false);
+                }
                 break;
             }
         }
