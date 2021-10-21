@@ -82,6 +82,8 @@ int main(int argc, char* argv[])
 
         if (mesh)
         {
+            if ((extPos = baseFile.find_last_of('/')) != std::string::npos)
+                baseFile = baseFile.substr(extPos + 1);
             baseFile.append(ext);
             mesh->write(baseFile);
             delete mesh;

@@ -1,7 +1,40 @@
 #include <Phyanim.h>
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
+
+phyanim::Meshes loadMeshes(std::vector<std::string> files)
+{
+    phyanim::Meshes meshes(files.size());
+    double progress = 0.0;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
+    auto startTime = std::chrono::steady_clock::now();
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < files.size(); ++i)
+    {
+        phyanim::MeshPtr mesh = new phyanim::Mesh(50.0, 1.0, 1.0, 0.3);
+        mesh->load(files[i]);
+        mesh->boundingBox =
+            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+        meshes[i] = mesh;
+#pragma omp critical
+        {
+            progress += 100.0f / files.size();
+            std::cout << "\rLoading files " << progress << "%" << std::flush;
+        }
+    }
+    std::cout << std::endl;
+    auto endTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
+              << std::endl;
+    return meshes;
+}
 
 int main(int argc, char* argv[])
 {
@@ -12,55 +45,21 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    phyanim::Meshes meshes(2);
-    meshes[0] = new phyanim::Mesh();
-    meshes[1] = new phyanim::Mesh();
-    meshes[0]->load(std::string(argv[1]));
-    meshes[1]->load(std::string(argv[2]));
-
-    uint64_t iterations = 100;
-    uint64_t cellSizeInit = 1;
-    uint64_t cellSizeEnd = 10;
-
-    if (argc > 3) iterations = std::atoi(argv[3]);
-    if (argc > 4) cellSizeInit = std::atoi(argv[4]);
-    if (argc > 5) cellSizeEnd = std::atoi(argv[5]);
-
-    meshes[0]->boundingBox =
-        new phyanim::HierarchicalAABB(meshes[0]->surfaceTriangles);
-    meshes[1]->boundingBox =
-        new phyanim::HierarchicalAABB(meshes[1]->surfaceTriangles);
-
-    std::chrono::time_point<std::chrono::steady_clock> startTime =
-        std::chrono::steady_clock::now();
-    auto bbs = phyanim::CollisionDetection::collisionBoundingBoxes(meshes, 2);
-
-    auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
-
-    std::cout << "Number of collision bounding boxes: " << bbs.size()
-              << "\ttime: " << elapsedTime.count() * 1000 << " ms" << std::endl;
-
-    std::cout << "\nIterations: " << iterations << std::endl;
-
-    for (uint64_t cellSize = cellSizeInit; cellSize <= cellSizeEnd; ++cellSize)
+    std::vector<std::string> files;
+    for (uint32_t i = 1; i < argc; ++i)
     {
-        delete meshes[0]->boundingBox;
-        delete meshes[1]->boundingBox;
-        meshes[0]->boundingBox = new phyanim::HierarchicalAABB(
-            meshes[0]->surfaceTriangles, cellSize);
-
-        meshes[1]->boundingBox = new phyanim::HierarchicalAABB(
-            meshes[1]->surfaceTriangles, cellSize);
-
-        startTime = std::chrono::steady_clock::now();
-
-        for (uint64_t i = 0; i < iterations; ++i)
-            phyanim::CollisionDetection::computeCollisions(meshes);
-        endTime = std::chrono::steady_clock::now();
-        elapsedTime = endTime - startTime;
-        std::cout << "Cell size: " << cellSize
-                  << "\ttime: " << elapsedTime.count() / iterations * 1000
-                  << " ms" << std::endl;
+        std::string option(argv[i]);
+        if (option.find(".tet") != std::string::npos)
+            files.push_back(option);
+        else if (option.find(".off") != std::string::npos)
+            files.push_back(option);
     }
+
+    auto meshes = loadMeshes(files);
+
+    auto aabbs =
+        phyanim::CollisionDetection::collisionBoundingBoxes(meshes, 15);
+    std::cout << "Number of collisions: " << aabbs.size() << std::endl;
+
+    return 0;
 }
