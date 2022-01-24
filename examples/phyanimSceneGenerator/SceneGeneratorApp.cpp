@@ -24,8 +24,10 @@ SceneGeneratorApp::SceneGeneratorApp(int argc, char** argv)
 void SceneGeneratorApp::_actionLoop()
 {
     uint32_t numOutMeshes = 10;
-    _bbFactor = 1.0;
+    _bbFactor = 15.0;
+    double limitFactor = 1.0;
     uint32_t maxCollisions = 5;
+    double maxCollisionRadius = 4.0;
 
     std::vector<std::string> files;
 
@@ -36,15 +38,25 @@ void SceneGeneratorApp::_actionLoop()
             ++i;
             numOutMeshes = std::stoi(_args[i]);
         }
-        if (_args[i].compare("-c") == 0)
+        else if (_args[i].compare("-c") == 0)
         {
             ++i;
             maxCollisions = std::stoi(_args[i]);
+        }
+        else if (_args[i].compare("-cr") == 0)
+        {
+            ++i;
+            maxCollisionRadius = std::stoi(_args[i]);
         }
         else if (_args[i].compare("-bb") == 0)
         {
             ++i;
             _bbFactor = std::stod(_args[i]);
+        }
+        else if (_args[i].compare("-l") == 0)
+        {
+            ++i;
+            limitFactor = std::stod(_args[i]);
         }
         else if (_args[i].find(".tet") != std::string::npos)
             files.push_back(_args[i]);
@@ -83,12 +95,12 @@ void SceneGeneratorApp::_actionLoop()
 
     _setCameraPos(limits);
     phyanim::Vec3 center = limits.center();
-    phyanim::Vec3 axis = (limits.upperLimit() - center) * _bbFactor;
+    phyanim::Vec3 axis = (limits.upperLimit() - center) * limitFactor;
     limits.lowerLimit(center - axis);
     limits.upperLimit(center + axis);
 
     auto sceneMeshes = examples::SceneGenerator::generate(
-        meshes, numOutMeshes, limits, maxCollisions);
+        meshes, numOutMeshes, limits, _bbFactor, maxCollisions);
 
     for (auto mesh : sceneMeshes)
     {
@@ -110,7 +122,8 @@ void SceneGeneratorApp::_actionLoop()
     _coloredMeshes();
 
     _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, 1.001);
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+    _sortAABBs(_aabbs);
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     _collisionId = 0;
     if (_aabbs.size() > 0)
@@ -221,6 +234,7 @@ void SceneGeneratorApp::_mouseButtonCallback(GLFWwindow* window,
                     _mesh->boundingBox->update();
                     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
                                                                    true);
+                    _sortAABBs(_aabbs);
                     _mesh = nullptr;
                     _coloredMeshes();
                 }

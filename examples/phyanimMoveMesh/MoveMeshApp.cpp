@@ -21,7 +21,7 @@ MoveMeshApp::MoveMeshApp(int argc, char** argv)
 
 void MoveMeshApp::_actionLoop()
 {
-    _bbFactor = 1.0001;
+    _bbFactor = 15;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -45,13 +45,19 @@ void MoveMeshApp::_actionLoop()
 
     _aabbs =
         phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+    _sortAABBs(_aabbs);
+
+    for (auto aabb : _aabbs)
+        std::cout << "rdaius: " << aabb->radius() << std::endl;
+
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
     _coloredMeshes();
     _collisionId = 0;
     if (_aabbs.size() > 0)
     {
-        std::cout << "Collision id: " << _collisionId << std::endl;
+        std::cout << "Collision id: " << _collisionId
+                  << " radius: " << _aabbs[0]->radius() << std::endl;
         _setCameraPos(*_aabbs[0], false);
     }
 }
@@ -134,6 +140,7 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
                     _aabbs =
                         phyanim::CollisionDetection::collisionBoundingBoxes(
                             _meshes, _bbFactor);
+                    _sortAABBs(_aabbs);
                     std::cout << "Number of collisions: " << _aabbs.size()
                               << std::endl;
                     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,

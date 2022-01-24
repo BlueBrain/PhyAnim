@@ -15,15 +15,6 @@ public:
 protected:
     void _actionLoop();
 
-    void _sortAABBs(phyanim::AxisAlignedBoundingBoxes& aabbs)
-    {
-        auto cmp = [](phyanim::AxisAlignedBoundingBoxPtr a,
-                      phyanim::AxisAlignedBoundingBoxPtr b) {
-            return a->radius() > b->radius();
-        };
-        std::sort(aabbs.begin(), aabbs.end(), cmp);
-    }
-
     phyanim::MeshPtr _sliceMesh(phyanim::HierarchicalAABBPtr tetAABB,
                                 const phyanim::AxisAlignedBoundingBox& aabb,
                                 double stiffness,

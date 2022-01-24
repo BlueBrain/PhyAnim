@@ -102,10 +102,6 @@ void Mesh::compute(bool createEdges)
 {
     if (tetrahedra.size() > 0)
     {
-        for (auto tet : tetrahedra)
-        {
-            dynamic_cast<TetrahedronPtr>(tet)->compute();
-        }
         initVolume = volume();
     }
     if (createEdges)
@@ -266,7 +262,7 @@ void Mesh::computePerNodeMass(void)
         for (unsigned int i = 0; i < tetrahedra.size(); i++)
         {
             auto tet = dynamic_cast<TetrahedronPtr>(tetrahedra[i]);
-            double massPerNode = tet->initVolume * density * 0.25;
+            double massPerNode = tet->initVolume() * density * 0.25;
 
             for (auto node : tet->nodes())
             {

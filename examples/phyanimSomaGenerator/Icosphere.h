@@ -3,7 +3,7 @@
 
 #include <DrawableMesh.h>
 
-#include "Spring.h"
+#include "Tet.h"
 
 namespace examples
 {
@@ -19,6 +19,8 @@ public:
     std::vector<Spring*> springs(double stiffness = 100.0);
 
     std::vector<Spring*> surfaceSprings(double stiffness = 100.0);
+
+    Tets tets();
 
     std::vector<Node*> nodes;
 

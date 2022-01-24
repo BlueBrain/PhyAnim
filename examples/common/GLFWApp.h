@@ -29,6 +29,15 @@ protected:
                       std::vector<std::string> files,
                       std::string extension = "");
 
+    void _sortAABBs(phyanim::AxisAlignedBoundingBoxes& aabbs)
+    {
+        auto cmp = [](phyanim::AxisAlignedBoundingBoxPtr a,
+                      phyanim::AxisAlignedBoundingBoxPtr b) {
+            return a->radius() > b->radius();
+        };
+        std::sort(aabbs.begin(), aabbs.end(), cmp);
+    }
+
     bool _getAnim();
 
     void _setAnim(bool anim);

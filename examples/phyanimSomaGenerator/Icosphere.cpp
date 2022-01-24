@@ -1,5 +1,6 @@
 #include "Icosphere.h"
 
+#include <Tetrahedron.h>
 #include <Triangle.h>
 
 #include <iostream>
@@ -55,6 +56,19 @@ std::vector<Spring*> Icosphere::surfaceSprings(double stiffness)
     }
     std::vector<Spring*> springs(uSprings.begin(), uSprings.end());
     return springs;
+}
+
+Tets Icosphere::tets()
+{
+    Tets tets;
+    for (auto primitive : _mesh->tetrahedra)
+    {
+        auto t = dynamic_cast<phyanim::TetrahedronPtr>(primitive);
+        auto tet = new Tet(nodes[t->node0->id], nodes[t->node1->id],
+                           nodes[t->node2->id], nodes[t->node3->id]);
+        tets.push_back(tet);
+    }
+    return tets;
 }
 
 void Icosphere::_insert(Spring* spring, UniqueSprings& springs)

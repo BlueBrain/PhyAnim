@@ -276,7 +276,9 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                 {
                     _collisionId = (_collisionId - 1);
                     if (_collisionId < 0) _collisionId = aabbsSize - 1;
-                    std::cout << "Collision id: " << _collisionId << std::endl;
+                    std::cout << "Collision id: " << _collisionId
+                              << " radius: " << _aabbs[_collisionId]->radius()
+                              << std::endl;
                     _setCameraPos(*_aabbs[_collisionId], false);
                 }
                 break;
@@ -284,7 +286,9 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                 if (aabbsSize > 0)
                 {
                     _collisionId = (_collisionId + 1) % aabbsSize;
-                    std::cout << "Collision id: " << _collisionId << std::endl;
+                    std::cout << "Collision id: " << _collisionId
+                              << " radius: " << _aabbs[_collisionId]->radius()
+                              << std::endl;
                     _setCameraPos(*_aabbs[_collisionId], false);
                 }
                 break;

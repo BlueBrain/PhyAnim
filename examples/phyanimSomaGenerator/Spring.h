@@ -3,13 +3,16 @@
 
 #include <unordered_set>
 
+#include "Phyanim.h"
+
 namespace examples
 {
 class Node
 {
 public:
     Node(phyanim::Vec3 pos, uint64_t id, bool fixed = false)
-        : position(pos)
+        : initPosition(pos)
+        , position(pos)
         , velocity(phyanim::Vec3::Zero())
         , force(phyanim::Vec3::Zero())
         , id(id)
@@ -17,6 +20,8 @@ public:
         , mass(1.0){};
 
     ~Node(){};
+
+    phyanim::Vec3 initPosition;
 
     phyanim::Vec3 position;
 
@@ -30,6 +35,8 @@ public:
 
     bool fixed;
 };
+
+typedef std::vector<Node*> Nodes;
 
 class Spring;
 

@@ -2,6 +2,8 @@
 #define __EXAMPLES_SOMA_GENERATOR__
 
 #include "Icosphere.h"
+#include "Sample.h"
+#include "StiffnessMatrix.h"
 
 namespace examples
 {
@@ -11,47 +13,43 @@ typedef std::vector<NeuriteStart> NeuriteStarts;
 class SomaGenerator
 {
 public:
-    SomaGenerator(NeuriteStarts starts,
-                  phyanim::Vec3 pos = phyanim::Vec3::Zero(),
-                  double radius = 1.0,
+    SomaGenerator(Samples starts,
+                  Sample soma,
                   double dt = 0.01,
-                  double stiffness = 1.0,
-                  double fixedThreshold = 0.5);
+                  double stiffness = 1000.0,
+                  double poissonRatio = 0.49,
+                  double radialDist = 0.5);
 
     ~SomaGenerator(){};
 
-    void simulate(uint64_t iters = 1000);
-
     void anim(bool updateNodes = false);
+
+    void pull(float alpha);
 
     phyanim::DrawableMesh* mesh();
 
 private:
-    void _computePullSprings(NeuriteStarts starts,
-                             double stiffness,
-                             double resThreshold = 0.1);
+    void _addVec3ToVec(uint64_t id,
+                       const phyanim::Vec3& value,
+                       Eigen::VectorXd& vec);
 
-    void _innerSprings(double stiffness);
+    void _computeStartsNodes();
 
-    void _fixCenterNodes(double threshold = 0.7);
-
-    void _computeForce(SpringPtr spring);
+    void _fixCenterNodes(double radialDist = 0.5);
 
     void _updateNodes();
 
     Icosphere* _ico;
     phyanim::DrawableMesh* _mesh;
     std::vector<Node*> _nodes;
-    std::vector<Node*> _pullNodes;
-    Node* _centerNode;
-    Springs _springs;
-    Springs _pullSprings;
+    Tets _tets;
+    StiffnessMatrix _kMat;
 
-    phyanim::Vec3 _center;
-    double _radius;
+    Samples _starts;
+    std::vector<phyanim::Vec3> _positions;
+    std::vector<Nodes> _startsNodes;
+    Sample _soma;
     double _dt;
-    double _stiffness;
-    double _pullStiffness;
 };
 
 }  // namespace examples

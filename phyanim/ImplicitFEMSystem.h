@@ -18,23 +18,37 @@ public:
     void preprocessMesh(Mesh* mesh_);
 
 private:
+    typedef struct K
+    {
+        Mat3 k00;
+        Mat3 k11;
+        Mat3 k22;
+        Mat3 k33;
+        Mat3 k01;
+        Mat3 k02;
+        Mat3 k03;
+        Mat3 k12;
+        Mat3 k13;
+        Mat3 k23;
+    } TK;
+
+    typedef std::vector<TK> TKs;
+
     void _step(Mesh* mesh);
 
     void _conformKMatrix(Mesh* mesh);
 
     void _buildKTriplets(const Primitives& tets,
+                         TKs& ks,
                          double dt2,
                          Triplets& kTriplets,
                          Triplets& aTriplets);
 
-    void _computeTetsK(const Primitives& tets, double D0, double D1, double D2);
-
-    Mat3 _buildTetK(Vec3 bn,
-                    Vec3 bm,
-                    double D0,
-                    double D1,
-                    double D2,
-                    double volume);
+    void _computeTetsK(const Primitives& tets,
+                       TKs& ks,
+                       double D0,
+                       double D1,
+                       double D2);
 
     void _addMatrixToTriplets(uint64_t id0,
                               uint64_t id1,

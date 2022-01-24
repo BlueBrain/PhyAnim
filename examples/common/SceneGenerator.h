@@ -16,7 +16,9 @@ public:
     static phyanim::Meshes generate(phyanim::Meshes meshes,
                                     uint32_t numOutMeshes,
                                     phyanim::AxisAlignedBoundingBox aabb,
-                                    uint32_t maxCollisions = 4)
+                                    double bbFactor = 15.0,
+                                    uint32_t maxCollisions = 4,
+                                    double maxCollisionRadius = 4.0)
     {
         std::srand(std::time(nullptr));
         phyanim::Meshes sceneMeshes;
@@ -46,22 +48,49 @@ public:
                     pos.x() = (double)std::rand() / RAND_MAX * range.x();
                     pos.y() = (double)std::rand() / RAND_MAX * range.y();
                     pos.z() = (double)std::rand() / RAND_MAX * range.z();
-                    pos += aabb.lowerLimit();
-                    pos -= mesh->boundingBox->center();
 
+                    double alpha = (double)std::rand() / RAND_MAX * 2 * M_PI;
+                    double beta = (double)std::rand() / RAND_MAX * 2 * M_PI;
+                    double gamma = (double)std::rand() / RAND_MAX * 2 * M_PI;
+
+                    double cosX = std::cos(alpha);
+                    double sinX = std::sin(alpha);
+                    double cosY = std::cos(beta);
+                    double sinY = std::sin(beta);
+                    double cosZ = std::cos(gamma);
+                    double sinZ = std::sin(gamma);
+                    phyanim::Mat3 rot;
+                    phyanim::Mat3 xRot;
+                    phyanim::Mat3 yRot;
+                    phyanim::Mat3 zRot;
+                    zRot << cosZ, -sinZ, 0, sinZ, cosZ, 0, 0, 0, 1;
+                    yRot << cosY, 0, sinY, 0, 1, 0, -sinY, 0, cosY;
+                    xRot << 1, 0, 0, 0, cosX, -sinX, 0, sinX, cosX;
+                    rot = xRot * yRot * zRot;
+
+                    phyanim::Vec3 center = mesh->boundingBox->center();
                     for (auto node : mesh->nodes)
                     {
-                        node->position += pos;
-                        node->initPosition += pos;
+                        phyanim::Vec3 position = node->position - center;
+                        position = rot * position;
+                        position += pos;
+                        node->initPosition = position;
+                        node->position = position;
                     }
                     mesh->boundingBox->update();
 
                     auto aabbs =
                         phyanim::CollisionDetection::collisionBoundingBoxes(
-                            sceneMeshes, 1.0001);
+                            sceneMeshes, bbFactor);
 
                     rightPos =
                         ((aabbs.size() - numCollisions) <= maxCollisions);
+                    if (rightPos)
+                    {
+                        for (auto aabb : aabbs)
+                            rightPos &= aabb->radius() < maxCollisionRadius;
+                    }
+
                     if (rightPos) numCollisions = aabbs.size();
                 }
                 progress += 100.0 / numOutMeshes;

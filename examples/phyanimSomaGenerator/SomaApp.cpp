@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "Icosphere.h"
+#include "SWCReader.h"
 
 int main(int argc, char* argv[])
 {
@@ -20,9 +21,13 @@ SomaApp::SomaApp(int argc, char** argv) : GLFWApp(argc, argv), _anim(false) {}
 void SomaApp::_actionLoop()
 {
     double dt = 0.01;
-    double ks = 1;
-    uint32_t iters = 2000;
+    double stiffness = 10000;
+    double poissonRatio = 0.2;
+    double radialDist = 0;
+    uint32_t iters = 200;
     uint32_t iter = 0;
+    bool offline = false;
+    std::string file("data/a_s.swc");
 
     for (int i = 0; i < _args.size(); ++i)
     {
@@ -37,14 +42,30 @@ void SomaApp::_actionLoop()
             else if (option.compare("-ks") == 0)
             {
                 ++i;
-                ks = std::stof(_args[i]);
+                stiffness = std::stof(_args[i]);
+            }
+            else if (option.compare("-rd") == 0)
+            {
+                ++i;
+                radialDist = std::stof(_args[i]);
+            }
+            else if (option.compare("-pr") == 0)
+            {
+                ++i;
+                poissonRatio = std::stof(_args[i]);
             }
             else if (option.compare("-it") == 0)
             {
                 ++i;
                 iters = std::stof(_args[i]);
-                iter = iters;
-                ++i;
+            }
+            else if (option.compare("-off") == 0)
+            {
+                offline = true;
+            }
+            else
+            {
+                file = option;
             }
         }
         catch (...)
@@ -54,51 +75,62 @@ void SomaApp::_actionLoop()
         }
     }
 
-    NeuriteStarts starts;
-    starts.push_back(std::make_pair(phyanim::Vec3(3.0, -3.0, 0.0), 0.4));
-    starts.push_back(std::make_pair(phyanim::Vec3(-3.0, -3.0, 0.0), 0.4));
-    starts.push_back(std::make_pair(phyanim::Vec3(0.0, 3.0, 0.0), 0.4));
-    starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, 3.0), 0.4));
-    starts.push_back(std::make_pair(phyanim::Vec3(0.0, .0, -3.0), 0.4));
-    auto somaGen =
-        new SomaGenerator(starts, phyanim::Vec3::Zero(), 1, dt, ks, 0.7);
+    SWCReader reader(file);
+
+    std::cout << "Soma center " << reader.soma.position << std::endl;
+
+    std::cout << "Soma radius " << reader.soma.radius << std::endl;
 
     std::chrono::time_point<std::chrono::steady_clock> startTime =
         std::chrono::steady_clock::now();
-    somaGen->simulate(iters);
+    auto somaGen = new SomaGenerator(reader.neurites, reader.soma, dt,
+                                     stiffness, poissonRatio, radialDist);
 
-    auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
-    std::cout << iters << " run in: " << elapsedTime.count() << "seconds"
-              << std::endl;
-
-    std::cout << "dt: " << dt << "\nks: " << ks << std::endl;
+    std::cout << "dt: " << dt << std::endl;
+    std::cout << "stiffness: " << stiffness << std::endl;
+    std::cout << "poissonRatio: " << poissonRatio << std::endl;
+    std::cout << "radialDist: " << radialDist << std::endl;
     phyanim::DrawableMesh* mesh = somaGen->mesh();
     phyanim::AxisAlignedBoundingBox limits;
     limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
+    phyanim::Vec3 center = limits.center();
+    phyanim::Vec3 axis = (limits.upperLimit() - center) * 2.0;
+
+    limits.upperLimit(center + axis);
+    limits.lowerLimit(center - axis);
     _scene->addMesh(mesh);
     _setCameraPos(limits);
+
+    _anim = true;
 
     while (true)
     {
         _animMutex.lock();
         bool anim = _anim;
         _animMutex.unlock();
-        if (anim)
+        if (_anim)
         {
-            endTime = std::chrono::steady_clock::now();
-            elapsedTime = endTime - startTime;
-            if (elapsedTime.count() >= 0.005)
+            ++iter;
+            if (iter < iters)
             {
-                ++iter;
-                std::cout << "\rIteration: " << iter << std::flush;
-                somaGen->anim(true);
-                startTime = endTime;
+                float alpha = (float)iter / iters;
+                somaGen->pull(alpha);
+                somaGen->anim(!offline);
             }
-        }
-        else
-        {
-            startTime = std::chrono::steady_clock::now();
+            else
+            {
+                somaGen->anim(true);
+                if (iter == iters)
+                {
+                    _anim = false;
+                    auto endTime = std::chrono::steady_clock::now();
+                    std::chrono::duration<double> elapsedTime =
+                        endTime - startTime;
+                    std::cout << iters << " run in: " << elapsedTime.count()
+                              << "seconds" << std::endl;
+                }
+                std::cout << "Iteration: " << iter << std::endl;
+            }
         }
     }
 }

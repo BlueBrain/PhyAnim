@@ -9,30 +9,26 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     , node1(n1_)
     , node2(n2_)
     , node3(n3_)
+    , _volume(0.0)
+    , _volumeComputed(false)
 {
 }
 
-void Tetrahedron::compute()
+double Tetrahedron::initVolume()
 {
+    if (_volumeComputed) return _volume;
+
     Vec3 x0 = node0->initPosition;
     Vec3 x1 = node1->initPosition;
     Vec3 x2 = node2->initPosition;
     Vec3 x3 = node3->initPosition;
 
-    normal0 = (x3 - x1).cross(x2 - x1).normalized();
-    normal1 = (x2 - x0).cross(x3 - x0).normalized();
-    normal2 = (x3 - x0).cross(x1 - x0).normalized();
-    normal3 = (x1 - x0).cross(x2 - x0).normalized();
+    Mat3 basis;
+    basis << x1 - x0, x2 - x0, x3 - x0;
 
-    Vec3 e10 = x1 - x0;
-    Vec3 e20 = x2 - x0;
-    Vec3 e30 = x3 - x0;
-    basis << e10, e20, e30;
-    double det = basis.determinant();
-    initVolume = det / 6.0;
-
-    Mat3 E = basis;
-    invBasis = E.inverse().eval();
+    _volume = std::abs(basis.determinant() / 6.0);
+    _volumeComputed = true;
+    return _volume;
 }
 
 double Tetrahedron::volume() const

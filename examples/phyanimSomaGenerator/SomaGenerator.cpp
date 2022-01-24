@@ -4,74 +4,49 @@
 
 namespace examples
 {
-SomaGenerator::SomaGenerator(NeuriteStarts starts,
-                             phyanim::Vec3 pos,
-                             double radius,
+SomaGenerator::SomaGenerator(Samples starts,
+                             Sample soma,
                              double dt,
                              double stiffness,
-                             double fixedThreshold)
-    : _center(pos)
-    , _radius(radius)
+                             double poissonRatio,
+                             double radialDist)
+    : _starts(starts)
+    , _soma(soma)
     , _dt(dt)
 {
-    _stiffness = (1 / (_dt / (2 * M_PI))) * 0.01 * stiffness;
-    _pullStiffness = 0;
-
-    _ico = new Icosphere(_center, _radius);
-
+    _ico = new Icosphere(soma.position, soma.radius);
     _nodes = _ico->nodes;
     _mesh = _ico->mesh();
-
-    _springs = _ico->springs(_stiffness);
-    _computePullSprings(starts, _stiffness, 0.01);
-}
-
-void SomaGenerator::simulate(uint64_t iters)
-{
-    double incStiffness = _stiffness / iters;
-    for (uint64_t i = 0; i < iters; ++i)
-    {
-        _pullStiffness += incStiffness;
-        anim(false);
-    }
+    _tets = _ico->tets();
     _updateNodes();
+
+    _kMat.computeMatrices(_nodes, _tets, stiffness, poissonRatio, _dt);
+    _computeStartsNodes();
+    _fixCenterNodes(radialDist);
 }
 
 void SomaGenerator::anim(bool updateNodes)
 {
+    // Solve implicit system
+    uint64_t size = _nodes.size() * 3;
+    Eigen::VectorXd u(size);
+    Eigen::VectorXd mv(size);
+    Eigen::VectorXd v_1(size);
+    Eigen::VectorXd b(size);
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
     for (uint64_t i = 0; i < _nodes.size(); ++i)
     {
-        _nodes[i]->force = phyanim::Vec3::Zero();
-    }
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint64_t i = 0; i < _springs.size(); ++i)
-    {
-        _computeForce(_springs[i]);
-    }
-    for (auto spring : _springs)
-    {
-        spring->node0->force += spring->force;
-        spring->node1->force -= spring->force;
+        auto node = _nodes[i];
+        _addVec3ToVec(i, node->position - node->initPosition, u);
+        _addVec3ToVec(i, node->velocity * node->mass, mv);
     }
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint64_t i = 0; i < _pullSprings.size(); ++i)
-    {
-        _pullSprings[i]->stiffness = _pullStiffness;
-        _computeForce(_pullSprings[i]);
-    }
-    for (auto spring : _pullSprings)
-    {
-        spring->node0->force += spring->force;
-        spring->node1->force -= spring->force;
-    }
+    b = mv - _dt * (_kMat.kMatrix * u);
+    v_1 = _kMat.aMatrixSolver.solve(b);
+
+    // Update nodes velocity and position
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -80,80 +55,67 @@ void SomaGenerator::anim(bool updateNodes)
         auto node = _nodes[i];
         if (!node->fixed)
         {
-            phyanim::Vec3 v = node->velocity + node->force / node->mass * _dt;
-            phyanim::Vec3 x = node->position + v * _dt;
-
-            node->velocity = v;
-            node->position = x;
+            node->velocity =
+                phyanim::Vec3(v_1[i * 3], v_1[i * 3 + 1], v_1[i * 3 + 2]);
+            node->position += node->velocity * _dt;
         }
     }
 
     if (updateNodes) _updateNodes();
 }
 
+void SomaGenerator::pull(float alpha)
+{
+    for (uint64_t i = 0; i < _starts.size(); ++i)
+    {
+        phyanim::Vec3 increment =
+            (_starts[i]->position - _positions[i]) * alpha;
+        for (auto node : _startsNodes[i])
+            node->position = node->initPosition + increment;
+    }
+}
+
 phyanim::DrawableMesh* SomaGenerator::mesh() { return _mesh; }
 
-void SomaGenerator::_computePullSprings(NeuriteStarts starts,
-                                        double stiffness,
-                                        double resThreshold)
+void SomaGenerator::_addVec3ToVec(uint64_t id,
+                                  const phyanim::Vec3& value,
+                                  Eigen::VectorXd& vec)
 {
-    for (auto start : starts)
+    id *= 3;
+    for (uint64_t i = 0; i < 3; ++i)
     {
-        phyanim::Vec3 startPos = start.first;
-        double startRadius = start.second;
+        vec[id + i] = value[i];
+    }
+}
 
-        phyanim::Vec3 direction = (startPos - _center).normalized();
-        phyanim::Vec3 surfacePos = direction * _radius + _center;
-        double diff = (startPos - surfacePos).norm();
-        if (diff < 0.1)
-        {
-            diff = 0.1;
-        }
-        direction *= diff;
+void SomaGenerator::_computeStartsNodes()
+{
+    _startsNodes.resize(_starts.size());
+    _positions.resize(_starts.size());
+    for (uint64_t i = 0; i < _starts.size(); ++i)
+    {
+        auto start = _starts[i];
+        phyanim::Vec3 direction =
+            (start->position - _soma.position).normalized();
+        phyanim::Vec3 surfacePos = direction * _soma.radius + _soma.position;
+        _positions[i] = surfacePos;
 
         for (auto node : _nodes)
-        {
-            if ((node->position - surfacePos).norm() < startRadius)
+            if ((node->position - surfacePos).norm() <= start->radius)
             {
-                auto linkNode = new Node(node->position + direction, 0, true);
-                _pullNodes.push_back(linkNode);
-                _pullSprings.push_back(
-                    new Spring(node, linkNode, stiffness, diff * resThreshold));
+                _startsNodes[i].push_back(node);
+                node->fixed = true;
             }
-        }
     }
 }
 
-void SomaGenerator::_innerSprings(double stiffness)
-{
-    _centerNode = new Node(_center, 0, true);
-    for (auto node : _nodes)
-        _springs.push_back(new Spring(node, _centerNode, stiffness));
-}
-
-void SomaGenerator::_fixCenterNodes(double threshold)
+void SomaGenerator::_fixCenterNodes(double radialDist)
 {
     for (auto node : _nodes)
     {
-        node->fixed = ((node->position - _center).norm() < _radius * threshold);
+        double dist = (node->position - _soma.position).norm();
+        if (dist < radialDist * _soma.radius) node->fixed = true;
     }
-}
-
-void SomaGenerator::_computeForce(SpringPtr spring)
-{
-    double ks = spring->stiffness;
-    double kd = ks * 0.1;
-    double m = (spring->node0->mass + spring->node1->mass) * 0.5;
-    phyanim::Vec3 d = spring->node1->position - spring->node0->position;
-    double r = spring->resLength;
-    double l = d.norm();
-    phyanim::Vec3 v = spring->node1->velocity - spring->node0->velocity;
-    phyanim::Vec3 f0 = phyanim::Vec3::Zero();
-    if (l > 0.0)
-    {
-        f0 = (ks * (l / r - 1.0) + kd * (v.dot(d) / (l * r))) * d / l;
-    }
-    spring->force = f0;
 }
 
 void SomaGenerator::_updateNodes()
