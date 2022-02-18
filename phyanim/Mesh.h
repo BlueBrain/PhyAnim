@@ -109,6 +109,7 @@ private:
     void _loadTETGEN(const std::string& nodeFile_, const std::string& eleFile_);
 
     void _writeOFF(const std::string& file_);
+    void _writeOBJ(const std::string& file_);
 
     void _writeTET(const std::string& file_);
 };

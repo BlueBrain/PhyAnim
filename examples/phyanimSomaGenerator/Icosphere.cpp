@@ -12,12 +12,23 @@ Icosphere::Icosphere(phyanim::Vec3 pos, double radius)
 {
     _mesh = new phyanim::DrawableMesh();
     _mesh->load(PATH_TO_ICO);
+
     for (auto meshNode : _mesh->nodes)
     {
         phyanim::Vec3 position = meshNode->position * radius + pos;
         auto node = new Node(position, meshNode->id);
         nodes.push_back(node);
     }
+    std::set<Node*> sNodes;
+    for (auto primitive : _mesh->triangles)
+    {
+        auto triangle = dynamic_cast<phyanim::TrianglePtr>(primitive);
+
+        sNodes.insert(nodes[triangle->node0->id]);
+        sNodes.insert(nodes[triangle->node1->id]);
+        sNodes.insert(nodes[triangle->node2->id]);
+    }
+    surfaceNodes.insert(surfaceNodes.begin(), sNodes.begin(), sNodes.end());
 }
 
 phyanim::DrawableMesh* Icosphere::mesh() { return _mesh; }

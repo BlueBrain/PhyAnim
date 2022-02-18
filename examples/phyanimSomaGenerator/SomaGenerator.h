@@ -18,7 +18,7 @@ public:
                   double dt = 0.01,
                   double stiffness = 1000.0,
                   double poissonRatio = 0.49,
-                  double radialDist = 0.5);
+                  double alphaSoma = 0.75);
 
     ~SomaGenerator(){};
 

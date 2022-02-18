@@ -23,8 +23,8 @@ void SomaApp::_actionLoop()
     double dt = 0.01;
     double stiffness = 10000;
     double poissonRatio = 0.2;
-    double radialDist = 0;
-    uint32_t iters = 200;
+    double alphaSoma = 0.75;
+    uint32_t iters = 201;
     uint32_t iter = 0;
     bool offline = false;
     std::string file("data/a_s.swc");
@@ -44,10 +44,10 @@ void SomaApp::_actionLoop()
                 ++i;
                 stiffness = std::stof(_args[i]);
             }
-            else if (option.compare("-rd") == 0)
+            else if (option.compare("-as") == 0)
             {
                 ++i;
-                radialDist = std::stof(_args[i]);
+                alphaSoma = std::stof(_args[i]);
             }
             else if (option.compare("-pr") == 0)
             {
@@ -84,12 +84,12 @@ void SomaApp::_actionLoop()
     std::chrono::time_point<std::chrono::steady_clock> startTime =
         std::chrono::steady_clock::now();
     auto somaGen = new SomaGenerator(reader.neurites, reader.soma, dt,
-                                     stiffness, poissonRatio, radialDist);
+                                     stiffness, poissonRatio, alphaSoma);
 
     std::cout << "dt: " << dt << std::endl;
     std::cout << "stiffness: " << stiffness << std::endl;
     std::cout << "poissonRatio: " << poissonRatio << std::endl;
-    std::cout << "radialDist: " << radialDist << std::endl;
+    std::cout << "alphaSoma: " << alphaSoma << std::endl;
     phyanim::DrawableMesh* mesh = somaGen->mesh();
     phyanim::AxisAlignedBoundingBox limits;
     limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
@@ -116,6 +116,14 @@ void SomaApp::_actionLoop()
                 float alpha = (float)iter / iters;
                 somaGen->pull(alpha);
                 somaGen->anim(!offline);
+                if (iter == 1 || iter == 50 || iter == 100 || iter == 150 ||
+                    iter == 200)
+                {
+                    std::string outFile("out_");
+                    outFile.append(std::to_string(iter));
+                    outFile.append(".obj");
+                    mesh->write(outFile);
+                }
             }
             else
             {
@@ -126,7 +134,8 @@ void SomaApp::_actionLoop()
                     auto endTime = std::chrono::steady_clock::now();
                     std::chrono::duration<double> elapsedTime =
                         endTime - startTime;
-                    std::cout << iters << " run in: " << elapsedTime.count()
+                    std::cout << iters
+                              << " irations in: " << elapsedTime.count()
                               << "seconds" << std::endl;
                 }
                 std::cout << "Iteration: " << iter << std::endl;

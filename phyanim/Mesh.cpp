@@ -3,6 +3,7 @@
 #include <igl/readOBJ.h>
 #include <igl/readOFF.h>
 #include <igl/readPLY.h>
+#include <igl/writeOBJ.h>
 #include <igl/writeOFF.h>
 
 #include <fstream>
@@ -123,6 +124,10 @@ void Mesh::write(const std::string& file_)
     if (file_.find(".off") != std::string::npos)
     {
         _writeOFF(file_);
+    }
+    else if (file_.find(".obj") != std::string::npos)
+    {
+        _writeOBJ(file_);
     }
     else if (file_.find(".tet") != std::string::npos)
     {
@@ -646,6 +651,27 @@ void Mesh::_writeOFF(const std::string& file_)
         facets.row(i) = facet;
     }
     igl::writeOFF(file_.c_str(), vertices, facets);
+}
+
+void Mesh::_writeOBJ(const std::string& file_)
+{
+    unsigned int nVertices = nodes.size();
+    unsigned int nFacets = surfaceTriangles.size();
+    Eigen::MatrixXd vertices(nVertices, 3);
+    Eigen::MatrixXi facets(nFacets, 3);
+    for (unsigned int i = 0; i < nVertices; i++)
+    {
+        nodes[i]->id = i;
+        vertices.row(i) = nodes[i]->position;
+    }
+    for (unsigned int i = 0; i < nFacets; i++)
+    {
+        Eigen::MatrixXi facet(1, 3);
+        auto triangle = dynamic_cast<TrianglePtr>(surfaceTriangles[i]);
+        facet << triangle->node0->id, triangle->node1->id, triangle->node2->id;
+        facets.row(i) = facet;
+    }
+    igl::writeOBJ(file_.c_str(), vertices, facets);
 }
 
 void Mesh::_writeTET(const std::string& file_)

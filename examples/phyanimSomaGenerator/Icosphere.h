@@ -24,6 +24,8 @@ public:
 
     std::vector<Node*> nodes;
 
+    std::vector<Node*> surfaceNodes;
+
     std::vector<Triangle*> triangles;
 
 private:

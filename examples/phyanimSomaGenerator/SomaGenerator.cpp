@@ -9,12 +9,13 @@ SomaGenerator::SomaGenerator(Samples starts,
                              double dt,
                              double stiffness,
                              double poissonRatio,
-                             double radialDist)
+                             double alphaSoma)
     : _starts(starts)
     , _soma(soma)
     , _dt(dt)
 {
-    _ico = new Icosphere(soma.position, soma.radius);
+    _soma.radius *= alphaSoma;
+    _ico = new Icosphere(_soma.position, _soma.radius);
     _nodes = _ico->nodes;
     _mesh = _ico->mesh();
     _tets = _ico->tets();
@@ -22,7 +23,6 @@ SomaGenerator::SomaGenerator(Samples starts,
 
     _kMat.computeMatrices(_nodes, _tets, stiffness, poissonRatio, _dt);
     _computeStartsNodes();
-    _fixCenterNodes(radialDist);
 }
 
 void SomaGenerator::anim(bool updateNodes)
@@ -92,6 +92,10 @@ void SomaGenerator::_computeStartsNodes()
 {
     _startsNodes.resize(_starts.size());
     _positions.resize(_starts.size());
+
+    std::vector<bool> assignedNodes(_ico->surfaceNodes.size());
+    for (auto assignedNode : assignedNodes) assignedNode = false;
+
     for (uint64_t i = 0; i < _starts.size(); ++i)
     {
         auto start = _starts[i];
@@ -100,12 +104,38 @@ void SomaGenerator::_computeStartsNodes()
         phyanim::Vec3 surfacePos = direction * _soma.radius + _soma.position;
         _positions[i] = surfacePos;
 
-        for (auto node : _nodes)
-            if ((node->position - surfacePos).norm() <= start->radius)
+        float minDist = std::numeric_limits<double>::max();
+        uint64_t minId = 0;
+        for (uint64_t nodeId = 0; nodeId < _ico->surfaceNodes.size(); ++nodeId)
+        {
+            if (!assignedNodes[nodeId])
             {
-                _startsNodes[i].push_back(node);
-                node->fixed = true;
+                auto node = _ico->surfaceNodes[nodeId];
+                double dist = (node->position - surfacePos).norm();
+
+                if (dist < minDist)
+                {
+                    minDist = dist;
+                    minId = nodeId;
+                }
+
+                if (dist <= start->radius)
+                {
+                    _startsNodes[i].push_back(node);
+                    node->fixed = true;
+                    assignedNodes[nodeId] = true;
+                }
             }
+        }
+
+        if (_startsNodes[i].empty())
+        {
+            auto node = _ico->surfaceNodes[minId];
+            _startsNodes[i].push_back(node);
+            _positions[i] = node->position;
+            node->fixed = true;
+            assignedNodes[minId] = true;
+        }
     }
 }
 
