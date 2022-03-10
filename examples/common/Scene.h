@@ -12,7 +12,7 @@ namespace examples
 class Scene
 {
 public:
-    Scene();
+    Scene(uint32_t width, uint32_t height);
 
     ~Scene();
 

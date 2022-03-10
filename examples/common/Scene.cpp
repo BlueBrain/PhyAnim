@@ -75,16 +75,17 @@ const std::string fRenderSource(
     "diff = clamp( diff, 0.0, 1.0 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
-Scene::Scene()
+Scene::Scene(uint32_t width, uint32_t height)
     : showFPS(false)
     , _renderMode(SOLID)
     , _framesCount(0)
-    , _width(600)
-    , _height(600)
+    , _width(width)
+    , _height(height)
 {
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_FRONT);
-    _camera = new Camera();
+    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 90.0,
+                         (double)_width / _height);
     _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
     _pickingProgram =
         new RenderProgram(vPickingSource, std::string(""), fPickingSource);

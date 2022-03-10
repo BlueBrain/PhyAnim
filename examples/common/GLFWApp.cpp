@@ -12,6 +12,8 @@ namespace examples
 {
 GLFWApp::GLFWApp(int argc, char** argv)
     : _scene(nullptr)
+    , _width(600)
+    , _height(600)
     , _mouseX(0.0)
     , _mouseY(0.0)
     , _leftButtonPressed(false)
@@ -22,9 +24,24 @@ GLFWApp::GLFWApp(int argc, char** argv)
     , _collisionId(0)
     , _bbFactor(15.0)
 {
+    for (uint32_t i = 1; i < argc; ++i)
+    {
+        std::string arg(argv[i]);
+        if (arg.compare("-w") == 0)
+        {
+            ++i;
+            _width = std::stoi(argv[i]);
+        }
+        else if (arg.compare("-h") == 0)
+        {
+            ++i;
+            _height = std::stoi(argv[i]);
+        }
+        else
+            _args.push_back(std::string(argv[i]));
+    }
     _initGLFW();
-    _scene = new Scene();
-    for (uint32_t i = 1; i < argc; ++i) _args.push_back(std::string(argv[i]));
+    _scene = new Scene(_width, _height);
 }
 
 GLFWApp::~GLFWApp()
@@ -208,7 +225,7 @@ void GLFWApp::_initGLFW()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    _window = glfwCreateWindow(600, 600, "Example app", NULL, NULL);
+    _window = glfwCreateWindow(_width, _height, "Example app", NULL, NULL);
 
     if (!_window)
     {

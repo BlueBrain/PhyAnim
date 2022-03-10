@@ -102,6 +102,9 @@ protected:
 
     Scene* _scene;
 
+    uint32_t _width;
+    uint32_t _height;
+
     std::vector<std::string> _args;
 
     double _mouseX;
