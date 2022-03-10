@@ -69,7 +69,7 @@ void Camera::_makeViewMat()
 
 void Camera::_makeProjectionMat()
 {
-    double nearPlane = 0.0001;
+    double nearPlane = 0.01;
     double farPlane = 1000.0;
     double nf = 1.0 / (nearPlane - farPlane);
     double f = 1.0 / tan(_fov);

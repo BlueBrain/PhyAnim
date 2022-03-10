@@ -209,7 +209,7 @@ void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits,
     phyanim::Vec3 cameraPos = limits.center();
     phyanim::Vec3 dist = limits.upperLimit() - cameraPos;
     double max = std::max(std::max(dist.x(), dist.y()), dist.z());
-    cameraPos.z() = limits.upperLimit().z() + max;
+    // cameraPos.z() = limits.upperLimit().z();
     if (increment) _cameraPosInc = max * 0.001;
     _scene->cameraPosition(cameraPos);
 }

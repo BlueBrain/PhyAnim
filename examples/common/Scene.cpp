@@ -19,7 +19,6 @@ const std::string fPickingSource(
     "out vec4 color;"
     "uniform vec4 pickingColor;"
     "void main(void){"
-    //     "color = vec4(1.0, 0.0, 0.0, 1.0);}");
     "color = pickingColor;}");
 
 const std::string vRenderSource(
@@ -52,10 +51,12 @@ const std::string gRenderSource(
     "color = vColor[0];"
     "gl_Position = gl_in[0].gl_Position;"
     "EmitVertex();"
+    "normal = cross(axis0, axis1);"
     "gposition = position[1];"
     "color = vColor[1];"
     "gl_Position = gl_in[1].gl_Position;"
     "EmitVertex();"
+    "normal = cross(axis0, axis1);"
     "gposition = position[2];"
     "color = vColor[2];"
     "gl_Position = gl_in[2].gl_Position;"
@@ -83,7 +84,8 @@ Scene::Scene(uint32_t width, uint32_t height)
     , _height(height)
 {
     glEnable(GL_DEPTH_TEST);
-    glCullFace(GL_FRONT);
+    glEnable(GL_CULL_FACE);
+
     _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 90.0,
                          (double)_width / _height);
     _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
@@ -216,12 +218,10 @@ void Scene::changeRenderMode()
     case SOLID:
         _renderMode = WIREFRAME;
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glCullFace(GL_FRONT_AND_BACK);
         break;
     case WIREFRAME:
         _renderMode = SOLID;
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glCullFace(GL_FRONT);
         break;
     }
 }
