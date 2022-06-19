@@ -1,5 +1,5 @@
 # Data copy to build folder
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION
   ${CMAKE_BINARY_DIR}/data)
 
 add_subdirectory(phyanimCheckCollisions)
@@ -11,8 +11,9 @@ if(GLFW3_FOUND)
   add_subdirectory(phyanimAnimMesh)
   add_subdirectory(phyanimMoveMesh)
   add_subdirectory(phyanimRenderMesh)
-  add_subdirectory(phyanimSceneGenerator) 
+  add_subdirectory(phyanimSceneGenerator)
 
   add_subdirectory(phyanimOverlapCollisions)
   add_subdirectory(phyanimSomaGenerator)
+  add_subdirectory(phyanimDemo)
 endif()

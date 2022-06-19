@@ -26,6 +26,8 @@ public:
 
     void cameraPosition(phyanim::Vec3 position);
 
+    void cameraDistance(float distance);
+
     void displaceCamera(phyanim::Vec3 displace);
 
     void rotateCamera(double pitch, double yaw);

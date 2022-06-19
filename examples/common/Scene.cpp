@@ -191,6 +191,8 @@ void Scene::cameraPosition(phyanim::Vec3 position)
     _camera->position(position);
 }
 
+void Scene::cameraDistance(float distance) { _camera->distance(distance); }
+
 void Scene::displaceCamera(phyanim::Vec3 displace)
 {
     phyanim::Vec3 rotDis = _camera->rotation() * displace;

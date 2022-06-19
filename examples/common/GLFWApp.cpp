@@ -142,7 +142,6 @@ void GLFWApp::_loadMeshes(std::vector<std::string> files)
 #pragma omp critical
         {
             _limits.unite(*mesh->boundingBox);
-            _setCameraPos(_limits);
             progress += 100.0f / files.size();
             std::cout << "\rLoading files " << progress << "%" << std::flush;
         }
@@ -152,6 +151,7 @@ void GLFWApp::_loadMeshes(std::vector<std::string> files)
     std::chrono::duration<double> elapsedTime = endTime - startTime;
     std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
               << std::endl;
+    _setCameraPos(_limits);
 }
 
 void GLFWApp::_writeMeshes(phyanim::Meshes meshes,
@@ -207,11 +207,11 @@ void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits,
                             bool increment)
 {
     phyanim::Vec3 cameraPos = limits.center();
-    phyanim::Vec3 dist = limits.upperLimit() - cameraPos;
-    double max = std::max(std::max(dist.x(), dist.y()), dist.z());
-    // cameraPos.z() = limits.upperLimit().z();
-    if (increment) _cameraPosInc = max * 0.001;
+    float distance = (limits.upperLimit() - limits.center()).norm();
+    if (increment) _cameraPosInc = distance * 0.001;
     _scene->cameraPosition(cameraPos);
+    _scene->cameraDistance(distance);
+    std::cout << distance << std::endl;
 }
 
 void GLFWApp::_initGLFW()

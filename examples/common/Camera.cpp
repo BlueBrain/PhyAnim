@@ -9,10 +9,12 @@ const double degrees2radians = pi / 180.0;
 
 Camera::Camera(phyanim::Vec3 position,
                phyanim::Mat3 rotation,
+               float distance,
                double fov,
                double ratio)
     : _position(position)
     , _rotation(rotation)
+    , _distance(distance)
     , _ratio(ratio)
     , _fov(fov * degrees2radians * 0.5f)
 {
@@ -37,6 +39,14 @@ void Camera::rotation(phyanim::Mat3 rotation)
     _rotation = rotation;
     _makeViewMat();
 }
+
+float Camera::distance() const { return _distance; };
+
+void Camera::distance(float distance)
+{
+    _distance = distance;
+    _makeViewMat();
+};
 
 void Camera::fov(double fov_)
 {
@@ -63,8 +73,9 @@ void Camera::_makeViewMat()
 {
     phyanim::Mat3 inv = _rotation.inverse();
     _viewMat = phyanim::Mat4::Identity();
-    _viewMat.block<3, 3>(0, 0) = inv;
-    _viewMat.block<3, 1>(0, 3) = inv * (-_position);
+    // _viewMat.block<3, 3>(0, 0) = inv;
+    _viewMat.block<3, 1>(0, 3) =
+        -(_position + phyanim::Vec3(0.0, 0.0, 1.0) * _distance);
 }
 
 void Camera::_makeProjectionMat()
