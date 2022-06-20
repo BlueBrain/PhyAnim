@@ -34,6 +34,10 @@ void DemoApp::_actionLoop()
         else if (_args[i].find(".off") != std::string::npos)
         {
             _fileNames.push_back(_args[i]);
+        } 
+        else if (_args[i].find(".obj") != std::string::npos)
+        {
+            _fileNames.push_back(_args[i]);
         }
         else
             std::cerr << "Unknown file format: " << _args[i] << std::endl;
@@ -47,19 +51,10 @@ void DemoApp::_actionLoop()
         phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
     _sortAABBs(_aabbs);
 
-    for (auto aabb : _aabbs)
-        std::cout << "rdaius: " << aabb->radius() << std::endl;
-
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
     _coloredMeshes();
     _collisionId = 0;
-    if (_aabbs.size() > 0)
-    {
-        std::cout << "Collision id: " << _collisionId
-                  << " radius: " << _aabbs[0]->radius() << std::endl;
-        // _setCameraPos(*_aabbs[0], false);
-    }
 }
 
 void DemoApp::_coloredMeshes()
@@ -190,7 +185,7 @@ void DemoApp::_mousePositionCallback(GLFWwindow* window,
         _mouseX = xpos;
         _mouseY = ypos;
         phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _cameraPosInc, diffY * _cameraPosInc, 0.0);
+            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f, diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             if (_mesh)

@@ -58,7 +58,7 @@ void MoveMeshApp::_actionLoop()
     {
         std::cout << "Collision id: " << _collisionId
                   << " radius: " << _aabbs[0]->radius() << std::endl;
-        _setCameraPos(*_aabbs[0], false);
+        _setCameraPos(*_aabbs[0]);
     }
 }
 
@@ -190,7 +190,7 @@ void MoveMeshApp::_mousePositionCallback(GLFWwindow* window,
         _mouseX = xpos;
         _mouseY = ypos;
         phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _cameraPosInc, diffY * _cameraPosInc, 0.0);
+            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.1f, diffY * _scene->cameraDistance() * 0.1f, 0.0);
         if (_leftButtonPressed)
         {
             if (_mesh)

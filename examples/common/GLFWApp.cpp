@@ -19,7 +19,6 @@ GLFWApp::GLFWApp(int argc, char** argv)
     , _leftButtonPressed(false)
     , _middleButtonPressed(false)
     , _rightButtonPressed(false)
-    , _cameraPosInc(0.1)
     , _anim(false)
     , _collisionId(0)
     , _bbFactor(15.0)
@@ -203,15 +202,13 @@ void GLFWApp::_setAnim(bool anim)
     _animMutex.unlock();
 }
 
-void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits,
-                            bool increment)
+void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
 {
     phyanim::Vec3 cameraPos = limits.center();
     float distance = (limits.upperLimit() - limits.center()).norm();
-    if (increment) _cameraPosInc = distance * 0.001;
+    distance /= sin((45.0f)/180.0f*M_PI);
     _scene->cameraPosition(cameraPos);
     _scene->cameraDistance(distance);
-    std::cout << distance << std::endl;
 }
 
 void GLFWApp::_initGLFW()
@@ -294,9 +291,8 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                     _collisionId = (_collisionId - 1);
                     if (_collisionId < 0) _collisionId = aabbsSize - 1;
                     std::cout << "Collision id: " << _collisionId
-                              << " radius: " << _aabbs[_collisionId]->radius()
                               << std::endl;
-                    _setCameraPos(*_aabbs[_collisionId], false);
+                    _setCameraPos(*_aabbs[_collisionId]);
                 }
                 break;
             case GLFW_KEY_RIGHT:
@@ -304,9 +300,8 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                 {
                     _collisionId = (_collisionId + 1) % aabbsSize;
                     std::cout << "Collision id: " << _collisionId
-                              << " radius: " << _aabbs[_collisionId]->radius()
                               << std::endl;
-                    _setCameraPos(*_aabbs[_collisionId], false);
+                    _setCameraPos(*_aabbs[_collisionId]);
                 }
                 break;
             }
@@ -333,7 +328,7 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
 
         if (cameraDisplaced)
         {
-            dxyz *= _cameraPosInc * 10.0;
+            dxyz *= _scene->cameraDistance() * 0.001f * 2.0;
             _scene->displaceCamera(dxyz);
         }
     }
@@ -442,7 +437,7 @@ void GLFWApp::_mousePositionCallback(GLFWwindow* window,
         _mouseX = xpos;
         _mouseY = ypos;
         phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _cameraPosInc, diffY * _cameraPosInc, 0.0);
+            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f, diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
         }
@@ -470,11 +465,8 @@ void GLFWApp::_mouseScrollCallback(GLFWwindow* window,
                                    double yoffset)
 {
     if (_scene)
-    {
-        phyanim::Vec3 dxyz =
-            phyanim::Vec3(0.0, 0.0, -yoffset * _cameraPosInc * 20);
-        _scene->displaceCamera(dxyz);
-    }
+        _scene->cameraZoom(-yoffset);
+    
 }
 
 }  // namespace examples

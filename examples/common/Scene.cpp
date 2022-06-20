@@ -86,7 +86,7 @@ Scene::Scene(uint32_t width, uint32_t height)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 90.0,
+    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f, 90.0,
                          (double)_width / _height);
     _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
     _pickingProgram =
@@ -191,12 +191,28 @@ void Scene::cameraPosition(phyanim::Vec3 position)
     _camera->position(position);
 }
 
-void Scene::cameraDistance(float distance) { _camera->distance(distance); }
+void Scene::cameraDistance(float distance)
+{
+    _camera->distance(distance);
+}
+
+float Scene::cameraDistance()
+{
+    return _camera->distance();
+}
 
 void Scene::displaceCamera(phyanim::Vec3 displace)
 {
     phyanim::Vec3 rotDis = _camera->rotation() * displace;
     _camera->position(_camera->position() + rotDis);
+}
+
+void Scene::cameraZoom(float zoomInOut) 
+{ 
+    if (zoomInOut > 0)
+        _camera->distance(_camera->distance() * 1.1f); 
+    else    
+        _camera->distance(_camera->distance() * 0.9f);
 }
 
 void Scene::rotateCamera(double pitch, double yaw)

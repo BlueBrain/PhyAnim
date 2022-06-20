@@ -73,9 +73,9 @@ void Camera::_makeViewMat()
 {
     phyanim::Mat3 inv = _rotation.inverse();
     _viewMat = phyanim::Mat4::Identity();
-    // _viewMat.block<3, 3>(0, 0) = inv;
+    _viewMat.block<3, 3>(0, 0) = inv;
     _viewMat.block<3, 1>(0, 3) =
-        -(_position + phyanim::Vec3(0.0, 0.0, 1.0) * _distance);
+        -inv * (_position + _rotation * phyanim::Vec3(0.0, 0.0, 1.0) * _distance);
 }
 
 void Camera::_makeProjectionMat()

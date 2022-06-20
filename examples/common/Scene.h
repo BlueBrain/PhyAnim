@@ -28,7 +28,11 @@ public:
 
     void cameraDistance(float distance);
 
+    float cameraDistance();
+
     void displaceCamera(phyanim::Vec3 displace);
+
+    void cameraZoom(float zoomInOut);
 
     void rotateCamera(double pitch, double yaw);
 
