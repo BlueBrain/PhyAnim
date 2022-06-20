@@ -3,6 +3,7 @@
 
 #include <Camera.h>
 #include <RenderProgram.h>
+#include "SkyBox.h"
 
 #include <chrono>
 #include <mutex>
@@ -56,6 +57,10 @@ private:
     } RenderMode;
 
     Camera* _camera;
+
+    SkyBox* _sky;
+
+    phyanim::Vec3 _background;
 
     RenderMode _renderMode;
     bool _renderModeChanged;

@@ -1,5 +1,4 @@
 #include "Scene.h"
-
 #include <GL/glew.h>
 
 #include <cstdlib>
@@ -80,17 +79,19 @@ const std::string fRenderSource(
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
 Scene::Scene(uint32_t width, uint32_t height)
-    : showFPS(false)
+    : showFPS(true)
     , _renderMode(SOLID)
     , _framesCount(0)
     , _width(width)
     , _height(height)
+    , _background(0.2f, 0.2f, 0.2f)
 {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
     _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f, 90.0,
                          (double)_width / _height);
+    _sky = new SkyBox();
     _program = new RenderProgram(vRenderSource, "", fRenderSource);
     _pickingProgram =
         new RenderProgram(vPickingSource, std::string(""), fPickingSource);
@@ -113,8 +114,15 @@ void Scene::addMesh(phyanim::DrawableMesh* mesh)
 void Scene::render()
 {
     ++_framesCount;
-    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glClearColor(_background.x(), _background.y(), _background.z(), 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDisable(GL_DEPTH_TEST);
+    _sky->render(_camera);
+
+
+    glEnable(GL_DEPTH_TEST);
+
     _program->use();
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();

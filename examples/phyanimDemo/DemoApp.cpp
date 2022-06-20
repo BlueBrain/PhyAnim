@@ -17,7 +17,7 @@ DemoApp::DemoApp(int argc, char** argv) : GLFWApp(argc, argv), _mesh(nullptr) {}
 
 void DemoApp::_actionLoop()
 {
-    _bbFactor = 15;
+    _bbFactor = 2;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -52,28 +52,37 @@ void DemoApp::_actionLoop()
     _sortAABBs(_aabbs);
 
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
-    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
+    _checkCollisions();
     _coloredMeshes();
     _collisionId = 0;
 }
 
+void DemoApp::_checkCollisions()
+{
+    for (auto mesh: _meshes)
+        for (auto node: mesh->nodes)
+            node->collide = false;
+
+    for (auto aabb: _aabbs)
+        for (auto mesh : _meshes)
+            for (auto node: mesh->nodes)
+                if (aabb->isInside(node->position))
+                    node->collide = true;
+}
+
+
 void DemoApp::_coloredMeshes()
 {
-    phyanim::Vec3 baseColor(0.4, 0.4, 0.8);
-    phyanim::Vec3 baseSelectedColor(0.0, 0.0, 1.0);
 
-    phyanim::Vec3 collisionColor(1.0, 0.0, 0.0);
-    phyanim::Vec3 collisionSelectedColor(1.0, 0.0, 0.0);
-
-    for (auto mesh : _meshes)
+    for (uint32_t meshId = 0; meshId < _meshes.size(); ++meshId)
     {
-        phyanim::Vec3 color = baseColor;
-        phyanim::Vec3 collColor = collisionColor;
-
+        auto mesh = _meshes[meshId];
+        phyanim::Vec3 color = _palette.color(meshId);
+        phyanim::Vec3 collColor = _palette.collisionColor();
         if (mesh == _mesh)
         {
-            color = baseSelectedColor;
-            collColor = collisionSelectedColor;
+            color *= 1.5f;    
+            collColor *= 2.0f;
         }
 
         uint64_t nodeSize = mesh->nodes.size();
@@ -138,8 +147,7 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
                     _sortAABBs(_aabbs);
                     std::cout << "Number of collisions: " << _aabbs.size()
                               << std::endl;
-                    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
-                                                                   true);
+                    _checkCollisions();
                     _mesh = nullptr;
                     _coloredMeshes();
                 }

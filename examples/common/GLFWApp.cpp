@@ -145,10 +145,16 @@ void GLFWApp::_loadMeshes(std::vector<std::string> files)
             std::cout << "\rLoading files " << progress << "%" << std::flush;
         }
     }
+
+    uint32_t numTriangles = 0;
+    for (auto mesh : _meshes)
+        numTriangles += mesh->surfaceTriangles.size();
+    
     std::cout << std::endl;
     auto endTime = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsedTime = endTime - startTime;
-    std::cout << "Files loaded in: " << elapsedTime.count() << " seconds"
+    std::cout << "Files loaded in: " << elapsedTime.count() 
+            << " seconds. With: " << numTriangles << " triangles." 
               << std::endl;
     _setCameraPos(_limits);
 }
@@ -293,7 +299,9 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                     if (_collisionId < 0) _collisionId = aabbsSize - 1;
                     std::cout << "Collision id: " << _collisionId
                               << std::endl;
-                    _setCameraPos(*_aabbs[_collisionId]);
+                    auto limit = *_aabbs[_collisionId];
+                    limit.resize(2.0f);
+                    _setCameraPos(limit);
                 }
                 break;
             case GLFW_KEY_RIGHT:
@@ -302,7 +310,9 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
                     _collisionId = (_collisionId + 1) % aabbsSize;
                     std::cout << "Collision id: " << _collisionId
                               << std::endl;
-                    _setCameraPos(*_aabbs[_collisionId]);
+                    auto limit = *_aabbs[_collisionId];
+                    limit.resize(2.0f);
+                    _setCameraPos(limit);
                 }
                 break;
             }
