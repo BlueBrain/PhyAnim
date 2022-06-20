@@ -205,8 +205,9 @@ void GLFWApp::_setAnim(bool anim)
 void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
 {
     phyanim::Vec3 cameraPos = limits.center();
-    float distance = (limits.upperLimit() - limits.center()).norm();
-    distance /= sin((45.0f)/180.0f*M_PI);
+    // float distance = (limits.upperLimit() - limits.center()).norm();
+    // distance /= sin((45.0f)/180.0f*M_PI);
+    float distance = limits.upperLimit().z() - limits.center().z();
     _scene->cameraPosition(cameraPos);
     _scene->cameraDistance(distance);
 }
@@ -328,7 +329,7 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
 
         if (cameraDisplaced)
         {
-            dxyz *= _scene->cameraDistance() * 0.001f * 2.0;
+            dxyz *= _scene->cameraDistance() * 0.001f * 10.0;
             _scene->displaceCamera(dxyz);
         }
     }

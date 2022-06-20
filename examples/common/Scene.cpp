@@ -24,14 +24,17 @@ const std::string fPickingSource(
 const std::string vRenderSource(
     "#version 400\n"
     "in vec3 inPos;"
+    "in vec3 inNormal;"
     "in vec3 inColor;"
     "out vec3 position;"
-    "out vec3 vColor;"
+    "out vec3 normal;"
+    "out vec3 color;"
     "uniform mat4 projViewModel;"
     "uniform mat4 viewModel;"
     "void main(void) {"
-    "vColor = inColor;"
+    "color = inColor;"
     "position = (viewModel*vec4(inPos, 1.0)).xyz;"
+    "normal = (viewModel*vec4(inNormal, 0.0)).xyz;"
     "gl_Position = projViewModel * vec4(inPos, 1.0);}");
 
 const std::string gRenderSource(
@@ -65,13 +68,13 @@ const std::string gRenderSource(
 
 const std::string fRenderSource(
     "#version 400\n"
+    "in vec3 position;"
     "in vec3 normal;"
     "in vec3 color;"
-    "in vec3 gposition;"
     "out vec4 oColor;"
     "void main(void){"
     "vec3 N = normalize( normal );"
-    "vec3 L = normalize( -gposition );"
+    "vec3 L = normalize( -position );"
     "float diff = dot( N, L );"
     "diff = clamp( diff, 0.0, 1.0 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
@@ -88,7 +91,7 @@ Scene::Scene(uint32_t width, uint32_t height)
 
     _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f, 90.0,
                          (double)_width / _height);
-    _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
+    _program = new RenderProgram(vRenderSource, "", fRenderSource);
     _pickingProgram =
         new RenderProgram(vPickingSource, std::string(""), fPickingSource);
     _previousTime = std::chrono::steady_clock::now();
