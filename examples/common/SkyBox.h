@@ -21,8 +21,12 @@ protected:
     RenderProgram* _program;
     Texture* _texture;
 
-    uint32_t _uProjView;
+    uint32_t _uView;
+    uint32_t _uProj;
     uint32_t _vao;
+
+    uint32_t _numIndices;
+
 
 };
 }

@@ -1,4 +1,5 @@
 #include "Scene.h"
+
 #include <GL/glew.h>
 
 #include <cstdlib>
@@ -89,8 +90,8 @@ Scene::Scene(uint32_t width, uint32_t height)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f, 90.0,
-                         (double)_width / _height);
+    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f,
+                         120.0, (double)_width / _height);
     _sky = new SkyBox();
     _program = new RenderProgram(vRenderSource, "", fRenderSource);
     _pickingProgram =
@@ -117,11 +118,7 @@ void Scene::render()
     glClearColor(_background.x(), _background.y(), _background.z(), 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glDisable(GL_DEPTH_TEST);
     _sky->render(_camera);
-
-
-    glEnable(GL_DEPTH_TEST);
 
     _program->use();
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
@@ -202,15 +199,11 @@ void Scene::cameraPosition(phyanim::Vec3 position)
     _camera->position(position);
 }
 
-void Scene::cameraDistance(float distance)
-{
-    _camera->distance(distance);
-}
+void Scene::cameraDistance(float distance) { _camera->distance(distance); }
 
-float Scene::cameraDistance()
-{
-    return _camera->distance();
-}
+float Scene::cameraDistance() { return _camera->distance(); }
+
+void Scene::cameraFov(float fov) { _camera->fov(fov); }
 
 void Scene::displaceCamera(phyanim::Vec3 displace)
 {
@@ -218,11 +211,11 @@ void Scene::displaceCamera(phyanim::Vec3 displace)
     _camera->position(_camera->position() + rotDis);
 }
 
-void Scene::cameraZoom(float zoomInOut) 
-{ 
+void Scene::cameraZoom(float zoomInOut)
+{
     if (zoomInOut > 0)
-        _camera->distance(_camera->distance() * 1.1f); 
-    else    
+        _camera->distance(_camera->distance() * 1.1f);
+    else
         _camera->distance(_camera->distance() * 0.9f);
 }
 

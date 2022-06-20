@@ -2,6 +2,8 @@
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION
   ${CMAKE_BINARY_DIR}/data)
 
+add_compile_definitions(DATAPATH="${CMAKE_BINARY_DIR}/data")
+
 add_subdirectory(phyanimCheckCollisions)
 add_subdirectory(phyanimFormatConverter)
 add_subdirectory(phyanimTetrahedralizeMesh)

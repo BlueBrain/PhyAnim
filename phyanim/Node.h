@@ -34,6 +34,8 @@ public:
 
     Vec3 position;
 
+    Vec3 normal;
+
     Vec3 velocity;
 
     Vec3 force;

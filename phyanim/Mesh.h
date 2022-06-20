@@ -112,6 +112,10 @@ private:
     void _writeOBJ(const std::string& file_);
 
     void _writeTET(const std::string& file_);
+
+    void _computeNormals();
+
+    bool _normalsLoaded;
 };
 
 }  // namespace phyanim

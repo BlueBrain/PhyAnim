@@ -27,6 +27,11 @@ void DemoApp::_actionLoop()
             ++i;
             _bbFactor = std::stoi(_args[i]);
         }
+        if (_args[i].compare("-fov") == 0)
+        {
+            ++i;
+            _scene->cameraFov(std::stof(_args[i]));
+        }
         else if (_args[i].find(".tet") != std::string::npos)
         {
             _fileNames.push_back(_args[i]);
@@ -34,7 +39,7 @@ void DemoApp::_actionLoop()
         else if (_args[i].find(".off") != std::string::npos)
         {
             _fileNames.push_back(_args[i]);
-        } 
+        }
         else if (_args[i].find(".obj") != std::string::npos)
         {
             _fileNames.push_back(_args[i]);
@@ -59,21 +64,17 @@ void DemoApp::_actionLoop()
 
 void DemoApp::_checkCollisions()
 {
-    for (auto mesh: _meshes)
-        for (auto node: mesh->nodes)
-            node->collide = false;
+    for (auto mesh : _meshes)
+        for (auto node : mesh->nodes) node->collide = false;
 
-    for (auto aabb: _aabbs)
+    for (auto aabb : _aabbs)
         for (auto mesh : _meshes)
-            for (auto node: mesh->nodes)
-                if (aabb->isInside(node->position))
-                    node->collide = true;
+            for (auto node : mesh->nodes)
+                if (aabb->isInside(node->position)) node->collide = true;
 }
-
 
 void DemoApp::_coloredMeshes()
 {
-
     for (uint32_t meshId = 0; meshId < _meshes.size(); ++meshId)
     {
         auto mesh = _meshes[meshId];
@@ -81,7 +82,7 @@ void DemoApp::_coloredMeshes()
         phyanim::Vec3 collColor = _palette.collisionColor();
         if (mesh == _mesh)
         {
-            color *= 1.5f;    
+            color *= 1.5f;
             collColor *= 2.0f;
         }
 
@@ -193,7 +194,8 @@ void DemoApp::_mousePositionCallback(GLFWwindow* window,
         _mouseX = xpos;
         _mouseY = ypos;
         phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f, diffY * _scene->cameraDistance() * 0.001f, 0.0);
+            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
+                          diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             if (_mesh)

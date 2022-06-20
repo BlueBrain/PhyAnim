@@ -29,7 +29,9 @@ public:
 
     void cameraDistance(float distance);
 
-    float cameraDistance();
+    float cameraDistance();    
+    
+    void cameraFov(float fov);
 
     void displaceCamera(phyanim::Vec3 displace);
 

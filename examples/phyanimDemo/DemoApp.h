@@ -2,6 +2,7 @@
 #define __EXAMPLES_DEMO_APP__
 
 #include <GLFWApp.h>
+
 #include "ColorPalette.h"
 
 namespace examples
@@ -12,7 +13,6 @@ public:
     DemoApp(int argc, char** argv);
 
 protected:
-
     void _actionLoop();
 
     void _checkCollisions();
@@ -36,7 +36,6 @@ protected:
     phyanim::Mesh* _mesh;
 
     ColorPalette _palette;
-
 };
 
 }  // namespace examples
