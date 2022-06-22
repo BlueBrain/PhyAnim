@@ -19,6 +19,8 @@ void DemoApp::_actionLoop()
 {
     _bbFactor = 2;
 
+    _scene->showFPS = true;
+
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
         size_t extensionPos;

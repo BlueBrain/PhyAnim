@@ -30,7 +30,13 @@ Mesh::Mesh(double stiffness_,
 {
 }
 
-Mesh::~Mesh(void) {}
+Mesh::~Mesh(void)
+{
+    for (auto node : nodes) delete node;
+    nodes.clear();
+    for (auto triangle : triangles) delete triangle;
+    triangles.clear();
+}
 
 void Mesh::load(const std::string& file_)
 {
@@ -433,12 +439,14 @@ void Mesh::_loadOBJ(const std::string& file_)
         triangles.clear();
         std::vector<BTriangle> bTriangles;
 
-        std::string line;
-        std::vector<std::string> strings;
-
         while (file)
         {
+            std::string line;
+            std::vector<std::string> strings;
+
             std::getline(file, line);
+            if (line.empty()) continue;
+
             _split(line, strings);
 
             if (strings[0].compare("v") == 0)
@@ -453,6 +461,7 @@ void Mesh::_loadOBJ(const std::string& file_)
             {
                 std::vector<std::string> numbers;
                 BTriangle triangle;
+                triangle.quad = false;
 
                 _split(strings[1], numbers, '/');
                 triangle.id0 = std::stoi(numbers[0]) - 1;

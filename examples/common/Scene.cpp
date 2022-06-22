@@ -80,7 +80,7 @@ const std::string fRenderSource(
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
 
 Scene::Scene(uint32_t width, uint32_t height)
-    : showFPS(true)
+    : showFPS(false)
     , _renderMode(SOLID)
     , _framesCount(0)
     , _width(width)
