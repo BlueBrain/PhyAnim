@@ -1,7 +1,8 @@
 #include <iostream>
 // #include <cstdio>
+#include <Phyanim.h>
 #include <igl/copyleft/tetgen/tetrahedralize.h>
-#include <igl/readOBJ.h>
+// #include <igl/readOBJ.h>
 #include <igl/readOFF.h>
 #include <igl/readPLY.h>
 #include <igl/writeOFF.h>
@@ -12,7 +13,7 @@ void tetrahedralizeMesh(const std::string& file)
 {
     Eigen::MatrixXd sourceVertices;
     Eigen::MatrixXi sourceFacets;
-// 
+    //
     Eigen::MatrixXd destVertices;
     Eigen::MatrixXi destTets;
     Eigen::MatrixXi destFacets;
@@ -32,19 +33,49 @@ void tetrahedralizeMesh(const std::string& file)
     else if ((extPos = file.find(".obj")) != std::string::npos)
     {
         outFile = file.substr(0, extPos);
-        igl::readOBJ(file.c_str(), sourceVertices, sourceFacets);
+
+        auto mesh = new phyanim::Mesh();
+        mesh->load(file);
+
+        uint32_t size = mesh->nodes.size();
+        sourceVertices = Eigen::MatrixXd(size, 3);
+        for (uint32_t i = 0; i < size; ++i)
+        {
+            sourceVertices(i, 0) = mesh->nodes[i]->position.x();
+            sourceVertices(i, 1) = mesh->nodes[i]->position.y();
+            sourceVertices(i, 2) = mesh->nodes[i]->position.z();
+        }
+
+        size = mesh->triangles.size();
+        sourceFacets = Eigen::MatrixXi(size, 3);
+        for (uint32_t i = 0; i < size; ++i)
+        {
+            auto triangle =
+                dynamic_cast<phyanim::Triangle*>(mesh->triangles[i]);
+            sourceFacets(i, 0) = triangle->node0->id;
+            sourceFacets(i, 1) = triangle->node1->id;
+            sourceFacets(i, 2) = triangle->node2->id;
+        }
+        delete mesh;
     }
     else
     {
         return;
     }
-    outFile.append(".tet");
 
+    outFile.append(".tet");
     igl::copyleft::tetgen::tetrahedralize(sourceVertices, sourceFacets,
                                           "Qa0.01", destVertices, destTets,
                                           destFacets);
 
+    if (destVertices.rows() == 0 || destTets.rows() == 0)
+    {
+        std::cout << "Tetrahedralization falied. Not file saved." << std::endl;
+        return;
+    }
+
     std::ofstream os(outFile.c_str());
+
     if (!os.is_open())
     {
         return;
@@ -59,6 +90,7 @@ void tetrahedralizeMesh(const std::string& file)
         os << destTets(i, 0) << " " << destTets(i, 1) << " " << destTets(i, 2)
            << " " << destTets(i, 3) << "\n";
     }
+    os.close();
 
     std::cout << "Tetrahedralization sucess: " << destVertices.rows()
               << " nodes, " << destTets.rows() << " tetrahedra." << std::endl;
