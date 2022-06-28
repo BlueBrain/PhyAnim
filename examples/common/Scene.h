@@ -3,10 +3,11 @@
 
 #include <Camera.h>
 #include <RenderProgram.h>
-#include "SkyBox.h"
 
 #include <chrono>
 #include <mutex>
+
+#include "SkyBox.h"
 
 namespace examples
 {
@@ -29,8 +30,8 @@ public:
 
     void cameraDistance(float distance);
 
-    float cameraDistance();    
-    
+    float cameraDistance();
+
     void cameraFov(float fov);
 
     void displaceCamera(phyanim::Vec3 displace);
@@ -43,8 +44,12 @@ public:
 
     phyanim::Mat3 cameraRotation() const;
 
+    void setSky(const std::string& file);
+
 private:
     float* _idToColor4f(uint32_t id);
+
+    void _loadSky();
 
 public:
     bool showFPS;
@@ -60,6 +65,8 @@ private:
 
     Camera* _camera;
 
+    std::string _skyPath;
+    bool _genSky;
     SkyBox* _sky;
 
     phyanim::Vec3 _background;

@@ -54,6 +54,10 @@ void DemoApp::_actionLoop()
     for (auto mesh : _meshes)
         _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
 
+    std::string texPath(DATAPATH);
+    texPath.append("/img/skyCells/");
+    _scene->setSky(texPath);
+
     _aabbs =
         phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
     _sortAABBs(_aabbs);

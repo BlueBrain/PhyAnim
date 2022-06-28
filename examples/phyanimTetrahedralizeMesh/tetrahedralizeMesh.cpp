@@ -12,7 +12,7 @@ void tetrahedralizeMesh(const std::string& file)
 {
     Eigen::MatrixXd sourceVertices;
     Eigen::MatrixXi sourceFacets;
-// 
+    //
     Eigen::MatrixXd destVertices;
     Eigen::MatrixXi destTets;
     Eigen::MatrixXi destFacets;
@@ -43,6 +43,13 @@ void tetrahedralizeMesh(const std::string& file)
     igl::copyleft::tetgen::tetrahedralize(sourceVertices, sourceFacets,
                                           "Qa0.01", destVertices, destTets,
                                           destFacets);
+
+    if (destVertices.rows() == 0)
+    {
+        std::cerr << "Tetrahedralization failed for file: " << file
+                  << std::endl;
+        return;
+    }
 
     std::ofstream os(outFile.c_str());
     if (!os.is_open())

@@ -2,22 +2,21 @@
 #define __EXAMPLES_SKYBOX__
 
 #include <Phyanim.h>
-#include "Texture.h"
-#include "RenderProgram.h"
+
 #include "Camera.h"
+#include "RenderProgram.h"
+#include "Texture.h"
 
 namespace examples
 {
 class SkyBox
 {
 public:
-    SkyBox();
+    SkyBox(const std::string& file);
 
     void render(Camera* camera);
 
-
 protected:
-
     RenderProgram* _program;
     Texture* _texture;
 
@@ -26,9 +25,7 @@ protected:
     uint32_t _vao;
 
     uint32_t _numIndices;
-
-
 };
-}
+}  // namespace examples
 
 #endif

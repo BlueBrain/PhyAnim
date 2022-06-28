@@ -85,14 +85,15 @@ Scene::Scene(uint32_t width, uint32_t height)
     , _framesCount(0)
     , _width(width)
     , _height(height)
-    , _background(0.2f, 0.2f, 0.2f)
+    , _background(0.8f, 0.8f, 0.8f)
+    , _genSky(false)
+    , _sky(nullptr)
 {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
     _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f,
-                         120.0, (double)_width / _height);
-    _sky = new SkyBox();
+                         90.0, (double)_width / _height);
     _program = new RenderProgram(vRenderSource, "", fRenderSource);
     _pickingProgram =
         new RenderProgram(vPickingSource, std::string(""), fPickingSource);
@@ -118,7 +119,9 @@ void Scene::render()
     glClearColor(_background.x(), _background.y(), _background.z(), 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    _sky->render(_camera);
+    _loadSky();
+
+    if (_sky) _sky->render(_camera);
 
     _program->use();
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
@@ -250,6 +253,12 @@ void Scene::changeRenderMode()
 
 phyanim::Mat3 Scene::cameraRotation() const { return _camera->rotation(); }
 
+void Scene::setSky(const std::string& file)
+{
+    _skyPath = file;
+    _genSky = true;
+}
+
 float* Scene::_idToColor4f(uint32_t id)
 {
     float* value = (float*)malloc(sizeof(float) * 4);
@@ -258,6 +267,19 @@ float* Scene::_idToColor4f(uint32_t id)
     value[2] = ((id & 0x00FF0000) >> 16) / 255.0f;
     value[3] = 1.0f;
     return value;
+}
+
+void Scene::_loadSky()
+{
+    if (_genSky)
+    {
+        if (!_skyPath.empty())
+        {
+            if (_sky) delete _sky;
+            _sky = new SkyBox(_skyPath);
+            _genSky = false;
+        }
+    }
 }
 
 }  // namespace examples

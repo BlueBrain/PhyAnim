@@ -34,14 +34,12 @@ const std::string fSkySource(
     // "difuse *= 0.2/size;"
     "color = difuse;}");
 
-SkyBox::SkyBox()
+SkyBox::SkyBox(const std::string& file)
 {
     _program = new RenderProgram(vSkySource, "", fSkySource);
     _uView = glGetUniformLocation(_program->id, "view");
     _uProj = glGetUniformLocation(_program->id, "proj");
-    std::string texPath(DATAPATH);
-    texPath.append("/img/skyCells/");
-    _texture = new Texture(texPath);
+    _texture = new Texture(file);
 
     uint32_t numPos = 72;
     float pos[numPos];
