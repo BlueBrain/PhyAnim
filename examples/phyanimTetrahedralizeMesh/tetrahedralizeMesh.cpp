@@ -70,7 +70,8 @@ void tetrahedralizeMesh(const std::string& file)
 
     if (destVertices.rows() == 0 || destTets.rows() == 0)
     {
-        std::cout << "Tetrahedralization falied. Not file saved." << std::endl;
+        std::cerr << "Tetrahedralization failed. Not file saved: " << file
+                  << std::endl;
         return;
     }
 

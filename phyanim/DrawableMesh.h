@@ -34,15 +34,18 @@ public:
                bool tetrahedra_ = true,
                bool edges_ = true);
 
-    bool updatedPositions;
+    bool updatedPositions;    
+    bool updatedNormals;
     bool updatedColors;
 
 private:
     void _uploadPositions();
+    void _uploadNormals();
     void _uploadColors();
 
     unsigned int _vao;
     unsigned int _posVbo;
+    unsigned int _normalVbo;
     unsigned int _colorVbo;
     size_t _indicesSize;
 };

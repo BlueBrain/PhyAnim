@@ -9,7 +9,7 @@ namespace examples
 RenderProgram::RenderProgram(const std::string& vShaderSource,
                              const std::string& gShaderSource,
                              const std::string& fShaderSource)
-    : _id(0)
+    : id(0)
     , projviewmodelIndex(-1)
     , viewmodelIndex(-1)
     , pickingColor(-1)
@@ -24,8 +24,8 @@ RenderProgram::~RenderProgram() { _deleteProgram(); }
 
 void RenderProgram::use()
 {
-    if (_id > 0)
-        glUseProgram(_id);
+    if (id > 0)
+        glUseProgram(id);
     else
     {
         std::cerr << "Rende program not initialized" << std::endl;
@@ -37,8 +37,8 @@ void RenderProgram::_createProgram(const std::string& vSource,
                                    const std::string& gSource,
                                    const std::string& fSource)
 {
-    _id = glCreateProgram();
-    if (_id > 0)
+    id = glCreateProgram();
+    if (id > 0)
     {
         if (!vSource.empty())
         {
@@ -48,7 +48,7 @@ void RenderProgram::_createProgram(const std::string& vSource,
                 _deleteProgram();
                 throw std::runtime_error("Compilation error in Vertex Shader");
             }
-            glAttachShader(_id, _vshader);
+            glAttachShader(id, _vshader);
         }
         if (!gSource.empty())
         {
@@ -59,7 +59,7 @@ void RenderProgram::_createProgram(const std::string& vSource,
                 throw std::runtime_error(
                     "Compilation error in Geometry Shader");
             }
-            glAttachShader(_id, _gshader);
+            glAttachShader(id, _gshader);
         }
         if (!fSource.empty())
         {
@@ -70,46 +70,46 @@ void RenderProgram::_createProgram(const std::string& vSource,
                 throw std::runtime_error(
                     "Compilation error in Fragment Shader");
             }
-            glAttachShader(_id, _fshader);
+            glAttachShader(id, _fshader);
         }
-        glLinkProgram(_id);
+        glLinkProgram(id);
         int32_t status;
-        glGetProgramiv(_id, GL_LINK_STATUS, &status);
+        glGetProgramiv(id, GL_LINK_STATUS, &status);
         if (status == 0)
         {
             _deleteProgram();
             throw std::runtime_error("Render program could not be linked");
         }
-        projviewmodelIndex = glGetUniformLocation(_id, "projViewModel");
-        viewmodelIndex = glGetUniformLocation(_id, "viewModel");
-        pickingColor = glGetUniformLocation(_id, "pickingColor");
+        projviewmodelIndex = glGetUniformLocation(id, "projViewModel");
+        viewmodelIndex = glGetUniformLocation(id, "viewModel");
+        pickingColor = glGetUniformLocation(id, "pickingColor");
     }
 }
 
 void RenderProgram::_deleteProgram(void)
 {
-    if (_id > 0)
+    if (id > 0)
     {
         if (_vshader > 0)
         {
-            glDetachShader(_id, _vshader);
+            glDetachShader(id, _vshader);
             glDeleteShader(_vshader);
             _vshader = 0;
         }
         if (_gshader > 0)
         {
-            glDetachShader(_id, _gshader);
+            glDetachShader(id, _gshader);
             glDeleteShader(_gshader);
             _gshader = 0;
         }
         if (_fshader > 0)
         {
-            glDetachShader(_id, _fshader);
+            glDetachShader(id, _fshader);
             glDeleteShader(_fshader);
             _fshader = 0;
         }
-        glDeleteProgram(_id);
-        _id = 0;
+        glDeleteProgram(id);
+        id = 0;
         projviewmodelIndex = -1;
         viewmodelIndex = -1;
     }

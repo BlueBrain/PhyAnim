@@ -7,6 +7,8 @@
 #include <chrono>
 #include <mutex>
 
+#include "SkyBox.h"
+
 namespace examples
 {
 class Scene
@@ -26,7 +28,15 @@ public:
 
     void cameraPosition(phyanim::Vec3 position);
 
+    void cameraDistance(float distance);
+
+    float cameraDistance();
+
+    void cameraFov(float fov);
+
     void displaceCamera(phyanim::Vec3 displace);
+
+    void cameraZoom(float zoomInOut);
 
     void rotateCamera(double pitch, double yaw);
 
@@ -34,8 +44,12 @@ public:
 
     phyanim::Mat3 cameraRotation() const;
 
+    void setSky(const std::string& file);
+
 private:
     float* _idToColor4f(uint32_t id);
+
+    void _loadSky();
 
 public:
     bool showFPS;
@@ -50,6 +64,12 @@ private:
     } RenderMode;
 
     Camera* _camera;
+
+    std::string _skyPath;
+    bool _genSky;
+    SkyBox* _sky;
+
+    phyanim::Vec3 _background;
 
     RenderMode _renderMode;
     bool _renderModeChanged;

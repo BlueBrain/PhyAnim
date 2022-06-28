@@ -11,6 +11,7 @@ Node::Node(Vec3 position,
            bool fix)
     : initPosition(position)
     , position(position)
+    , normal(Vec3::UnitZ())
     , id(id)
     , velocity(velocity)
     , force(force)

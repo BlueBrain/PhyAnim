@@ -29,9 +29,11 @@ public:
     int64_t projviewmodelIndex;
     int64_t viewmodelIndex;
     int64_t pickingColor;
+    
+    uint64_t id;
+
 
 private:
-    uint64_t _id;
     uint64_t _vshader;
     uint64_t _gshader;
     uint64_t _fshader;

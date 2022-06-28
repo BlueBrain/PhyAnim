@@ -26,10 +26,17 @@ Mesh::Mesh(double stiffness_,
     , density(density_)
     , damping(damping_)
     , poissonRatio(poissonRatio_)
+    , _normalsLoaded(false)
 {
 }
 
-Mesh::~Mesh(void) {}
+Mesh::~Mesh(void)
+{
+    for (auto node : nodes) delete node;
+    nodes.clear();
+    for (auto triangle : triangles) delete triangle;
+    triangles.clear();
+}
 
 void Mesh::load(const std::string& file_)
 {
@@ -70,6 +77,7 @@ void Mesh::load(const std::string& file_)
     {
         surfaceTriangles = triangles;
     }
+    if (!_normalsLoaded) _computeNormals();
 }
 
 void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
@@ -412,30 +420,73 @@ void Mesh::_split(const std::string& string_,
 
 void Mesh::_loadOBJ(const std::string& file_)
 {
-    Eigen::MatrixXd vertices;
-    Eigen::MatrixXi facets;
-    igl::readOBJ(file_.c_str(), vertices, facets);
-    size_t nVertices = vertices.rows();
-    nodes.resize(nVertices);
-    for (size_t i = 0; i < nVertices; ++i)
+    std::ifstream file;
+
+    file.open(file_);
+
+    struct BTriangle
     {
-        nodes[i] = new phyanim::Node(Vec3(vertices.row(i)), i);
-    }
-    size_t nFacets = facets.rows();
-    bool quads = facets.cols() == 4;
-    triangles.resize(nFacets);
-    if (quads)
+        bool quad = false;
+        uint32_t id0;
+        uint32_t id1;
+        uint32_t id2;
+        uint32_t id3;
+    };
+
+    if (file.is_open())
     {
-        triangles.resize(nFacets * 2);
-    }
-    for (size_t i = 0; i < nFacets; ++i)
-    {
-        triangles[i] = new phyanim::Triangle(
-            nodes[facets(i, 0)], nodes[facets(i, 1)], nodes[facets(i, 2)]);
-        if (quads)
+        nodes.clear();
+        triangles.clear();
+        std::vector<BTriangle> bTriangles;
+
+        while (file)
         {
-            triangles[nFacets + i] = new phyanim::Triangle(
-                nodes[facets(i, 0)], nodes[facets(i, 3)], nodes[facets(i, 2)]);
+            std::string line;
+            std::vector<std::string> strings;
+
+            std::getline(file, line);
+            if (line.empty()) continue;
+
+            _split(line, strings);
+
+            if (strings[0].compare("v") == 0)
+            {
+                uint32_t id = nodes.size();
+                double x = std::stof(strings[1]);
+                double y = std::stof(strings[2]);
+                double z = std::stof(strings[3]);
+                nodes.push_back(new Node(Vec3(x, y, z), id));
+            }
+            else if ((strings[0].compare("f") == 0))
+            {
+                std::vector<std::string> numbers;
+                BTriangle triangle;
+                triangle.quad = false;
+
+                _split(strings[1], numbers, '/');
+                triangle.id0 = std::stoi(numbers[0]) - 1;
+                _split(strings[2], numbers, '/');
+                triangle.id1 = std::stoi(numbers[0]) - 1;
+                _split(strings[3], numbers, '/');
+                triangle.id2 = std::stoi(numbers[0]) - 1;
+                if (strings.size() == 5)
+                {
+                    _split(strings[4], numbers, '/');
+                    triangle.id3 = std::stoi(numbers[0]) - 1;
+                    triangle.quad = true;
+                }
+                bTriangles.push_back(triangle);
+            }
+        }
+
+        for (auto triangle : bTriangles)
+        {
+            triangles.push_back(new Triangle(
+                nodes[triangle.id0], nodes[triangle.id1], nodes[triangle.id2]));
+            if (triangle.quad)
+                triangles.push_back(new Triangle(nodes[triangle.id0],
+                                                 nodes[triangle.id2],
+                                                 nodes[triangle.id3]));
         }
     }
 }
@@ -697,6 +748,34 @@ void Mesh::_writeTET(const std::string& file_)
            << " " << tet->node3->id << "\n";
     }
     os.close();
+}
+
+void Mesh::_computeNormals()
+{
+    std::vector<uint32_t> w(nodes.size());
+
+    for (uint32_t i = 0; i < nodes.size(); ++i)
+    {
+        nodes[i]->normal = Vec3::Zero();
+        w[i] = 0;
+    }
+
+    for (auto prim : surfaceTriangles)
+    {
+        auto triangle = dynamic_cast<TrianglePtr>(prim);
+        uint32_t id0 = triangle->node0->id;
+        uint32_t id1 = triangle->node1->id;
+        uint32_t id2 = triangle->node2->id;
+        auto normal = triangle->normal();
+        nodes[id0]->normal += normal;
+        nodes[id1]->normal += normal;
+        nodes[id2]->normal += normal;
+        w[id0] += 1;
+        w[id1] += 1;
+        w[id2] += 1;
+    }
+
+    for (uint32_t i = 0; i < nodes.size(); ++i) nodes[i]->normal /= w[i];
 }
 
 }  // namespace phyanim

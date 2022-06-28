@@ -42,6 +42,8 @@ public:
 
     double area() const;
 
+    Vec3 normal() const;
+
     void sortedIds(unsigned int& id0_,
                    unsigned int& id1_,
                    unsigned int& id2_) const;

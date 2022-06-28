@@ -169,7 +169,7 @@ void OverlapCollisionsApp::_actionLoop()
                     completeMeshes.push_back(_meshes[j]);
                 }
             }
-            _setCameraPos(*aabb, false);
+            _setCameraPos(*aabb);
 
             animSys->preprocessMesh(slicedMeshes);
 

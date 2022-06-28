@@ -24,14 +24,17 @@ const std::string fPickingSource(
 const std::string vRenderSource(
     "#version 400\n"
     "in vec3 inPos;"
+    "in vec3 inNormal;"
     "in vec3 inColor;"
     "out vec3 position;"
-    "out vec3 vColor;"
+    "out vec3 normal;"
+    "out vec3 color;"
     "uniform mat4 projViewModel;"
     "uniform mat4 viewModel;"
     "void main(void) {"
-    "vColor = inColor;"
+    "color = inColor;"
     "position = (viewModel*vec4(inPos, 1.0)).xyz;"
+    "normal = (viewModel*vec4(inNormal, 0.0)).xyz;"
     "gl_Position = projViewModel * vec4(inPos, 1.0);}");
 
 const std::string gRenderSource(
@@ -65,13 +68,13 @@ const std::string gRenderSource(
 
 const std::string fRenderSource(
     "#version 400\n"
+    "in vec3 position;"
     "in vec3 normal;"
     "in vec3 color;"
-    "in vec3 gposition;"
     "out vec4 oColor;"
     "void main(void){"
     "vec3 N = normalize( normal );"
-    "vec3 L = normalize( -gposition );"
+    "vec3 L = normalize( -position );"
     "float diff = dot( N, L );"
     "diff = clamp( diff, 0.0, 1.0 );"
     "oColor = vec4( diff*color*0.8+color*0.2, 1.0 );}");
@@ -82,13 +85,16 @@ Scene::Scene(uint32_t width, uint32_t height)
     , _framesCount(0)
     , _width(width)
     , _height(height)
+    , _background(0.8f, 0.8f, 0.8f)
+    , _genSky(false)
+    , _sky(nullptr)
 {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
-    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 90.0,
-                         (double)_width / _height);
-    _program = new RenderProgram(vRenderSource, gRenderSource, fRenderSource);
+    _camera = new Camera(phyanim::Vec3::Zero(), phyanim::Mat3::Identity(), 1.0f,
+                         90.0, (double)_width / _height);
+    _program = new RenderProgram(vRenderSource, "", fRenderSource);
     _pickingProgram =
         new RenderProgram(vPickingSource, std::string(""), fPickingSource);
     _previousTime = std::chrono::steady_clock::now();
@@ -110,8 +116,13 @@ void Scene::addMesh(phyanim::DrawableMesh* mesh)
 void Scene::render()
 {
     ++_framesCount;
-    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glClearColor(_background.x(), _background.y(), _background.z(), 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    _loadSky();
+
+    if (_sky) _sky->render(_camera);
+
     _program->use();
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     Eigen::Matrix4f view = _camera->viewMatrix().cast<float>();
@@ -191,10 +202,24 @@ void Scene::cameraPosition(phyanim::Vec3 position)
     _camera->position(position);
 }
 
+void Scene::cameraDistance(float distance) { _camera->distance(distance); }
+
+float Scene::cameraDistance() { return _camera->distance(); }
+
+void Scene::cameraFov(float fov) { _camera->fov(fov); }
+
 void Scene::displaceCamera(phyanim::Vec3 displace)
 {
     phyanim::Vec3 rotDis = _camera->rotation() * displace;
     _camera->position(_camera->position() + rotDis);
+}
+
+void Scene::cameraZoom(float zoomInOut)
+{
+    if (zoomInOut > 0)
+        _camera->distance(_camera->distance() * 1.1f);
+    else
+        _camera->distance(_camera->distance() * 0.9f);
 }
 
 void Scene::rotateCamera(double pitch, double yaw)
@@ -228,6 +253,12 @@ void Scene::changeRenderMode()
 
 phyanim::Mat3 Scene::cameraRotation() const { return _camera->rotation(); }
 
+void Scene::setSky(const std::string& file)
+{
+    _skyPath = file;
+    _genSky = true;
+}
+
 float* Scene::_idToColor4f(uint32_t id)
 {
     float* value = (float*)malloc(sizeof(float) * 4);
@@ -236,6 +267,19 @@ float* Scene::_idToColor4f(uint32_t id)
     value[2] = ((id & 0x00FF0000) >> 16) / 255.0f;
     value[3] = 1.0f;
     return value;
+}
+
+void Scene::_loadSky()
+{
+    if (_genSky)
+    {
+        if (!_skyPath.empty())
+        {
+            if (_sky) delete _sky;
+            _sky = new SkyBox(_skyPath);
+            _genSky = false;
+        }
+    }
 }
 
 }  // namespace examples

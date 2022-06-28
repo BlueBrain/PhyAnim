@@ -42,8 +42,7 @@ protected:
 
     void _setAnim(bool anim);
 
-    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits,
-                       bool increment = true);
+    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits);
 
     virtual void _keyCallback(GLFWwindow* window,
                               int key,
@@ -113,8 +112,6 @@ protected:
     bool _leftButtonPressed;
     bool _middleButtonPressed;
     bool _rightButtonPressed;
-
-    double _cameraPosInc;
 
     bool _anim;
     std::mutex _animMutex;
