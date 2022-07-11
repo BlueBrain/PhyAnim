@@ -1,5 +1,5 @@
-from turtle import position
-from render import *
+from render.math import *
+from render.render import *
 from enum import Enum
 import re
 
@@ -109,9 +109,9 @@ def mesh_from_morpho(morpho: Morphology):
 
     for sample in morpho.samples:
         positions.append(
-            [sample.position.x/1000, sample.position.y/1000, sample.position.z/1000])
+            [sample.position.x, sample.position.y, sample.position.z])
         normals.append([0, 0, 1])
-        colors.append([1.0, 0.5, 0.5])
+        colors.append([0.2, 0.2, 0.2])
 
     for segment in morpho.segments:
         lines.append([segment[0], segment[1]])

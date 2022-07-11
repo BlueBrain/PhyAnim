@@ -1,104 +1,11 @@
 from array import array
-import math
-import numbers
+import string
+from turtle import position
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
 from OpenGL_accelerate import *
 
-import numpy as np
-
-
-class Vec3:
-
-    def __init__(self, x=None, y=None, z=None):
-        self.data = np.array((0, 0, 0), dtype=np.float32)
-        if isinstance(x, Vec3):
-            self.data = np.copy(x.data)
-        if isinstance(x, np.ndarray) and np.size(x) == 3:
-            self.data = np.copy(x)
-        elif isinstance(x, numbers.Number):
-            if not (isinstance(y, numbers.Number) and isinstance(z, numbers.Number)):
-                y = x
-                z = x
-            self.data = np.array((x, y, z), dtype=np.float32)
-
-    def __add__(self, o):
-        if not isinstance(o, Vec3):
-            raise "Invalid operation: Vec3 type is needed"
-        return Vec3(self.data + o.data)
-
-    def __sub__(self, o):
-        if not isinstance(o, Vec3):
-            raise "Invalid operation: Vec3 type is needed"
-        return Vec3(self.data - o.data)
-
-    def __mul__(self, o):
-        if not isinstance(o, numbers.Number):
-            raise "Invalid operation: numeric type is needed"
-        return Vec3(self.data * o)
-
-    def __truediv__(self, o):
-        if not isinstance(o, numbers.Number):
-            raise "Invalid operation: numeric type is needed"
-        o = 1.0 / o
-        return self * o
-
-    def __eq__(self, o):
-        return all(self.data == o.data)
-
-    def __str__(self):
-        return "("+str(self.x) + ", " + str(self.y) + ", " + str(self.z) + ")"
-
-    def dot(self, o):
-        if not isinstance(o, Vec3):
-            raise "Invalid operation: Vec3 type is needed"
-        return sum(self.data * o.data)
-
-    def norm(self):
-        return math.sqrt(self.dot(self))
-
-    def normalize(self):
-        normalized = self.normalized()
-        self.data = normalized.data
-
-    def normalized(self):
-        norm = self.norm()
-        if norm > 0:
-            return self / norm
-        return Vec3()
-
-    def data(self):
-        return np.copy(self.data)
-
-    @property
-    def x(self):
-        return self.data[0]
-
-    @x.setter
-    def x(self, value):
-        if not isinstance(value, numbers.Number):
-            raise "Invalid assing: the value must be a number"
-        self.data[0] = value
-
-    @property
-    def y(self):
-        return self.data[1]
-
-    @y.setter
-    def y(self, value):
-        if not isinstance(value, numbers.Number):
-            raise "Invalid assing: the value must be a number"
-        self.data[1] = value
-
-    @property
-    def z(self):
-        return self.data[2]
-
-    @z.setter
-    def z(self, value):
-        if not isinstance(value, numbers.Number):
-            raise "Invalid assing: the value must be a number"
-        self.data[2] = value
+from render.math import *
 
 
 class Mesh:
@@ -203,7 +110,6 @@ class Mesh:
             glDeleteVertexArrays(1, self.vao_lines)
         if (self.vao_triangles >= 0):
             glDeleteVertexArrays(1, self.vao_triangles)
-        # print("Mesh deleted")
 
     def render(self):
         if self.vao_lines >= 0:
@@ -219,51 +125,148 @@ class Mesh:
 class Quad(Mesh):
     def __init__(self):
         Mesh.__init__(self, [], [0, 1, 2, 0, 2, 3],
-                      [-1, 1, 0.999, -1, -1, 0.999, 1, -1, 0.999, 1, 1, 0.999], [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1])
+                      [-1, 1, 0.0, -1, -1, 0.999, 1, -1, 0.999, 1, 1, 0.999],
+                      [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+                      [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1])
+
+
+class ShaderType:
+    VERTEX = GL_VERTEX_SHADER
+    FRAGMENT = GL_FRAGMENT_SHADER
+    GEOMETRY = GL_GEOMETRY_SHADER
+
+
+ShaderDescription = (string, ShaderType)
 
 
 class ShaderProgram:
 
-    def __init__(self, shader_paths):
-        self.id = self.__create_program(shader_paths[0], shader_paths[1])
+    def __init__(self, shader_descriptions):
+        self.id = None
+        self.__create_program(shader_descriptions)
 
     def __del__(self):
-        glDeleteProgram(self.id)
-        glDeleteShader(self.vertex_shader)
-        glDeleteShader(self.fragment_shader)
+        if not self.id is None:
+            glDeleteProgram(self.id)
+        for shader in self.shaders:
+            glDeleteShader(shader)
 
-    def __create_shader(self, shader_path, shader_type):
-        with open(shader_path, 'r') as f:
+    def __create_shader(self, shader_desc: ShaderDescription):
+        with open(shader_desc[0], 'r') as f:
             shader_source = f.readlines()
-        return compileShader(shader_source, shader_type)
+            return compileShader(shader_source, shader_desc[1])
+        return None
 
-    def __create_program(self, vertex_path, fragment_path):
-        self.vertex_shader = self.__create_shader(
-            vertex_path, GL_VERTEX_SHADER)
-        self.fragment_shader = self.__create_shader(
-            fragment_path, GL_FRAGMENT_SHADER)
-        return compileProgram(self.vertex_shader, self.fragment_shader)
+    def __create_program(self, shader_descriptions):
+        self.shaders = []
+        self.id = glCreateProgram()
+        for shader_desc in shader_descriptions:
+            shader = self.__create_shader(shader_desc)
+            if not shader is None:
+                self.shaders.append(shader)
+                glAttachShader(self.id, shader, shader_desc[1])
+        glLinkProgram(self.id)
+        self.__register_uniforms()
+
+    def __register_uniforms(self):
+        self.uniforms = {}
+        count = glGetProgramiv(self.id, GL_ACTIVE_UNIFORMS)
+        for i in range(count):
+            info = glGetActiveUniform(self.id, i)
+            name = info[0].decode('UTF-8')
+            location = glGetUniformLocation(self.id, name)
+            self.uniforms[name] = location
+
+    def get_uniforms(self):
+        return self.uniforms
 
     def use(self):
-        glUseProgram(self.id)
+        if not self.id is None:
+            glUseProgram(self.id)
+
+
+class Camera:
+
+    def __init__(self, position: Vec3, target: Vec3 = Vec3(), up: Vec3 = Vec3(0, 1, 0), near: float = 0.01, far: float = 1000.0, fov: float = 90.0, ratio: float = 1.0):
+        self.position = position
+        self.target = target
+        self.up = up
+        self.near = near
+        self.far = far
+        self.fov = fov * math.pi / 360.0
+        self.ratio = ratio
+
+        self.__build_view()
+        self.__build_proj()
+
+    def __build_view(self):
+        self.view = Mat4()
+        self.view.identity()
+        self.view.data[0, 3] = -self.position.x
+        self.view.data[1, 3] = -self.position.y
+        self.view.data[2, 3] = -self.position.z
+
+    def __build_proj(self):
+        nf = 1.0 / (self.near - self.far)
+        f = 1.0 / math.tan(self.fov)
+        data = [f / self.ratio, 0.0, 0.0, 0.0,
+                0.0, f, 0.0, 0.0,
+                0.0, 0.0, (self.far + self.near) * nf, -1.0,
+                0.0, 0.0, 2.0 * self.far * self.near * nf, 0.0]
+        self.proj = Mat4(data)
+
+    @property
+    def position(self):
+        return self._position
+
+    @position.setter
+    def position(self, value: Vec3):
+        self._position = value
+        self.__build_view()
+
+    @property
+    def ratio(self):
+        return self._ratio
+
+    @ratio.setter
+    def ratio(self, value: float):
+        self._ratio = value
+        self.__build_proj()
 
 
 class Scene:
     def __init__(self):
         self.program = ShaderProgram(
-            ("shaders/scene.vert", "shaders/scene.frag"))
+            [("shaders/scene.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
+        self.uniforms = self.program.get_uniforms()
+        self.camera = Camera(Vec3(0, 0, 2))
+        self.background_color = Vec3(1.0)
+        glClearColor(self.background_color.x,
+                     self.background_color.y, self.background_color.z, 1.0)
+        self.color = Vec3(0.2, 1.0, 1.0)
         self.meshes = []
+        glEnable(GL_CULL_FACE)
+        glEnable(GL_DEPTH_TEST)
 
-    @property
-    def meshes(self):
-        return self._meshes
+    @ property
+    def background_color(self):
+        return self._background_color
 
-    @meshes.setter
-    def meshes(self, value):
-        self._meshes = value
+    @ background_color.setter
+    def background_color(self, value):
+        self._background_color = value
+        glClearColor(self.background_color.x,
+                     self.background_color.y, self.background_color.z, 1.0)
 
     def render(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
         self.program.use()
+        glUniform3fv(self.uniforms["color"], 1, self.color.data)
+        glUniformMatrix4fv(
+            self.uniforms["uView"], 1, 0, self.camera.view.data)
+        glUniformMatrix4fv(self.uniforms["proj"], 1, 0, self.camera.proj.data)
+
         for mesh in self.meshes:
             if not mesh is None:
                 mesh.render()
@@ -276,38 +279,30 @@ class Engine:
         self.height = height
         self.background_color = Vec3(1.0)
         self.scene = Scene()
-        glClearColor(self.background_color.x,
-                     self.background_color.y, self.background_color.z, 1.0)
-        glEnable(GL_CULL_FACE)
-        glEnable(GL_DEPTH_TEST)
+        self.mode = GL_FILL
 
     def resize(self, width, height):
-        self.width = width
-        self.height = height
-        glViewport(0, 0, width, height)
+        self.width = int(width)
+        self.height = int(height)
+        self.scene.camera.ratio = width * 1.0 / height
 
-    @property
-    def background_color(self):
-        return self._background_color
-
-    @background_color.setter
-    def background_color(self, value):
-        self._background_color = value
-        glClearColor(self.background_color.x,
-                     self.background_color.y, self.background_color.z, 1.0)
-
-    @property
+    @ property
     def scene(self):
         return self._scene
 
-    @scene.setter
+    @ scene.setter
     def scene(self, value):
         self._scene = value
 
     def render(self, t=0):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.scene.render()
-        pass
+
+    def render_mode(self):
+        if self.mode == GL_FILL:
+            self.mode = GL_LINE
+        else:
+            self.mode = GL_FILL
+        glPolygonMode(GL_FRONT_AND_BACK, self.mode)
 
 
 def load_obj(path):
@@ -322,6 +317,8 @@ def load_obj(path):
         readlines = f.readlines()
         for line in readlines:
             words = line.split()
+            if len(words) == 0:
+                continue
             if words[0] == 'v':
                 positions += [float(words[1]),
                               float(words[2]), float(words[3])]
@@ -336,4 +333,37 @@ def load_obj(path):
     for i in range(int(len(positions)/3)):
         colors += [1, 0, 0]
 
+    # num_vertex = int(len(positions)/3)
+    # num_triangles = int(len(triangles)/3)
+
+    # comp_normals = []
+    # weights = []
+    # for i in range(num_vertex):
+    #     comp_normals.append(Vec3(0, 0, 0))
+    #     weights.append(0.0)
+
+    # for i in range(num_triangles):
+    #     id0 = triangles[i*3]
+    #     id1 = triangles[i*3+1]
+    #     id2 = triangles[i*3+2]
+
+    #     p0 = Vec3(positions[id0*3], positions[id0*3+1], positions[id0*3+2])
+    #     p1 = Vec3(positions[id1*3], positions[id1*3+1], positions[id1*3+2])
+    #     p2 = Vec3(positions[id2*3], positions[id2*3+1], positions[id2*3+2])
+    #     axis0 = (p1-p0).normalized()
+    #     axis1 = (p2-p0).normalized()
+    #     normal = axis0.cross(axis1)
+    #     comp_normals[id0] += normal
+    #     comp_normals[id1] += normal
+    #     comp_normals[id2] += normal
+    #     weights[id0] += 1
+    #     weights[id1] += 1
+    #     weights[id2] += 1
+
+    # normals = []
+    # for i in range(num_vertex):
+    #     comp_normals[i] /= weights[i]
+    #     normals += [comp_normals[i].x, comp_normals[i].y, comp_normals[i].z]
+
+    print("mesh loaded")
     return Mesh(lines, triangles, positions, normals, colors)

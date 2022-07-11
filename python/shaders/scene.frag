@@ -1,15 +1,19 @@
-#version 330 core
+#version 410
 
 in vec3 position;
 in vec3 normal;
 in vec3 fragColor;
 
-out vec4 color;
+out vec4 oColor;
 
 void main()
 {
-    vec3 L = -1.0 * position;
-    float diff = dot(L,normal);
+    vec3 L = normalize(-1.0 * position);
 
-    color = vec4(fragColor*diff, 1.0);
+    float diff = clamp(dot(L,normal), 0, 1);
+    
+
+
+    oColor = vec4(fragColor*diff, 1.0);
+    // color = vec4(1,0,0,1);
 }
