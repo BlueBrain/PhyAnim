@@ -1,11 +1,28 @@
 from array import array
 import string
-from turtle import position
 from OpenGL.GL import *
 from OpenGL.GL.shaders import *
 from OpenGL_accelerate import *
+import sys
 
 from render.math import *
+
+
+class AABoundingBox:
+
+    def __init__(self):
+        self.min = Vec3(sys.float_info.max)
+        self.max = Vec3(sys.float_info.min)
+
+    def center(self):
+        return (self.min + self.max) * 0.5
+
+    def radius(self):
+        return (self.max - self.center()).norm()
+
+    def add_pos(self, position: Vec3):
+        self.min = self.min.min(position)
+        self.max = self.max.max(position)
 
 
 class Mesh:
@@ -19,25 +36,36 @@ class Mesh:
         self.vbo_triangles = -1
         self.vao_lines = -1
         self.vao_triangles = -1
+        self.aabb = AABoundingBox()
 
         # Vertices
+        positions_vec = []
+        for position in positions:
+            self.aabb.add_pos(position)
+            positions_vec.append([position.x, position.y, position.z])
         self.vbo_position = glGenBuffers(1)
-        positions = np.array(positions, dtype=np.float32)
+        positions_vec = np.array(positions_vec, dtype=np.float32)
         glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
-        glBufferData(GL_ARRAY_BUFFER, positions.nbytes,
-                     positions, GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, positions_vec.nbytes,
+                     positions_vec, GL_STATIC_DRAW)
         if len(normals) > 0:
+            normals_vec = []
+            for normal in normals:
+                normals_vec.append([normal.x, normal.y, normal.z])
             self.vbo_normal = glGenBuffers(1)
-            normals = np.array(normals, dtype=np.float32)
+            normals_vec = np.array(normals_vec, dtype=np.float32)
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
-            glBufferData(GL_ARRAY_BUFFER, normals.nbytes,
-                         normals, GL_STATIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, normals_vec.nbytes,
+                         normals_vec, GL_STATIC_DRAW)
         if len(colors) > 0:
+            colors_vec = []
+            for color in colors:
+                colors_vec.append([color.x, color.y, color.z])
             self.vbo_color = glGenBuffers(1)
-            colors = np.array(colors, dtype=np.float32)
+            colors_vec = np.array(colors_vec, dtype=np.float32)
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
-            glBufferData(GL_ARRAY_BUFFER, colors.nbytes,
-                         colors, GL_STATIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, colors_vec.nbytes,
+                         colors_vec, GL_STATIC_DRAW)
 
         # Lines
         self.num_lines = len(lines)
@@ -177,9 +205,6 @@ class ShaderProgram:
             location = glGetUniformLocation(self.id, name)
             self.uniforms[name] = location
 
-    def get_uniforms(self):
-        return self.uniforms
-
     def use(self):
         if not self.id is None:
             glUseProgram(self.id)
@@ -187,41 +212,53 @@ class ShaderProgram:
 
 class Camera:
 
-    def __init__(self, position: Vec3, target: Vec3 = Vec3(), up: Vec3 = Vec3(0, 1, 0), near: float = 0.01, far: float = 1000.0, fov: float = 90.0, ratio: float = 1.0):
-        self.position = position
-        self.target = target
-        self.up = up
-        self.near = near
-        self.far = far
-        self.fov = fov * math.pi / 360.0
-        self.ratio = ratio
+    def __init__(self, target: Vec3 = Vec3(0), radius: float = 1.0,  up: Vec3 = Vec3(0, 1, 0), near: float = 0.01, far: float = 10000.0, fov: float = 90.0, ratio: float = 1.0):
+        self._target = target
+        self._radius = radius
+        self._up = up
+        self._near = near
+        self._far = far
+        self._fov = fov * math.pi / 360.0
+        self._ratio = ratio
 
         self.__build_view()
         self.__build_proj()
 
     def __build_view(self):
+        pos = self._target + Vec3(0, 0, self._radius)
+
         self.view = Mat4()
         self.view.identity()
-        self.view.data[0, 3] = -self.position.x
-        self.view.data[1, 3] = -self.position.y
-        self.view.data[2, 3] = -self.position.z
+        self.view.data[0, 3] = -pos.x
+        self.view.data[1, 3] = -pos.y
+        self.view.data[2, 3] = -pos.z
 
     def __build_proj(self):
-        nf = 1.0 / (self.near - self.far)
-        f = 1.0 / math.tan(self.fov)
+        nf = 1.0 / (self._near - self._far)
+        f = 1.0 / math.tan(self._fov)
         data = [f / self.ratio, 0.0, 0.0, 0.0,
                 0.0, f, 0.0, 0.0,
-                0.0, 0.0, (self.far + self.near) * nf, -1.0,
-                0.0, 0.0, 2.0 * self.far * self.near * nf, 0.0]
+                0.0, 0.0, (self._far + self._near) * nf,  2.0 *
+                self._far * self._near * nf,
+                0.0, 0.0, -1.0, 0.0]
         self.proj = Mat4(data)
 
     @property
-    def position(self):
-        return self._position
+    def target(self):
+        return self._target
 
-    @position.setter
-    def position(self, value: Vec3):
-        self._position = value
+    @target.setter
+    def target(self, target: Vec3):
+        self._target = target
+        self.__build_view()
+
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, value: float):
+        self._radius = value
         self.__build_view()
 
     @property
@@ -234,17 +271,20 @@ class Camera:
         self.__build_proj()
 
 
+Model = (Mesh, ShaderProgram, Mat4)
+
+
 class Scene:
     def __init__(self):
-        self.program = ShaderProgram(
-            [("shaders/scene.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
-        self.uniforms = self.program.get_uniforms()
-        self.camera = Camera(Vec3(0, 0, 2))
+        self.programs = []
+        self.camera = Camera()
         self.background_color = Vec3(1.0)
         glClearColor(self.background_color.x,
                      self.background_color.y, self.background_color.z, 1.0)
-        self.color = Vec3(0.2, 1.0, 1.0)
-        self.meshes = []
+        self.color = Vec3(0.2, 0.8, 1.0)
+        self.models = []
+        self.aabb = AABoundingBox()
+        self.mode = GL_FILL
         glEnable(GL_CULL_FACE)
         glEnable(GL_DEPTH_TEST)
 
@@ -258,44 +298,38 @@ class Scene:
         glClearColor(self.background_color.x,
                      self.background_color.y, self.background_color.z, 1.0)
 
+    def add_model(self, model: Model):
+        self.models.append(model)
+        translation = Vec3(model[2].data[0, 3],
+                           model[2].data[1, 3], model[2].data[2, 3])
+        self.aabb.add_pos(model[0].aabb.min + translation)
+        self.aabb.add_pos(model[0].aabb.max + translation)
+        self.target = self.aabb.center()
+        self.radius = self.aabb.radius()
+
+        program = model[1]
+        if not program in self.programs:
+            self.programs.append(program)
+            program.use()
+            uniform = program.uniforms.get("color")
+            if not uniform is None:
+                glUniform3fv(uniform, 1, self.color.data)
+            uniform = program.uniforms.get("view")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+            uniform = program.uniforms.get("proj")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.proj.data)
+
     def render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        self.program.use()
-        glUniform3fv(self.uniforms["color"], 1, self.color.data)
-        glUniformMatrix4fv(
-            self.uniforms["uView"], 1, 0, self.camera.view.data)
-        glUniformMatrix4fv(self.uniforms["proj"], 1, 0, self.camera.proj.data)
-
-        for mesh in self.meshes:
-            if not mesh is None:
-                mesh.render()
-
-
-class Engine:
-
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.background_color = Vec3(1.0)
-        self.scene = Scene()
-        self.mode = GL_FILL
-
-    def resize(self, width, height):
-        self.width = int(width)
-        self.height = int(height)
-        self.scene.camera.ratio = width * 1.0 / height
-
-    @ property
-    def scene(self):
-        return self._scene
-
-    @ scene.setter
-    def scene(self, value):
-        self._scene = value
-
-    def render(self, t=0):
-        self.scene.render()
+        for model in self.models:
+            model[1].use()
+            uniform = model[1].uniforms.get("model")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, model[2].data)
+            model[0].render()
 
     def render_mode(self):
         if self.mode == GL_FILL:
@@ -304,66 +338,41 @@ class Engine:
             self.mode = GL_FILL
         glPolygonMode(GL_FRONT_AND_BACK, self.mode)
 
+    @property
+    def target(self):
+        return self.camera.target
 
-def load_obj(path):
+    @target.setter
+    def target(self, target: Vec3):
+        self.camera.target = target
+        for program in self.programs:
+            program.use()
+            uniform = program.uniforms.get("view")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
 
-    positions = []
-    normals = []
-    colors = []
-    lines = []
-    triangles = []
+    @property
+    def radius(self):
+        return self.camera.radius
 
-    with open(path, 'r') as f:
-        readlines = f.readlines()
-        for line in readlines:
-            words = line.split()
-            if len(words) == 0:
-                continue
-            if words[0] == 'v':
-                positions += [float(words[1]),
-                              float(words[2]), float(words[3])]
-            elif words[0] == 'vn':
-                normals += [float(words[1]),
-                            float(words[2]), float(words[3])]
-            elif words[0] == 'f':
-                triangles += [int(words[1].split('/')[0])-1,
-                              int(words[2].split('/')[0])-1,
-                              int(words[3].split('/')[0])-1]
+    @radius.setter
+    def radius(self, value: float):
+        self.camera.radius = value
+        for program in self.programs:
+            program.use()
+            uniform = program.uniforms.get("view")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
 
-    for i in range(int(len(positions)/3)):
-        colors += [1, 0, 0]
+    @property
+    def ratio(self):
+        return self.camera.ratio
 
-    # num_vertex = int(len(positions)/3)
-    # num_triangles = int(len(triangles)/3)
-
-    # comp_normals = []
-    # weights = []
-    # for i in range(num_vertex):
-    #     comp_normals.append(Vec3(0, 0, 0))
-    #     weights.append(0.0)
-
-    # for i in range(num_triangles):
-    #     id0 = triangles[i*3]
-    #     id1 = triangles[i*3+1]
-    #     id2 = triangles[i*3+2]
-
-    #     p0 = Vec3(positions[id0*3], positions[id0*3+1], positions[id0*3+2])
-    #     p1 = Vec3(positions[id1*3], positions[id1*3+1], positions[id1*3+2])
-    #     p2 = Vec3(positions[id2*3], positions[id2*3+1], positions[id2*3+2])
-    #     axis0 = (p1-p0).normalized()
-    #     axis1 = (p2-p0).normalized()
-    #     normal = axis0.cross(axis1)
-    #     comp_normals[id0] += normal
-    #     comp_normals[id1] += normal
-    #     comp_normals[id2] += normal
-    #     weights[id0] += 1
-    #     weights[id1] += 1
-    #     weights[id2] += 1
-
-    # normals = []
-    # for i in range(num_vertex):
-    #     comp_normals[i] /= weights[i]
-    #     normals += [comp_normals[i].x, comp_normals[i].y, comp_normals[i].z]
-
-    print("mesh loaded")
-    return Mesh(lines, triangles, positions, normals, colors)
+    @ratio.setter
+    def ratio(self, value: float):
+        self.camera.ratio = value
+        for program in self.programs:
+            program.use()
+            uniform = program.uniforms.get("proj")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.proj.data)

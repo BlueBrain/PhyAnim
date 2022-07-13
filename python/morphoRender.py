@@ -1,12 +1,16 @@
 # pip install glfw numpy PyOpenGL PyOpenGL_accelerate
 
 import copy
+from math import ceil
+from threading import currentThread
 import glfw
 from numpy import float32
 from render.render import *
-from morphology import *
+from data.morphology import *
+from data.loaders import *
 import sys
 import os
+import time
 
 
 class MorphoRender:
@@ -15,23 +19,69 @@ class MorphoRender:
         self.width = 600
         self.height = 600
 
+        self.translate = False
+        self.rotate = False
+        self.x = 0
+        self.y = 0
+
         if not self.__init_window():
             return None
         glfw.set_key_callback(self.window, self.key_callback)
         glfw.set_window_size_callback(self.window, self.resize_callback)
+        glfw.set_scroll_callback(self.window, self.scroll_callback)
+        glfw.set_mouse_button_callback(self.window, self.mouse_button_callback)
+        glfw.set_cursor_pos_callback(
+            self.window, self.cursor_position_callback)
+
         glfw.make_context_current(self.window)
         print(glGetString(GL_VERSION))
 
         self.background_color = Vec3(1)
-        self.engine = Engine(self.width, self.height)
+        self.scene = Scene()
 
+        # Shaders init
+
+        program0 = ShaderProgram(
+            [("shaders/scene.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
+        program1 = ShaderProgram(
+            [("shaders/scene2.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
+
+        total_paths = float(len(paths))
+        num_paths = 0
+        mesh_loaded = 0
+        displaceX = 0.0
+        displaceY = 0.0
+        meshes_per_row = ceil(math.sqrt(len(paths)))
         for path in paths:
+            num_paths += 1
             filename, file_extension = os.path.splitext(path)
             if file_extension == ".swc":
-                self.engine.scene.meshes.append(
-                    mesh_from_morpho(load_swc(path)))
+                mesh = mesh_from_morpho(load_swc(path))
+                displaceX += mesh.aabb.radius()
+                self.scene.add_model((mesh, program0, Mat4([1, 0, 0, displaceX,
+                                                            0, 1, 0, displaceY,
+                                                            0, 0, 1, 0,
+                                                            0, 0, 0, 1])))
+                displaceX += mesh.aabb.radius()
+                mesh_loaded += 1
             elif file_extension == ".obj":
-                self.engine.scene.meshes.append(load_obj(path))
+                mesh = load_obj(path)
+                displaceX += mesh.aabb.radius()
+                self.scene.add_model((mesh, program1, Mat4([1, 0, 0, displaceX,
+                                                            0, 1, 0, displaceY,
+                                                            0, 0, 1, 0,
+                                                            0, 0, 0, 1])))
+
+                displaceX += mesh.aabb.radius()
+                mesh_loaded += 1
+            if mesh_loaded % meshes_per_row == 0:
+                displaceY = self.scene.aabb.min.y
+                displaceX = 0.0
+            print("\rLoading meshes " +
+                  str(int(num_paths/total_paths*100))+"%", end='')
+
+        print()
+        print("Loaded " + str(mesh_loaded) + " meshes")
 
     def __init_window(self):
         if not glfw.init():
@@ -52,10 +102,17 @@ class MorphoRender:
 
     def run(self):
         glfw.make_context_current(self.window)
-        t = .0
+        fps = 0
+        prev_time = time.time()
         while not glfw.window_should_close(self.window):
-            self.engine.render(t)
-            t += 0.01
+            self.scene.render()
+            fps += 1
+            current_time = time.time()
+            step = current_time - prev_time
+            if step > 1.0:
+                prev_time = current_time
+                print("\rFPS: " + str(int(fps/step)) + "    ", end='')
+                fps = 0
             glfw.swap_buffers(self.window)
             glfw.poll_events()
         glfw.terminate()
@@ -63,20 +120,45 @@ class MorphoRender:
     def key_callback(self, window, key, scancode, action, mods):
 
         if action == glfw.PRESS or action == glfw.REPEAT:
+            r = self.scene.radius * 0.05
             if key == glfw.KEY_D:
-                self.engine.scene.camera.position += Vec3(0.1, 0, 0)
+                self.scene.target += Vec3(r, 0, 0)
             elif key == glfw.KEY_A:
-                self.engine.scene.camera.position += Vec3(-0.1, 0, 0)
+                self.scene.target += Vec3(-r, 0, 0)
             elif key == glfw.KEY_W:
-                self.engine.scene.camera.position += Vec3(0.0, 0, -0.1)
+                self.scene.target += Vec3(0.0, 0, -r)
             elif key == glfw.KEY_S:
-                self.engine.scene.camera.position += Vec3(0.0, 0, 0.1)
-            elif key == glfw.KEY_SPACE:
-                self.engine.render_mode()
+                self.scene.target += Vec3(0.0, 0, r)
+            elif key == glfw.KEY_M:
+                self.scene.render_mode()
+
+    def scroll_callback(self, window, x, y):
+        if (y > 0):
+            self.scene.radius *= 0.9
+        else:
+            self.scene.radius *= 1.1
+
+    def mouse_button_callback(self, window, button, action, mods):
+        if button == glfw.MOUSE_BUTTON_MIDDLE:
+            if action == glfw.PRESS:
+                self.translate = True
+                (self.x, self.y) = glfw.get_cursor_pos(window)
+            else:
+                self.translate = False
+
+    def cursor_position_callback(self, window, x, y):
+        if self.translate:
+            x_diff = x - self.x
+            y_diff = y - self.y
+            r = self.scene.radius * 0.005
+            self.scene.target += Vec3(-r*x_diff, r*y_diff, 0)
+        self.x = x
+        self.y = y
 
     def resize_callback(self, window, width, height):
         glfw.make_context_current(self.window)
-        self.engine.resize(width, height)
+        self.scene.ratio = float(width)/height
+        glViewport(0, 0, width, height)
 
 
 if __name__ == "__main__":

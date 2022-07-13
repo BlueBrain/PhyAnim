@@ -14,6 +14,6 @@ void main()
     
 
 
-    oColor = vec4(fragColor*diff, 1.0);
+    oColor = vec4(fragColor*(diff*0.8+0.2), 1.0);
     // color = vec4(1,0,0,1);
 }

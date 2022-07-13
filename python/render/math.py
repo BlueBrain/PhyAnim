@@ -58,8 +58,17 @@ class Vec3:
             return self / norm
         return Vec3()
 
-    def vec(self):
-        return [self.x, self.y, self.z]
+    def min(self, vec: 'Vec3'):
+        x = min(self.x, vec.x)
+        y = min(self.y, vec.y)
+        z = min(self.z, vec.z)
+        return Vec3(x, y, z)
+
+    def max(self, vec: 'Vec3'):
+        x = max(self.x, vec.x)
+        y = max(self.y, vec.y)
+        z = max(self.z, vec.z)
+        return Vec3(x, y, z)
 
     @property
     def x(self):
