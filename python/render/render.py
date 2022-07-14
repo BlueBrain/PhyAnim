@@ -68,8 +68,11 @@ class Mesh:
                          colors_vec, GL_STATIC_DRAW)
 
         # Lines
-        self.num_lines = len(lines)
+        self.num_lines = len(lines)*2
         if self.num_lines > 0:
+            lines_vec = []
+            for l in lines:
+                lines_vec += [l.id0, l.id1]
             self.vao_lines = glGenVertexArrays(1)
             glBindVertexArray(self.vao_lines)
 
@@ -88,16 +91,19 @@ class Mesh:
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                                       12, ctypes.c_void_p(0))
 
-            lines = np.array(lines, dtype=np.uint32)
+            lines_vec = np.array(lines_vec, dtype=np.uint32)
             self.vbo_lines = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_lines)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         lines.nbytes, lines, GL_STATIC_DRAW)
+                         lines_vec.nbytes, lines_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
 
         # Triangles
-        self.num_triangles = len(triangles)
+        self.num_triangles = len(triangles)*3
         if self.num_triangles > 0:
+            triangles_vec = []
+            for t in triangles:
+                triangles_vec += [t.id0, t.id1, t.id2]
             self.vao_triangles = glGenVertexArrays(1)
             glBindVertexArray(self.vao_triangles)
 
@@ -116,11 +122,11 @@ class Mesh:
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                                       12, ctypes.c_void_p(0))
 
-            triangles = np.array(triangles, dtype=np.uint32)
+            triangles_vec = np.array(triangles_vec, dtype=np.uint32)
             self.vbo_triangles = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_triangles)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         triangles.nbytes, triangles, GL_STATIC_DRAW)
+                         triangles_vec.nbytes, triangles_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
 
     def __del__(self):
@@ -152,10 +158,15 @@ class Mesh:
 
 class Quad(Mesh):
     def __init__(self):
-        Mesh.__init__(self, [], [0, 1, 2, 0, 2, 3],
-                      [-1, 1, 0.0, -1, -1, 0.999, 1, -1, 0.999, 1, 1, 0.999],
-                      [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                      [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1])
+        lines = []
+        triangles = [Triangle(0, 1, 2), Triangle(0, 2, 3)]
+        positions = [Vec3(-1, 1, 0.0), Vec3(-1, -1, 0.0),
+                     Vec3(1, -1, 0), Vec3(1, 1, 0.0)]
+        normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
+                   Vec3(0, 0, 1), Vec3(0, 0, 1)]
+        colors = [Vec3(0.0, 1, 1), Vec3(0, 0.5, 1),
+                  Vec3(0, 0.5, 1), Vec3(0.0, 1, 1)]
+        Mesh.__init__(self, lines, triangles, positions, normals, colors)
 
 
 class ShaderType:
@@ -212,8 +223,10 @@ class ShaderProgram:
 
 class Camera:
 
-    def __init__(self, target: Vec3 = Vec3(0), radius: float = 1.0,  up: Vec3 = Vec3(0, 1, 0), near: float = 0.01, far: float = 10000.0, fov: float = 90.0, ratio: float = 1.0):
+    def __init__(self, target: Vec3 = Vec3(0), direction: Vec3 = Vec3(0, 0, -1),
+                 radius: float = 1.0,  up: Vec3 = Vec3(0, 1, 0), near: float = 0.01, far: float = 10000.0, fov: float = 90.0, ratio: float = 1.0):
         self._target = target
+        self._direction = direction
         self._radius = radius
         self._up = up
         self._near = near
@@ -225,13 +238,23 @@ class Camera:
         self.__build_proj()
 
     def __build_view(self):
-        pos = self._target + Vec3(0, 0, self._radius)
+        dir = self._direction
+        right = dir.cross(self._up).normalized()
+        up = right.cross(dir).normalized()
 
-        self.view = Mat4()
-        self.view.identity()
-        self.view.data[0, 3] = -pos.x
-        self.view.data[1, 3] = -pos.y
-        self.view.data[2, 3] = -pos.z
+        rot = Mat3([right.x, right.y, right.z,
+                    up.x, up.y, up.z,
+                    -dir.x, -dir.y, -dir.z])
+
+        pos = rot * (self._target - self._direction * self._radius)
+
+        self.view = Mat4([rot.data[0][0], rot.data[0][1],
+                          rot.data[0][2], -pos.x,
+                          rot.data[1][0], rot.data[1][1],
+                          rot.data[1][2], -pos.y,
+                          rot.data[2][0], rot.data[2][1],
+                          rot.data[2][2], -pos.z,
+                          0, 0, 0, 1])
 
     def __build_proj(self):
         nf = 1.0 / (self._near - self._far)
@@ -250,6 +273,16 @@ class Camera:
     @target.setter
     def target(self, target: Vec3):
         self._target = target
+        self.__build_view()
+
+    @property
+    def direction(self):
+        return self._direction
+
+    @direction.setter
+    def direction(self, value: Vec3):
+        print(self._direction)
+        self._direction = value
         self.__build_view()
 
     @property
@@ -328,8 +361,12 @@ class Scene:
             model[1].use()
             uniform = model[1].uniforms.get("model")
             if not uniform is None:
+                glDepthMask(GL_TRUE)
                 glUniformMatrix4fv(uniform, 1, 1, model[2].data)
-            model[0].render()
+                model[0].render()
+            else:
+                glDepthMask(GL_FALSE)
+                model[0].render()
 
     def render_mode(self):
         if self.mode == GL_FILL:
@@ -345,6 +382,19 @@ class Scene:
     @target.setter
     def target(self, target: Vec3):
         self.camera.target = target
+        for program in self.programs:
+            program.use()
+            uniform = program.uniforms.get("view")
+            if not uniform is None:
+                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+
+    @property
+    def direction(self):
+        return self.camera.direction
+
+    @direction.setter
+    def direction(self, direction: Vec3):
+        self.camera.direction = direction
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")

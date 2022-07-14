@@ -18,5 +18,5 @@ void main()
     position = (view * model * vec4(inPos, 1.0)).xyz;
     normal = normalize(inNormal);
     fragColor = inColor;
-    gl_Position =  proj * vec4(position,  1.0);
+    gl_Position = proj * vec4(position,  1.0);
 }

@@ -41,10 +41,14 @@ class MorphoRender:
 
         # Shaders init
 
-        program0 = ShaderProgram(
-            [("shaders/scene.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
-        program1 = ShaderProgram(
-            [("shaders/scene2.vert", ShaderType.VERTEX), ("shaders/scene.frag", ShaderType.FRAGMENT)])
+        program_triangles = ShaderProgram([("shaders/triangles.vert", ShaderType.VERTEX),
+                                          ("shaders/triangles.frag", ShaderType.FRAGMENT)])
+        program_lines = ShaderProgram([("shaders/lines.vert", ShaderType.VERTEX),
+                                       ("shaders/lines.frag", ShaderType.FRAGMENT)])
+        program_background = ShaderProgram([("shaders/background.vert", ShaderType.VERTEX),
+                                            ("shaders/background.frag", ShaderType.FRAGMENT)])
+
+        self.scene.add_model((Quad(), program_background, Mat4()))
 
         total_paths = float(len(paths))
         num_paths = 0
@@ -58,22 +62,36 @@ class MorphoRender:
             if file_extension == ".swc":
                 mesh = mesh_from_morpho(load_swc(path))
                 displaceX += mesh.aabb.radius()
-                self.scene.add_model((mesh, program0, Mat4([1, 0, 0, displaceX,
-                                                            0, 1, 0, displaceY,
-                                                            0, 0, 1, 0,
-                                                            0, 0, 0, 1])))
+                self.scene.add_model((mesh, program_triangles,
+                                      Mat4([1, 0, 0, displaceX,
+                                            0, 1, 0, displaceY-mesh.aabb.radius(),
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1])))
+                displaceX += mesh.aabb.radius()
+                mesh_loaded += 1
+
+                mesh = lines_from_morpho(load_swc(path))
+                displaceX += mesh.aabb.radius()
+                self.scene.add_model((mesh, program_lines,
+                                      Mat4([1, 0, 0, displaceX,
+                                            0, 1, 0, displaceY-mesh.aabb.radius(),
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1])))
                 displaceX += mesh.aabb.radius()
                 mesh_loaded += 1
             elif file_extension == ".obj":
                 mesh = load_obj(path)
-                displaceX += mesh.aabb.radius()
-                self.scene.add_model((mesh, program1, Mat4([1, 0, 0, displaceX,
-                                                            0, 1, 0, displaceY,
-                                                            0, 0, 1, 0,
-                                                            0, 0, 0, 1])))
+                # mesh = Quad()
+                if mesh is not None:
+                    displaceX += mesh.aabb.radius()
+                    self.scene.add_model((mesh, program_triangles,
+                                          Mat4([1, 0, 0, displaceX,
+                                                0, 1, 0, displaceY-mesh.aabb.radius(),
+                                                0, 0, 1, 0,
+                                                0, 0, 0, 1])))
 
-                displaceX += mesh.aabb.radius()
-                mesh_loaded += 1
+                    displaceX += mesh.aabb.radius()
+                    mesh_loaded += 1
             if mesh_loaded % meshes_per_row == 0:
                 displaceY = self.scene.aabb.min.y
                 displaceX = 0.0
@@ -81,7 +99,11 @@ class MorphoRender:
                   str(int(num_paths/total_paths*100))+"%", end='')
 
         print()
-        print("Loaded " + str(mesh_loaded) + " meshes")
+        num_triangles = 0
+        for model in self.scene.models:
+            num_triangles += model[0].num_triangles/3
+        print("Loaded " + str(mesh_loaded) + " meshes with " +
+              str(num_triangles/1000.0) + "K triangles")
 
     def __init_window(self):
         if not glfw.init():
@@ -145,13 +167,23 @@ class MorphoRender:
                 (self.x, self.y) = glfw.get_cursor_pos(window)
             else:
                 self.translate = False
+        elif button == glfw.MOUSE_BUTTON_RIGHT:
+            if action == glfw.PRESS:
+                self.rotate = True
+                (self.x, self.y) = glfw.get_cursor_pos(window)
+            else:
+                self.rotate = False
 
     def cursor_position_callback(self, window, x, y):
+        x_diff = x - self.x
+        y_diff = y - self.y
+        r = self.scene.radius * 0.005
         if self.translate:
-            x_diff = x - self.x
-            y_diff = y - self.y
-            r = self.scene.radius * 0.005
             self.scene.target += Vec3(-r*x_diff, r*y_diff, 0)
+        elif self.rotate:
+            rot = rotation_from_yaw_pitch(x_diff*0.01, y_diff*0.01)
+            self.scene.direction = rot * self.scene.direction
+
         self.x = x
         self.y = y
 

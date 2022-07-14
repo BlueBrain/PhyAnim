@@ -132,6 +132,20 @@ class Mat3:
             [[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
 
 
+def rotation_from_yaw_pitch(x: float, y: float):
+    sin = math.sin(y)
+    cos = math.cos(y)
+    pitch = Mat3([1, 0, 0,
+                  0, cos, -sin,
+                  0, sin, cos])
+    sin = math.sin(x)
+    cos = math.cos(x)
+    yaw = Mat3([cos, 0, sin,
+                0, 1, 0,
+                -sin, 0, cos])
+    return yaw * pitch
+
+
 class Mat4:
 
     def __init__(self, value=None):
@@ -161,3 +175,41 @@ class Mat4:
     def identity(self):
         self.data = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                              [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32)
+
+
+class Line:
+
+    def __init__(self, id0: int, id1: int):
+        self._id0 = id0
+        self._id1 = id1
+
+    @property
+    def id0(self):
+        return self._id0
+
+    @property
+    def id1(self):
+        return self._id1
+
+
+class Triangle:
+
+    def __init__(self, id0: int, id1: int, id2: int):
+        self._id0 = id0
+        self._id1 = id1
+        self._id2 = id2
+
+    @property
+    def id0(self):
+        return self._id0
+
+    @property
+    def id1(self):
+        return self._id1
+
+    @property
+    def id2(self):
+        return self._id2
+
+    def __str__(self):
+        return str(self.id0) + ", " + str(self.id1) + ", " + str(self.id2)

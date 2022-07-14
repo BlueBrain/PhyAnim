@@ -135,10 +135,10 @@ def lines_from_morpho(morpho: Morphology):
     for sample in morpho.samples:
         positions.append(sample.position)
         normals.append(Vec3(0, 0, 1))
-        colors.append(Vec3(0.2, 0.9, 0.2))
+        colors.append(Vec3(0.5, 1, 0.5))
 
     for segment in morpho.segments:
-        lines += [segment[0], segment[1]]
+        lines.append(Line(segment[0], segment[1]))
 
     return Mesh(lines, triangles, positions, normals, colors)
 
@@ -150,7 +150,7 @@ def mesh_from_morpho(morpho: Morphology):
     normals = []
     colors = []
 
-    color = Vec3(0.9, 0.5, 0.2)
+    color = Vec3(0.5, 1, 0.5)
 
     center, radius = morpho.soma_center_radius()
     x = Vec3(1, 0, 0) * radius
@@ -162,8 +162,8 @@ def mesh_from_morpho(morpho: Morphology):
                   center + z, center - z]
     normals += [x, x*-1, y, y*-1, z, z*-1]
     colors += [color, color, color, color, color, color]
-    triangles += [0, 2, 4, 0, 4, 3, 0, 3, 5, 0, 5, 2,
-                  1, 4, 2, 1, 3, 4, 1, 5, 3, 1, 2, 5]
+    triangles += [Triangle(0, 2, 4), Triangle(0, 4, 3), Triangle(0, 3, 5), Triangle(0, 5, 2),
+                  Triangle(1, 4, 2), Triangle(1, 3, 4), Triangle(1, 5, 3), Triangle(1, 2, 5)]
 
     for seg in morpho.get_segments():
 
@@ -210,11 +210,13 @@ def mesh_from_morpho(morpho: Morphology):
                    color, color, color, color,
                    color, color]
 
-        triangles += [id0, id1, id5, id0, id5, id4,
-                      id1, id2, id6, id1, id6, id5,
-                      id2, id3, id7, id2, id7, id6,
-                      id3, id0, id4, id3, id4, id7]
-        triangles += [id8, id1, id0, id8, id2, id1, id8, id3, id2, id8, id0, id3,
-                      id9, id4, id5, id9, id5, id6, id9, id6, id7, id9, id7, id4]
+        triangles += [Triangle(id0, id1, id5), Triangle(id0, id5, id4),
+                      Triangle(id1, id2, id6), Triangle(id1, id6, id5),
+                      Triangle(id2, id3, id7), Triangle(id2, id7, id6),
+                      Triangle(id3, id0, id4), Triangle(id3, id4, id7)]
+        triangles += [Triangle(id8, id1, id0), Triangle(id8, id2, id1),
+                      Triangle(id8, id3, id2), Triangle(id8, id0, id3),
+                      Triangle(id9, id4, id5), Triangle(id9, id5, id6),
+                      Triangle(id9, id6, id7), Triangle(id9, id7, id4)]
 
     return Mesh(lines, triangles, positions, normals, colors)
