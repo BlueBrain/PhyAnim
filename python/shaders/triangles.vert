@@ -16,7 +16,7 @@ uniform mat4 model;
 void main()
 {
     position = (view * model * vec4(inPos, 1.0)).xyz;
-    normal = normalize(inNormal);
+    normal = (view*model*vec4(normalize(inNormal),0)).xyz;
     fragColor = inColor;
     gl_Position = proj * vec4(position,  1.0);
 }

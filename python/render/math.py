@@ -131,6 +131,11 @@ class Mat3:
         self.data = np.array(
             [[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.float32)
 
+    def transpose(self):
+        return Mat3([self.data[0][0], self.data[1][0], self.data[2][0],
+                     self.data[0][1], self.data[1][1], self.data[2][1],
+                     self.data[0][2], self.data[1][2], self.data[2][2]])
+
 
 def rotation_from_yaw_pitch(x: float, y: float):
     sin = math.sin(y)
