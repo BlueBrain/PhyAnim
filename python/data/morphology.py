@@ -1,4 +1,3 @@
-from render.math import *
 from render.render import *
 from enum import Enum
 import re
@@ -64,10 +63,20 @@ class Morphology:
         for sample in self.soma_samples:
             center += sample.position
         center /= len(self.soma_samples)
+
+        # # mean radius
         radius = 0.0
         for sample in self.soma_samples:
-            radius += (sample.position - center).norm()
+            # radius += (sample.position - center).norm()
+            radius += sample.radius
         radius /= len(self.soma_samples)
+        # print(radius)
+
+        # # max radius
+        # radius = 0
+        # for sample in self.soma_samples:
+        #     radius = max(radius, sample.radius)
+
         return center, radius
 
     def add_sample(self, sample: Sample):
@@ -111,11 +120,14 @@ def load_swc(path):
                     sample_id = morpho.add_sample(sample)
                     ids[id] = sample_id
                     if (parent == 1):
-                        morpho.add_soma_sample(sample)
+                        # morpho.add_soma_sample(sample)
                         neurites.append(sample_id)
                     else:
                         sample_parent_id = ids.get(parent, 0)
                         morpho.add_segment((sample_id, sample_parent_id))
+                else:
+                    sample = Sample(position, radius, SampleType.SOMA)
+                    morpho.add_soma_sample(sample)
 
     center, radius = morpho.soma_center_radius()
     for neurite_id in neurites:
@@ -146,121 +158,35 @@ def lines_from_morpho(morpho: Morphology):
 
 
 def soma_mesh_from_morpho(morpho: Morphology):
+    color = Vec3(0, 0.5, 0.5)
+    center, radius = morpho.soma_center_radius()
+    sphere = Sphere(center, radius)
+    (positions, normals, colors) = sphere.get_geometry(color)
+    triangles = sphere.get_triangles()
+    quads = sphere.get_quads()
+    return Mesh([], triangles, quads, positions, normals, colors)
+
+
+def mesh_from_morpho(morpho: Morphology):
     lines = []
+    quads = []
     triangles = []
     positions = []
     normals = []
     colors = []
 
-    color = Vec3(0, 0.5, 0.5)
-
-    center, radius = morpho.soma_center_radius()
-    x = Vec3(1, 0, 0) * radius
-    y = Vec3(0, 1, 0) * radius
-    z = Vec3(0, 0, 1) * radius
-
-    positions += [center + x, center - x,
-                  center + y, center - y,
-                  center + z, center - z]
-    normals += [x, x*-1, y, y*-1, z, z*-1]
-    colors += [color, color, color, color, color, color]
-    triangles += [Triangle(0, 2, 4), Triangle(0, 4, 3), Triangle(0, 3, 5), Triangle(0, 5, 2),
-                  Triangle(1, 4, 2), Triangle(1, 3, 4), Triangle(1, 5, 3), Triangle(1, 2, 5)]
-    return Mesh(lines, triangles, positions, normals, colors)
-
-
-def mesh_from_morpho(morpho: Morphology):
-    lines = []
-
     segments = morpho.get_segments()
-    num_segments = len(segments)
-
-    triangles = [None] * (num_segments * 16)
-    positions = [None] * (num_segments * 10)
-    normals = [None] * (num_segments * 10)
-    colors = [None] * (num_segments * 10)
-
     color = Vec3(0.5, 1, 0.5)
 
-    pos_offset_inc = 10
-    triangles_offset_inc = 16
-
-    pos_offset = 0
-    triangles_offset = 0
-    seg_id = 0.0
-    center, radius = morpho.soma_center_radius()
+    id = 0
     for seg in segments:
-        # alpha = (seg[0].position - center).norm()/100.0
-        # c = alpha*0.5+0.5
-        # color = Vec3(0, c, c)
-        color = Vec3(0.5, 1, 0.5)
-        x = (seg[1].position - seg[0].position).normalized()
-        if x.norm() == 0:
-            x = Vec3(1, 0, 0)
-        if x.y == 1.0 or x.y == -1.0:
-            y = Vec3(-1, 0, 0)
-        else:
-            y = Vec3(0, 1, 0)
-        z = (x.cross(y)).normalized()
-        y = (z.cross(x)).normalized()
-
-        id0 = pos_offset
-        id1 = id0 + 1
-        id2 = id0 + 2
-        id3 = id0 + 3
-        id4 = id0 + 4
-        id5 = id0 + 5
-        id6 = id0 + 6
-        id7 = id0 + 7
-        id8 = id0 + 8
-        id9 = id0 + 9
-        positions[pos_offset] = seg[0].position + y * seg[0].radius
-        positions[pos_offset+1] = seg[0].position + z * seg[0].radius
-        positions[pos_offset+2] = seg[0].position - y * seg[0].radius
-        positions[pos_offset+3] = seg[0].position - z * seg[0].radius
-        positions[pos_offset+4] = seg[1].position + y * seg[1].radius
-        positions[pos_offset+5] = seg[1].position + z * seg[1].radius
-        positions[pos_offset+6] = seg[1].position - y * seg[1].radius
-        positions[pos_offset+7] = seg[1].position - z * seg[1].radius
-        positions[pos_offset+8] = seg[0].position - x * seg[0].radius
-        positions[pos_offset+9] = seg[1].position + x * seg[1].radius
-        normals[pos_offset] = y*seg[0].radius
-        normals[pos_offset+1] = z*seg[0].radius
-        normals[pos_offset+2] = y*-1*seg[0].radius
-        normals[pos_offset+3] = z*-1*seg[0].radius
-        normals[pos_offset+4] = y*seg[0].radius
-        normals[pos_offset+5] = z*seg[0].radius
-        normals[pos_offset+6] = y*-1*seg[0].radius
-        normals[pos_offset+7] = z*-1*seg[0].radius
-        normals[pos_offset+8] = x*-1*seg[0].radius
-        normals[pos_offset+9] = x*seg[1].radius
-        colors[pos_offset] = color
-        colors[pos_offset+1] = color
-        colors[pos_offset+2] = color
-        colors[pos_offset+3] = color
-        colors[pos_offset+4] = color
-        colors[pos_offset+5] = color
-        colors[pos_offset+6] = color
-        colors[pos_offset+7] = color
-        colors[pos_offset+8] = color
-        colors[pos_offset+9] = color
-        triangles[triangles_offset] = Triangle(id0, id1, id5)
-        triangles[triangles_offset+1] = Triangle(id0, id5, id4)
-        triangles[triangles_offset+2] = Triangle(id1, id2, id6)
-        triangles[triangles_offset+3] = Triangle(id1, id6, id5)
-        triangles[triangles_offset+4] = Triangle(id2, id3, id7)
-        triangles[triangles_offset+5] = Triangle(id2, id7, id6)
-        triangles[triangles_offset+6] = Triangle(id3, id0, id4)
-        triangles[triangles_offset+7] = Triangle(id3, id4, id7)
-        triangles[triangles_offset+8] = Triangle(id8, id1, id0)
-        triangles[triangles_offset+9] = Triangle(id8, id2, id1)
-        triangles[triangles_offset+10] = Triangle(id8, id3, id2)
-        triangles[triangles_offset+11] = Triangle(id8, id0, id3)
-        triangles[triangles_offset+12] = Triangle(id9, id4, id5)
-        triangles[triangles_offset+13] = Triangle(id9, id5, id6)
-        triangles[triangles_offset+14] = Triangle(id9, id6, id7)
-        triangles[triangles_offset+15] = Triangle(id9, id7, id4)
-        pos_offset += pos_offset_inc
-        triangles_offset += triangles_offset_inc
-        seg_id += 1
-    return Mesh(lines, triangles, positions, normals, colors)
+        capsule = Capsule(seg[0].position, seg[0].radius,
+                          seg[1].position, seg[1].radius)
+        (pos, norms, cs) = capsule.get_geometry(color)
+        positions += pos
+        normals += norms
+        colors += cs
+        triangles += capsule.get_triangles(id)
+        quads += capsule.get_quads(id)
+        id += len(pos)
+    return Mesh(lines, triangles, quads, positions, normals, colors)

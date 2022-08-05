@@ -8,5 +8,6 @@ out vec3 fragColor;
 void main()
 {
     fragColor = inColor;
+    // fragColor = vec3(1,0,0);
     gl_Position = vec4(inPos,  1.0);
 }

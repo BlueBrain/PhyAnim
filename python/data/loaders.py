@@ -85,6 +85,7 @@ def load_obj(path):
         colors = []
         lines = []
         triangles = []
+        quads = []
 
         for triangle in raw_triangles:
             id0 = ids.get(triangle[0])
@@ -124,7 +125,7 @@ def load_obj(path):
         if len(normals) == 0:
             normals = compute_normals(positions, triangles)
 
-        mesh = Mesh(lines, triangles, positions, normals, colors)
+        mesh = Mesh(lines, triangles, quads, positions, normals, colors)
     except:
         mesh = None
     return mesh
