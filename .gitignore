@@ -2,3 +2,4 @@ build/
 libigl/
 launch.json
 settings.json
+__pycache__/

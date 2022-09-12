@@ -11,6 +11,7 @@ class App:
         self.height = 600
         if not self.__init_window():
             return None
+        glfw.swap_interval(0)
 
         self.__init_callbacks()
         self.scene = Scene()
@@ -41,6 +42,7 @@ class App:
         self.x = 0
         self.y = 0
         self.shift = False
+        self.pause = False
         glfw.set_key_callback(self.window, self.__key_callback)
         glfw.set_window_size_callback(self.window, self.__resize_callback)
         glfw.set_scroll_callback(self.window, self.__scroll_callback)
@@ -65,6 +67,8 @@ class App:
                 self.scene.render_mode()
             elif key == glfw.KEY_LEFT_SHIFT:
                 self.shift = True
+            elif key == glfw.KEY_SPACE:
+                self.pause = not self.pause
             elif key == glfw.KEY_UP:
                 self.scene.level += 1
             elif key == glfw.KEY_DOWN:
@@ -122,11 +126,13 @@ class App:
             glViewport(0, 0, width, height)
 
     def set_background(self):
-        program = ShaderProgram([("shaders/background.vert", ShaderType.VERTEX),
-                                 ("shaders/background.frag", ShaderType.FRAGMENT)], GL_TRIANGLES)
+        program = ShaderProgram(
+            [("shaders/background.vert", ShaderType.VERTEX),
+             ("shaders/background.frag", ShaderType.FRAGMENT)],
+            GL_TRIANGLES)
         self.scene.add_model((QuadMesh(), program, self.iMat))
 
-    def add_models(self, params=None):
+    def add_models(self):
         program = ShaderProgram(
             [("shaders/quads_tess_const.vert", ShaderType.VERTEX),
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
@@ -136,13 +142,20 @@ class App:
         self.scene.distance = 50.0
         self.scene.level = 60
 
-    def run(self):
+    def update(self):
+        pass
+
+    def render(self):
         glfw.make_context_current(self.window)
-        glfw.swap_interval(0)
+        self.scene.render()
+        glfw.swap_buffers(self.window)
+
+    def run(self):
         fps = 0
         prev_time = time.time()
         while not glfw.window_should_close(self.window):
-            self.scene.render()
+            self.update()
+            self.render()
             fps += 1
             current_time = time.time()
             step = current_time - prev_time
@@ -152,6 +165,5 @@ class App:
                       str(self.scene.level) + "    distance: " +
                       str(self.scene.distance) + "    ", end='')
                 fps = 0
-            glfw.swap_buffers(self.window)
             glfw.poll_events()
         glfw.terminate()

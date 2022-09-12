@@ -45,8 +45,8 @@ class MorphoRender(App):
         print("Loaded " + str(mesh_loaded) + " meshes with " +
               str(num_triangles/1000.0) + "K triangles in " +
               "{:.2f}".format(time.time() - prev_time) + " seconds")
-        self.scene.distance = 50.0
-        self.scene.level = 15
+        self.scene.distance = 25.0
+        self.scene.level = 10
 
 
 if __name__ == "__main__":

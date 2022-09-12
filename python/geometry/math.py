@@ -12,7 +12,9 @@ class Vec3:
         if isinstance(x, np.ndarray) and np.size(x) == 3:
             self.data = np.copy(x)
         elif isinstance(x, numbers.Number):
-            if not (isinstance(y, numbers.Number) and isinstance(z, numbers.Number)):
+            if not (
+                    isinstance(y, numbers.Number)
+                    and isinstance(z, numbers.Number)):
                 y = x
                 z = x
             self.data = np.array((x, y, z), dtype=np.float32)
@@ -101,6 +103,10 @@ class Vec3:
         self.data[2] = value
 
 
+def distance(p0: Vec3, p1: Vec3):
+    return (p0 - p1).norm()
+
+
 class Mat3:
 
     def __init__(self, value=None):
@@ -111,8 +117,8 @@ class Mat3:
             self.data = np.copy(value)
         elif isinstance(value, list):
             if len(value) == 9:
-                data = [[value[0], value[1],  value[2]],
-                        [value[3], value[4],  value[5]], [value[6], value[7],  value[8]]]
+                data = [[value[0], value[1], value[2]], [
+                    value[3], value[4], value[5]], [value[6], value[7], value[8]]]
                 self.data = np.array(data, dtype=np.float32)
 
     def __mul__(self, o):

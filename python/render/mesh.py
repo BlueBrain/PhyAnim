@@ -1,6 +1,5 @@
 import sys
 from OpenGL.GL import *
-from OpenGL_accelerate import *
 from geometry.geometry import *
 
 
@@ -235,8 +234,8 @@ class QuadMesh(Mesh):
                      Vec3(1, -1, 0), Vec3(1, 1, 0.0)]
         normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
                    Vec3(0, 0, 1), Vec3(0, 0, 1)]
-        colors = [Vec3(1, 1, 1), Vec3(1, 0.6, 1),
-                  Vec3(1, 0.6, 1), Vec3(1, 1, 1)]
+        colors = [Vec3(1, 1, 1), Vec3(0.6, 0.6, 1),
+                  Vec3(0.6, 0.6, 1), Vec3(1, 1, 1)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 
