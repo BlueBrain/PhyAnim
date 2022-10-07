@@ -22,80 +22,76 @@ class Node:
             self.velocity += a * dt
             self.position += self.velocity * dt
 
+    def clear(self):
+        self.collide = False
+        self.force = Vec3()
 
-class Section:
-    def _tangents(self):
-        num = len(self._nodes)
-        tangents = []
-        tangents.append(
-            (self._nodes[1].position - self._nodes[0].position).normalized())
-        for i in range(1, num-1):
-            tangents.append(
-                (self._nodes[i+1].position - self._nodes[i-1].position).normalized())
-        tangents.append(
-            (self._nodes[num-1].position - self._nodes[num-2].position).normalized())
-        return tangents
 
-    def _geometry(self):
-        positions = []
-        normals = []
-        colors = []
-        tangents = self._tangents()
+def mesh_springs_geometry(springs):
+    positions = []
+    normals = []
+    colors = []
+    color_collision = Vec3(0.8, 0.2, 0.2)
+    color_no_collision = Vec3(0.2, 0.8, 0.2)
 
-        for i in range(len(self._nodes)):
-            node = self._nodes[i]
-            p = node.position
-            r = node.radius
-            t = tangents[i]
+    for spring in springs:
+        node0 = spring._node0
+        node1 = spring._node1
+        p0 = node0.position
+        r0 = node0.radius
+        p1 = node1.position
+        r1 = node1.radius
+        t = (p1-p0).normalized()
+        if t.norm() == 0:
+            t = Vec3(1, 0, 0)
+        axis1 = Vec3(0, 0, 1)
+        axis0 = (axis1.cross(t)).normalized()
+        axis1 = (t.cross(axis0)).normalized()
+        positions += [axis0 * r0 + p0, axis1 * r0 + p0,
+                      axis0 * -r0 + p0, axis1 * -r0 + p0, t * -r0 + p0,
+                      axis0 * r1 + p1, axis1 * r1 + p1,
+                      axis0 * -r1 + p1, axis1 * -r1 + p1, t * r1 + p1]
+        normals += [axis0 * r0, axis1 * r0, axis0 * -r0, axis1 * -r0,
+                    t * -r0,
+                    axis0 * r1, axis1 * r1, axis0 * -r1, axis1 * -r1,
+                    t * r1]
+        if node0.collide:
+            colors += [color_collision] * 5
+        else:
+            colors += [color_no_collision] * 5
+        if node1.collide:
+            colors += [color_collision] * 5
+        else:
+            colors += [color_no_collision] * 5
+    return (positions, normals, colors)
 
-            if t.norm() == 0:
-                t = Vec3(1, 0, 0)
-            axis1 = Vec3(0, 0, 1)
-            axis0 = (axis1.cross(t)).normalized()
-            axis1 = (t.cross(axis0)).normalized()
 
-            positions += [axis0 * r + p, axis1 * r + p,
-                          axis0 * -r + p, axis1 * -r + p]
-            normals += [axis0 * r, axis1 * r, axis0 * -r, axis1 * -r]
-            if node.collide:
-                colors += [self.colorCol] * 4
-            else:
-                colors += [self.colorNoCol] * 4
+def mesh_springs(springs):
+    positions, normals, colors = mesh_springs_geometry(springs)
+    quads = []
+    for i in range(len(springs)):
+        id0 = i * 10
+        id1 = id0 + 5
+        quads.append(Quad(id0+4, id0+4, id0,   id0+1))
+        quads.append(Quad(id0+4, id0+4, id0+1, id0+2))
+        quads.append(Quad(id0+4, id0+4, id0+2, id0+3))
+        quads.append(Quad(id0+4, id0+4, id0+3, id0))
+        quads.append(Quad(id1+4, id1+4, id1,   id1+1))
+        quads.append(Quad(id1+4, id1+4, id1+1, id1+2))
+        quads.append(Quad(id1+4, id1+4, id1+2, id1+3))
+        quads.append(Quad(id1+4, id1+4, id1+3, id1))
+        quads.append(Quad(id0, id1, id0+1, id1+1))
+        quads.append(Quad(id0+1, id1+1, id0+2, id1+2))
+        quads.append(Quad(id0+2, id1+2, id0+3, id1+3))
+        quads.append(Quad(id0+3, id1+3, id0, id1))
+    return Mesh([], [], quads, positions, normals, colors)
 
-        return (positions, normals, colors)
 
-    def _primitives(self):
-        lines = []
-        triangles = []
-        quads = []
-        for i in range(len(self._nodes) - 1):
-            id0 = i * 4
-            id1 = (i+1) * 4
-            quads.append(Quad(id0, id1, id0+1, id1+1))
-            quads.append(Quad(id0+1, id1+1, id0+2, id1+2))
-            quads.append(Quad(id0+2, id1+2, id0+3, id1+3))
-            quads.append(Quad(id0+3, id1+3, id0, id1))
-
-        return (lines, triangles, quads)
-
-    def __init__(self, nodes):
-        self._nodes = nodes
-        self.colorNoCol = Vec3(0.2, 0.8, 0.2)
-        self.colorCol = Vec3(0.8, 0.2, 0.2)
-        positions, normals, colors = self._geometry()
-        lines, triangles, quads = self._primitives()
-
-        self.mesh = Mesh(lines, triangles, quads, positions, normals, colors)
-
-    def clearCollide(self):
-        for node in self._nodes:
-            node.collide = False
-
-    def update(self):
-        positions, normals, colors = self._geometry()
-        self.mesh.update_positions(positions)
-        self.mesh.update_normals(normals)
-        self.mesh.update_colors(colors)
+def mesh_springs_update(springs, mesh):
+    positions, normals, colors = mesh_springs_geometry(springs)
+    mesh.update_positions(positions)
+    mesh.update_normals(normals)
+    mesh.update_colors(colors)
 
 
 class Spring:
@@ -122,6 +118,12 @@ class Spring:
     def id1(self):
         return self._node1.id
 
+    def min(self):
+        return (self._node0.position - Vec3(self._node0.radius)).min(self._node1.position - Vec3(self._node1.radius))
+
+    def max(self):
+        return (self._node0.position + Vec3(self._node0.radius)).max(self._node1.position + Vec3(self._node1.radius))
+
     def length(self):
         return distance(self._node0.position, self._node1.position)
 
@@ -138,16 +140,3 @@ class Spring:
 
         self._node0.force += force
         self._node1.force -= force
-
-    def collide(self, other: 'Spring'):
-        p0 = (self._node0.position + self._node1.position) * 0.5
-        p1 = (other._node0.position + other._node1.position) * 0.5
-
-        r0 = (self._node0.position - self._node1.position).norm()
-        r1 = (other._node0.position - other._node1.position).norm()
-
-        if (p1-p0).norm() < r0 + r1:
-            self._node0.collide = True
-            self._node1.collide = True
-            other._node0.collide = True
-            other._node1.collide = True

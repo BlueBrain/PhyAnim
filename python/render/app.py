@@ -1,10 +1,11 @@
+from abc import ABC, abstractmethod
 import glfw
 from render.render import *
 import time
 import platform
 
 
-class App:
+class App(ABC):
 
     def __init__(self):
         self.width = 600
@@ -17,6 +18,7 @@ class App:
         self.scene = Scene()
         self.iMat = Mat4()
         self.iMat.identity()
+        self.message = ""
 
     def __init_window(self):
         if not glfw.init():
@@ -42,8 +44,7 @@ class App:
         self.x = 0
         self.y = 0
         self.shift = False
-        self.pause = False
-        glfw.set_key_callback(self.window, self.__key_callback)
+        glfw.set_key_callback(self.window, self.key_callback)
         glfw.set_window_size_callback(self.window, self.__resize_callback)
         glfw.set_scroll_callback(self.window, self.__scroll_callback)
         glfw.set_mouse_button_callback(
@@ -51,7 +52,7 @@ class App:
         glfw.set_cursor_pos_callback(
             self.window, self.__cursor_position_callback)
 
-    def __key_callback(self, window, key, scancode, action, mods):
+    def key_callback(self, window, key, scancode, action, mods):
         if action == glfw.PRESS or action == glfw.REPEAT:
             r = self.scene.radius * 0.05
             rot = self.scene.rotation.transpose()
@@ -67,8 +68,6 @@ class App:
                 self.scene.render_mode()
             elif key == glfw.KEY_LEFT_SHIFT:
                 self.shift = True
-            elif key == glfw.KEY_SPACE:
-                self.pause = not self.pause
             elif key == glfw.KEY_UP:
                 self.scene.level += 1
             elif key == glfw.KEY_DOWN:
@@ -161,9 +160,10 @@ class App:
             step = current_time - prev_time
             if step > 1.0:
                 prev_time = current_time
-                print("\rFPS: " + str(int(fps/step)) + "    lod: " +
+                print("\rFPS: " + str(int(fps / step)) + "    lod: " +
                       str(self.scene.level) + "    distance: " +
-                      str(self.scene.distance) + "    ", end='')
+                      str(self.scene.distance) + "    " + self.message +
+                      "                               ", end='')
                 fps = 0
             glfw.poll_events()
         glfw.terminate()

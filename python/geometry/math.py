@@ -107,6 +107,63 @@ def distance(p0: Vec3, p1: Vec3):
     return (p0 - p1).norm()
 
 
+def dot(v0, v1):
+    return v0.dot(v1)
+
+
+def cross(v0, v1):
+    return v0.cross(v1)
+
+
+def clamp(value, low=0.0, up=1.0):
+    if (value < low):
+        value = low
+    if (value > up):
+        value = up
+    return value
+
+
+def min(value0: float, value1: float):
+    if (value0 < value1):
+        return value0
+    else:
+        return value1
+
+
+def max(value0: float, value1: float):
+    if (value0 > value1):
+        return value0
+    else:
+        return value1
+
+
+def lerp(a, b, t):
+    return a*(1-t) + b*t
+
+
+def project_position_segment(p, a, b):
+    ba = b - a
+    t = (p - a).dot(ba) / ba.dot(ba)
+    return lerp(a, b, clamp(t))
+
+
+def project_segment_segment(a, b, c, d):
+    dc = d-c
+    dc_sqr_norm = dot(dc, dc)
+
+    a_proj = a - (dc*(dot(a-c, dc)/dc_sqr_norm))
+    b_proj = b - (dc*(dot(b-c, dc)/dc_sqr_norm))
+    ba_proj = b_proj - a_proj
+    t = dot(c-a_proj, ba_proj)/dot(ba_proj, ba_proj)
+    if (a_proj == b_proj):
+        t = 0.0
+
+    ba_p = lerp(a, b, t)
+    dc_p = project_position_segment(ba_p, c, d)
+    ba_p = project_position_segment(dc_p, a, b)
+    return (ba_p, dc_p)
+
+
 class Mat3:
 
     def __init__(self, value=None):

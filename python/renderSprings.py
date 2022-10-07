@@ -3,82 +3,115 @@ from render.app import *
 from anim.massSpring import *
 
 
-class Rope:
-
-    def __init__(
-            self, pos: Vec3, length: float, radius: float, num: int, ks: float,
-            kd: float):
-        self._nodes = []
-        self._springs = []
-        self._ks = ks
-        self._kd = kd
-        id = 0
-        self._nodes.append(Node(pos, radius, id, True))
-        dir = Vec3(random.random()*2-1, -random.random(),
-                   random.random()*2-1).normalized() * length / (num-1)
-        # dir = Vec3(0, -1, 0).normalized() * length / (num-1)
-        for i in range(1, num):
-            id += 1
-            self._nodes.append(Node(pos + dir*i, radius, id))
-            self._springs.append(
-                Spring(self._nodes[id-1], self._nodes[id], self._ks, self._kd))
-
-        self.section = Section(self._nodes)
-
-    def collide(self, other: 'Rope'):
-        for spring in self._springs:
-            for s in other._springs:
-                spring.collide(s)
-
-    def update(self, dt: float = 0.001):
-        anim(self._nodes, self._springs, dt)
-        self.section.update()
+def line(pos: Vec3, dir: Vec3, length: float, radius: float, num: int,
+         ks: float, kd: float):
+    id = 0
+    dir.normalized()
+    dir *= length / (num-1)
+    nodes = []
+    springs = []
+    nodes.append(Node(pos, radius, id, True))
+    for i in range(1, num):
+        id += 1
+        fixed = i == num-1
+        nodes.append(Node(pos + dir*i, radius, id, fixed))
+        springs.append(Spring(nodes[id-1], nodes[id], ks, kd))
+    return SpringSet(nodes, springs)
 
 
 class RenderSprings(App):
 
     def __init__(self):
         App.__init__(self)
-        self.ks = 10000.0
+        self.ks = 1000.0
+        self.ksc = 100.0
         self.kd = 10.0
-        self.dt = 0.001
-
-    def add_models(self):
-        program = ShaderProgram(
+        self.dt = 0.0001
+        self.pause = False
+        self.gravity = True
+        self.collisions_check = True
+        self.stop_on_collision = False
+        self.sets = []
+        self.program = ShaderProgram(
             [("shaders/quads_tess.vert", ShaderType.VERTEX),
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
              ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
              ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
-        self.ropes = []
 
-        for i in range(2):
-            for j in range(2):
-                self.ropes.append(
-                    Rope(Vec3(i * 0.1, 0, j * 0.1),
-                         1, 0.01, 10, self.ks, self.kd))
+    def key_callback(self, window, key, scancode, action, mods):
+        App.key_callback(self, window, key, scancode, action, mods)
+        if action == glfw.PRESS or action == glfw.REPEAT:
+            if key == glfw.KEY_SPACE:
+                self.pause = not self.pause
+                if self.pause:
+                    self.message = "Pause"
+                else:
+                    self.message = "Resume"
+            elif key == glfw.KEY_G:
+                self.gravity = not self.gravity
+                if self.gravity:
+                    self.message = "Gravity on"
+                else:
+                    self.message = "Gravity off"
+            elif key == glfw.KEY_C:
+                self.collisions_check = not self.collisions_check
+                if self.collisions_check:
+                    self.message = "Collisions on"
+                else:
+                    self.message = "Collisions off"
+            elif key == glfw.KEY_V:
+                self.stop_on_collision = not self.stop_on_collision
+                if self.stop_on_collision:
+                    self.message = "Stop on collision on"
+                else:
+                    self.message = "Stop on collision off"
+                    self.pause = False
 
-        for rope in self.ropes:
-            self.scene.add_model((rope.section.mesh, program, self.iMat))
+    def add_models(self):
+        self.sets.append(line(Vec3(-1, 0, 0),
+                              Vec3(1, 0, 0),
+                              2.0, 0.1, 10, self.ks, self.kd))
+        self.sets.append(line(Vec3(0, -1.0, 0.01),
+                              Vec3(0, 1.0, 0),
+                              2.0, 0.1, 10, self.ks, self.kd))
+
+    def generate_meshes(self):
+        for set in self.sets:
+            self.scene.add_model((set.mesh, self.program, self.iMat))
 
     def update(self):
         if not self.pause:
-            for rope in self.ropes:
-                rope.section.clearCollide()
-            for i in range(len(self.ropes)):
-                for j in range(i+1, len(self.ropes)):
-                    self.ropes[i].collide(self.ropes[j])
+            for set in self.sets:
+                set.clear()
 
-            for rope in self.ropes:
-                rope.update(self.dt)
+            if self.collisions_check:
+                collide_spring_sets(self.sets, self.ksc)
+
+            for set in self.sets:
+                set.anim(self.dt, self.gravity)
+
+            if self.collisions_check and self.stop_on_collision:
+                for set in self.sets:
+                    set.clear()
+                num = collide_spring_sets(self.sets, self.ksc)
+                if (num):
+                    self.message = "Number of collision: " + str(num)
+                    self.pause = True
+
+            for set in self.sets:
+                set.update()
 
 
 if __name__ == "__main__":
     app = RenderSprings()
     app.set_background()
-    app.ks = 100.0
-    app.kd = 0.01
-    app.dt = 0.01
+    app.ks = 1000.0
+    app.ksc = 10000.0
+    app.kd = 10
+    app.dt = 0.005
     app.scene.distance = 100
     app.scene.level = 20
     app.add_models()
+    app.generate_meshes()
+    app.gravity = False
     app.run()

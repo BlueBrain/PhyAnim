@@ -8,6 +8,8 @@ class AABoundingBox:
     def __init__(self):
         self.min = Vec3(sys.float_info.max)
         self.max = Vec3(sys.float_info.min)
+        self.childs = []
+        self.elements = []
 
     def center(self):
         return (self.min + self.max) * 0.5
@@ -18,6 +20,29 @@ class AABoundingBox:
     def add_pos(self, position: Vec3):
         self.min = self.min.min(position)
         self.max = self.max.max(position)
+
+    def update(self):
+        self.min = Vec3(sys.float_info.max)
+        self.max = Vec3(sys.float_info.min)
+
+        for child in self.childs:
+            child.update()
+            self.min = self.min.min(child.min)
+            self.max = self.max.max(child.max)
+        for element in self.elements:
+            self.min = self.min.min(element.min())
+            self.max = self.max.max(element.max())
+
+    def is_colliding(self, other: 'AABoundingBox'):
+
+        collide = True
+
+        if (other.min.x > self.max.x or other.max.x < self.min.x or
+                other.min.y > self.max.y or other.max.y < self.min.y or
+                other.min.z > self.max.z or other.max.z < self.min.z):
+            collide = False
+
+        return collide
 
 
 class Mesh:
