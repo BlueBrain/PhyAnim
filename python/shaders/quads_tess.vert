@@ -19,14 +19,16 @@ uniform float maxDistance;
 
 void main()
 {
-    float minLevel = 3.0;
-    float max = max(maxLevel, minLevel);
     vec3 position = (view * model * vec4(inPos, 1.0)).xyz;
     vNormal = (view * model * vec4(inNormal, 0.0)).xyz;
     vCenter = position - vNormal;
     vRadius = length(vNormal);
     vColor = inColor;
     vNormal = normalize(vNormal);
+
+
+    float minLevel = 1;
+    float maxL = max(maxLevel, minLevel);
     float alpha = clamp(-position.z/maxDistance, 0.0, 1.0);
-    level = minLevel * alpha + max * (1-alpha);
+    level = (minLevel * alpha + maxL * (1-alpha)) * max(vRadius*0.2,1.0);
 }

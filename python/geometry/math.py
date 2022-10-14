@@ -214,6 +214,47 @@ def rotation_from_yaw_pitch(x: float, y: float):
     return yaw * pitch
 
 
+def mat3_from_rotation(v: Vec3):
+    sin = math.sin(v.y)
+    cos = math.cos(v.y)
+    ry = Mat3([1, 0, 0,
+                  0, cos, -sin,
+                  0, sin, cos])
+    sin = math.sin(v.x)
+    cos = math.cos(v.x)
+    rx = Mat3([cos, 0, sin,
+                0, 1, 0,
+                -sin, 0, cos])
+    sin = math.sin(v.z)
+    cos = math.cos(v.z)
+    rz = Mat3([cos, -sin, 0,
+               sin, cos, 0,
+               0, 0, 1])
+    return rz * ry * rx
+
+
+def mat4_from_rotation(v: Vec3):
+    sin = math.sin(v.x)
+    cos = math.cos(v.x)
+    rx = Mat4([1, 0, 0, 0,
+               0, cos, -sin, 0,
+               0, sin, cos, 0, 
+               0, 0, 0, 1])
+    sin = math.sin(v.y)
+    cos = math.cos(v.y)
+    ry = Mat4([cos, 0, sin, 0,
+               0, 1, 0, 0,
+               -sin, 0, cos, 0,
+               0, 0, 0, 1])
+    sin = math.sin(v.z)
+    cos = math.cos(v.z)
+    rz = Mat4([cos, -sin, 0, 0,
+               sin, cos, 0, 0,
+               0, 0, 1, 0,
+               0, 0, 0, 1])
+    return rz * ry * rx
+
+
 class Mat4:
 
     def __init__(self, value=None):
@@ -230,6 +271,10 @@ class Mat4:
                         [value[12], value[13],  value[14], value[15]]]
                 self.data = np.array(data, dtype=np.float32)
 
+    def __mul__(self, o):
+        if isinstance(o, Mat4):
+            return Mat4(np.matmul(self.data, o.data))
+
     def __str__(self):
         return "(" + str(self.data[0][0]) + ", " + str(self.data[0][1]) + ", " + \
             str(self.data[0][2]) + ", " + str(self.data[0][3]) + ",\n" + \
@@ -243,3 +288,9 @@ class Mat4:
     def identity(self):
         self.data = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                              [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32)
+
+    def translate(self, v: Vec3):
+        self.data[0,3] += v.x
+        self.data[1, 3] += v.y
+        self.data[2, 3] += v.z
+

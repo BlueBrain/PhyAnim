@@ -36,10 +36,11 @@ if __name__ == "__main__":
     app.ks = 1000.0
     app.ksc = 1000000.0
     app.kd = 0.01
-    app.dt = 0.01
+    app.dt = 0.005
     app.scene.distance = 100
     app.scene.level = 20
     app.add_models()
     app.generate_meshes()
+    app.pause = True
     app.stop_on_collision = True
     app.run()

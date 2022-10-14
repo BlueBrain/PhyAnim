@@ -14,6 +14,10 @@ class MorphoRender(App):
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
              ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
              ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
+
+        # program = ShaderProgram(
+        #     [("shaders/lines.vert", ShaderType.VERTEX),
+        #      ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
         program_soma = ShaderProgram(
             [("shaders/quads_tess_const.vert", ShaderType.VERTEX),
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
@@ -21,30 +25,33 @@ class MorphoRender(App):
              ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
 
         total_paths = float(len(paths))
-        num_paths = 0
+        processed = 0
         mesh_loaded = 0
         prev_time = time.time()
         for path in paths:
-            num_paths += 1
-            filename, file_extension = os.path.splitext(path)
-            if file_extension == ".swc":
-                morpho = load_swc(path)
+            try:
+                morpho = morphio.Morphology(path)
                 mesh = mesh_from_morpho(morpho)
                 self.scene.add_model((mesh, program, self.iMat))
-                mesh = soma_mesh_from_morpho(morpho)
-                self.scene.add_model((mesh, program_soma, self.iMat))
+                # mesh = soma_mesh_from_morpho(morpho)
+                # self.scene.add_model((mesh, program_soma, self.iMat))
                 mesh_loaded += 1
-
+            except morphio._morphio.UnknownFileType:
+                pass
+            processed += 1
             print("\rLoading meshes " +
-                  str(int(num_paths/total_paths*100))+"%", end='')
-
+                  str(int(processed/total_paths*100))+"%", end='')
         print()
+
+        num_lines = 0
         num_triangles = 0
         for model in self.scene.models:
+            num_lines += model[0].num_lines/2
             num_triangles += model[0].num_triangles/3
-        print("Loaded " + str(mesh_loaded) + " meshes with " +
-              str(num_triangles/1000.0) + "K triangles in " +
-              "{:.2f}".format(time.time() - prev_time) + " seconds")
+        print("Loaded " + str(mesh_loaded) + "/" + str(len(paths)) + 
+            " meshes with " + str(num_lines/1000.0) + "K lines and " +
+            str(num_triangles/1000.0) + "K triangles in " +
+            "{:.2f}".format(time.time() - prev_time) + " seconds." )
         self.scene.distance = 25.0
         self.scene.level = 10
 

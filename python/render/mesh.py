@@ -48,7 +48,13 @@ class AABoundingBox:
 class Mesh:
 
     def __init__(self, lines, triangles, quads, positions, normals, colors):
-
+        self.aabb = AABoundingBox()
+        self.update_lines(lines)
+        self.update_triangles(triangles)
+        self.update_quads(quads)
+        self.update_positions(positions)
+        self.update_normals(normals)
+        self.update_colors(colors)
         self.vbo_position = -1
         self.vbo_normal = -1
         self.vbo_color = -1
@@ -58,104 +64,150 @@ class Mesh:
         self.vao_lines = -1
         self.vao_triangles = -1
         self.vao_quads = -1
-        self.aabb = AABoundingBox()
 
-        # Vertices
-        self.update_positions(positions)
-        self.update_normals(normals)
-        self.update_colors(colors)
+        self.__update_lines = True
+        self.__update_triangles = True
+        self.__update_quads = True
+        self.__update_positions = True
+        self.__update_normals = True
+        self.__update_colors = True
 
-        # Lines
+    def check_update(self): 
+        if self.__update_positions:
+            self._update_positions()
+        if self.__update_normals:
+            self._update_normals()
+        if self.__update_colors:
+            self._update_colors()
+        if self.__update_lines:
+            self._update_lines()
+        if self.__update_triangles:
+            self._update_triangles()
+        if self.__update_quads:
+            self._update_quads()
+        
+
+    def update_lines(self, lines):
+        self.lines = []
+        for l in lines:
+            self.lines += [l.id0, l.id1]
         self.num_lines = len(lines)*2
+        self.__update_lines = True
+
+    def update_triangles(self, triangles):
+        self.triangles = []
+        for t in triangles:
+            self.triangles += [t.id0, t.id1, t.id2]
+        self.num_triangles = len(triangles)*3
+        self.__update_triangles = True
+
+    def update_quads(self, quads):
+        self.quads = []
+        for q in quads:
+            self.quads += [q.id0, q.id1, q.id2, q.id3]
+        self.num_quads = len(quads)*4
+        self.__update_quads = True
+
+    def update_positions(self, positions):
+        self.positions = []
+        for position in positions:
+            self.aabb.add_pos(position)
+            self.positions.append([position.x, position.y, position.z])
+        self.__update_positions = True
+    
+    def update_normals(self, normals):
+        self.normals = []
+        for normal in normals:
+            self.normals.append([normal.x, normal.y, normal.z])
+        self.__update_normals = True
+    
+    def update_colors(self, colors):
+        self.colors = []
+        for color in colors:
+            self.colors.append([color.x, color.y, color.z])
+        self.__update_colors = True
+
+    def _update_lines(self):
+        self.__update_lines = False
         if self.num_lines > 0:
-            lines_vec = []
-            for l in lines:
-                lines_vec += [l.id0, l.id1]
             self.vao_lines = glGenVertexArrays(1)
             glBindVertexArray(self.vao_lines)
-
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                                  12, ctypes.c_void_p(0))
+                                12, ctypes.c_void_p(0))
             if self.vbo_normal >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
                 glEnableVertexAttribArray(1)
                 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
+                                    12, ctypes.c_void_p(0))
             if self.vbo_color >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
-
-            lines_vec = np.array(lines_vec, dtype=np.uint32)
+                                    12, ctypes.c_void_p(0))
+            lines_vec = np.array(self.lines, dtype=np.uint32)
             self.vbo_lines = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_lines)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         lines_vec.nbytes, lines_vec, GL_STATIC_DRAW)
+                        lines_vec.nbytes, lines_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
+            self.lines = None
 
-        # Triangles
-        self.num_triangles = len(triangles)*3
+    def _update_triangles(self):
+        self.__update_triangles = False
+        self.num_triangles = len(self.triangles)*3
         if self.num_triangles > 0:
-            triangles_vec = []
-            for t in triangles:
-                triangles_vec += [t.id0, t.id1, t.id2]
             self.vao_triangles = glGenVertexArrays(1)
             glBindVertexArray(self.vao_triangles)
-
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                                  12, ctypes.c_void_p(0))
+                                12, ctypes.c_void_p(0))
             if self.vbo_normal >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
                 glEnableVertexAttribArray(1)
                 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
+                                    12, ctypes.c_void_p(0))
             if self.vbo_color >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
-
-            triangles_vec = np.array(triangles_vec, dtype=np.uint32)
+                                    12, ctypes.c_void_p(0))
+            triangles_vec = np.array(self.triangles, dtype=np.uint32)
             self.vbo_triangles = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_triangles)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         triangles_vec.nbytes, triangles_vec, GL_STATIC_DRAW)
+                        triangles_vec.nbytes, triangles_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
+            self.triangles = None
 
-        # Quads
-        self.num_quads = len(quads)*4
+    def _update_quads(self):
+        self.__update_quads = False
+        self.num_quads = len(self.quads)*4
         if self.num_quads > 0:
-            quads_vec = []
-            for q in quads:
-                quads_vec += [q.id0, q.id1, q.id2, q.id3]
+            
             self.vao_quads = glGenVertexArrays(1)
             glBindVertexArray(self.vao_quads)
-
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-                                  12, ctypes.c_void_p(0))
+                                12, ctypes.c_void_p(0))
             if self.vbo_normal >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
                 glEnableVertexAttribArray(1)
                 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
+                                    12, ctypes.c_void_p(0))
             if self.vbo_color >= 0:
                 glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-                                      12, ctypes.c_void_p(0))
-
-            quads_vec = np.array(quads_vec, dtype=np.uint32)
+                                    12, ctypes.c_void_p(0))
+            quads_vec = np.array(self.quads, dtype=np.uint32)
             self.vbo_quads = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_quads)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                         quads_vec.nbytes, quads_vec, GL_STATIC_DRAW)
+                        quads_vec.nbytes, quads_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
 
     def __del__(self):
@@ -178,56 +230,52 @@ class Mesh:
         if (self.vao_quads >= 0):
             glDeleteVertexArrays(1, self.vao_quads)
 
-    def update_positions(self, positions):
-        if len(positions) > 0:
-            positions_vec = []
-            for position in positions:
-                self.aabb.add_pos(position)
-                positions_vec.append([position.x, position.y, position.z])
+    def _update_positions(self):
+        self.__update_positions = False
+        if len(self.positions) > 0:
             if self.vbo_position < 0:
                 self.vbo_position = glGenBuffers(1)
-            positions_vec = np.array(positions_vec, dtype=np.float32)
+            positions_vec = np.array(self.positions, dtype=np.float32)
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
             glBufferData(GL_ARRAY_BUFFER, positions_vec.nbytes,
                          positions_vec, GL_STATIC_DRAW)
 
-    def update_normals(self, normals):
-        if len(normals) > 0:
-            normals_vec = []
-            for normal in normals:
-                normals_vec.append([normal.x, normal.y, normal.z])
+    def _update_normals(self):
+        self.__update_normals = False
+        if len(self.normals) > 0:
             if self.vbo_normal < 0:
                 self.vbo_normal = glGenBuffers(1)
-            normals_vec = np.array(normals_vec, dtype=np.float32)
+            normals_vec = np.array(self.normals, dtype=np.float32)
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
             glBufferData(GL_ARRAY_BUFFER, normals_vec.nbytes,
                          normals_vec, GL_STATIC_DRAW)
 
-    def update_colors(self, colors):
-        if len(colors) > 0:
-            colors_vec = []
-            for color in colors:
-                colors_vec.append([color.x, color.y, color.z])
+    def _update_colors(self):
+        self.__update_colors = False
+        if len(self.colors) > 0:
             if self.vbo_color < 0:
                 self.vbo_color = glGenBuffers(1)
-            colors_vec = np.array(colors_vec, dtype=np.float32)
+            colors_vec = np.array(self.colors, dtype=np.float32)
             glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
             glBufferData(GL_ARRAY_BUFFER, colors_vec.nbytes,
                          colors_vec, GL_STATIC_DRAW)
 
     def render_lines(self):
+        self.check_update()
         if self.vao_lines >= 0:
             glBindVertexArray(self.vao_lines)
             glDrawElements(GL_LINES, self.num_lines,
                            GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
     def render_triangles(self):
+        self.check_update()
         if self.vao_triangles >= 0:
             glBindVertexArray(self.vao_triangles)
             glDrawElements(GL_TRIANGLES, self.num_triangles,
                            GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
     def render_patches(self):
+        self.check_update()
         if self.vao_quads >= 0:
             glPatchParameteri(GL_PATCH_VERTICES, 4)
             glBindVertexArray(self.vao_quads)
