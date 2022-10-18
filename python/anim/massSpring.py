@@ -1,18 +1,15 @@
+import multiprocessing
 from anim.geometry import *
 
 
 def anim(nodes, springs, dt: float, gravity: bool = True):
-
     if (gravity):
         for node in nodes:
             node.force += Vec3(0, -9.8, 0)*node.mass
-
     for spring in springs:
         spring.add_forces()
-
     for node in nodes:
         node.update(dt)
-
         if node.position.y < -2:
             node.position.y = -2
 
@@ -45,12 +42,10 @@ class SpringSet:
     def __init__(self, nodes, springs):
         self.nodes = nodes
         self.springs = springs
-
-        self.mesh = mesh_springs(self.springs)
         self.aabb = AABoundingBox()
         for spring in self.springs:
             self.aabb.elements.append(spring)
-        self.aabb.update()
+        self.aabb.divide()
 
     def clear(self):
         for node in self.nodes:
@@ -66,12 +61,11 @@ class SpringSet:
 
 def collide_spring_set(set0, set1, ksc: float):
     num = 0
-    if set0.aabb.is_colliding(set1.aabb):
-        for spring0 in set0.springs:
-            for spring1 in set1.springs:
-                num += collide_spring(spring0, spring1, ksc)
+    pairs = set0.aabb.colliding_pairs(set1.aabb)
+    # print("Number of pairs ",len(pairs))
+    for pair in pairs:
+        num += collide_spring(pair[0], pair[1], ksc)
     return num
-
 
 def collide_spring_sets(sets, ksc: float):
     n = len(sets)
@@ -80,3 +74,16 @@ def collide_spring_sets(sets, ksc: float):
         for j in range(i+1, n):
             num += collide_spring_set(sets[i], sets[j], ksc)
     return num
+
+def clear_sets(sets):
+    for set in sets:
+        set.clear()
+
+def anim_sets(sets, dt, gravity):
+    for set in sets:    
+        set.anim(dt, gravity)
+
+def update_sets(sets, meshes):
+    for i,set in enumerate(sets):
+        mesh = meshes[i]
+        mesh_springs_update(set.springs, mesh)

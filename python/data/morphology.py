@@ -36,11 +36,15 @@ def mesh_from_morpho(morpho: morphio.Morphology):
     id = 0
 
     center = Vec3(morpho.soma.center)
-    min_dist = sys.float_info.max
-    for point in morpho.soma.points:
-        dist = distance(center, Vec3(point))
-        min_dist = min(min_dist, dist)
-    sphere = Sphere(center, min_dist)
+    radius = morpho.soma.max_distance
+    # min_dist = 1e24
+    # # for sec in morpho.root_sections:
+    # #     center += Vec3(sec.points[0])
+    # # center /= len(morpho.root_sections)
+    # for sec in morpho.root_sections:
+    #     dist = distance(center, Vec3(sec.points[0]))
+    #     min_dist = min(min_dist, dist)
+    sphere = Sphere(center, radius)
 
     (pos, norms, cs) = sphere.get_geometry(Vec3(0.5, 1, 0.5))
     positions += pos
@@ -63,7 +67,13 @@ def mesh_from_morpho(morpho: morphio.Morphology):
             colors += cs
             quads += capsule.get_quads(id)
             id += len(pos)
-    return Mesh(lines, triangles, quads, positions, normals, colors)
+
+
+    mesh = Mesh(lines, triangles, quads, positions, normals, colors)
+    mesh.aabb = AABoundingBox()
+    mesh.aabb.add_pos(center - Vec3(radius * 2.0))
+    mesh.aabb.add_pos(center + Vec3(radius * 2.0))
+    return mesh
 
 # def soma_mesh_from_morpho(morpho: Morphology):
 #     color = Vec3(0, 0.5, 0.5)

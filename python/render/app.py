@@ -152,18 +152,23 @@ class App(ABC):
     def run(self):
         fps = 0
         prev_time = time.time()
-        while not glfw.window_should_close(self.window):
-            self.update()
-            self.render()
-            fps += 1
-            current_time = time.time()
-            step = current_time - prev_time
-            if step > 1.0:
-                prev_time = current_time
-                print("\rFPS: " + str(int(fps / step)) + "    lod: " +
-                      str(self.scene.level) + "    distance: " +
-                      str(self.scene.distance) + "    " + self.message +
-                      "                               ", end='')
-                fps = 0
-            glfw.poll_events()
+        
+        try:
+            while not glfw.window_should_close(self.window):
+                self.update()
+                self.render()
+                fps += 1
+                current_time = time.time()
+                step = current_time - prev_time
+                if step > 1.0:
+                    prev_time = current_time
+                    print("\rFPS: " + str(int(fps / step)) + "    lod: " +
+                        str(self.scene.level) + "    distance: " +
+                        str(self.scene.distance) + "    " + self.message +
+                        "                               ", end='')
+                    fps = 0
+                glfw.poll_events()
+        except:
+            pass
         glfw.terminate()
+        print()

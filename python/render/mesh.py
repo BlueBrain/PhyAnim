@@ -1,13 +1,21 @@
-import sys
+from __future__ import annotations
 from OpenGL.GL import *
 from geometry.geometry import *
 
+def sort_element_x(element):
+    return element.center().x
+
+def sort_element_y(element):
+    return element.center().y
+
+def sort_element_z(element):
+    return element.center().z
 
 class AABoundingBox:
 
     def __init__(self):
-        self.min = Vec3(sys.float_info.max)
-        self.max = Vec3(sys.float_info.min)
+        self.min = Vec3(1e24)
+        self.max = Vec3(-1e24)
         self.childs = []
         self.elements = []
 
@@ -15,35 +23,83 @@ class AABoundingBox:
         return (self.min + self.max) * 0.5
 
     def radius(self):
+        if self.max.x < -1e23:
+            return 1.0
         return (self.max - self.center()).norm()
 
     def add_pos(self, position: Vec3):
         self.min = self.min.min(position)
         self.max = self.max.max(position)
 
+    def add_aabb(self, o: 'AABoundingBox', p:Vec3 = Vec3()):
+        self.min = self.min.min(o.min + p)
+        self.max = self.max.max(o.max + p)
+
     def update(self):
-        self.min = Vec3(sys.float_info.max)
-        self.max = Vec3(sys.float_info.min)
+        self.min = Vec3(1e24)
+        self.max = Vec3(-1e24)
 
         for child in self.childs:
             child.update()
-            self.min = self.min.min(child.min)
-            self.max = self.max.max(child.max)
+            self.add_aabb(child)
         for element in self.elements:
             self.min = self.min.min(element.min())
             self.max = self.max.max(element.max())
 
+    def divide(self):
+        self.update()
+        if len(self.elements) > 2:
+            diff = self.max - self.min
+            if diff.x > diff.y and diff.x > diff.z:
+                self.elements.sort(key=sort_element_x)
+            elif diff.y > diff.z:
+                self.elements.sort(key=sort_element_y)
+            else:
+                self.elements.sort(key=sort_element_z)
+            child0 = AABoundingBox()
+            child1 = AABoundingBox()
+            self.childs += [child0, child1]
+            middle = len(self.elements) // 2
+            child0.elements += self.elements[:middle]
+            child1.elements += self.elements[middle:]
+            child0.divide()
+            child1.divide()
+            self.elements = []
+            self.update()
+            
+            # for i,ele in enumerate(self.elements):
+            #     print(centers[i].y, center.y)
+            #     if centers[i].y < center.y:
+            #         print("left")
+            #         child0.elements.append(ele)
+            #     else:
+            #         print("right")
+            #         child1.elements.append(ele)
+           
+
     def is_colliding(self, other: 'AABoundingBox'):
-
         collide = True
-
         if (other.min.x > self.max.x or other.max.x < self.min.x or
                 other.min.y > self.max.y or other.max.y < self.min.y or
                 other.min.z > self.max.z or other.max.z < self.min.z):
             collide = False
-
         return collide
 
+    def colliding_pairs(self, other: 'AABoundingBox'):
+        pairs = []
+        if self.is_colliding(other):
+            if not self.childs and not other.childs:
+                for element0 in self.elements:
+                    for element1 in other.elements:
+                        pairs.append((element0, element1))
+            elif not self.childs:
+                for o_child in other.childs:
+                    pairs += self.colliding_pairs(o_child)
+            else:
+                for child in self.childs:
+                    for o_child in other.childs:
+                        pairs += child.colliding_pairs(o_child)
+        return pairs
 
 class Mesh:
 
@@ -210,7 +266,10 @@ class Mesh:
                         quads_vec.nbytes, quads_vec, GL_STATIC_DRAW)
             glBindVertexArray(0)
 
-    def __del__(self):
+    def __enter__(self) -> Mesh:
+        return self
+    
+    def __exit__(self, *_) -> None:
         if (self.vbo_position >= 0):
             glDeleteBuffers(1, self.vbo_position)
         if (self.vbo_normal >= 0):

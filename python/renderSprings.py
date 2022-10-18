@@ -32,6 +32,7 @@ class RenderSprings(App):
         self.collisions_check = True
         self.stop_on_collision = False
         self.sets = []
+        self.meshes = []
         self.program = ShaderProgram(
             [("shaders/quads_tess.vert", ShaderType.VERTEX),
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
@@ -77,37 +78,50 @@ class RenderSprings(App):
 
     def generate_meshes(self):
         for set in self.sets:
-            self.scene.add_model((set.mesh, self.program, self.iMat))
+            mesh = mesh_springs(set.springs)
+            self.meshes.append(mesh)
+            self.scene.add_model((mesh, self.program, self.iMat))
 
     def update(self):
+        log = True
         if not self.pause:
-            for set in self.sets:
-                set.clear()
+            if log:
+               
+                prev_total = time.time()
+                clear_sets(self.sets)
+                if self.collisions_check:
+                    collide_spring_sets(self.sets, self.ksc)
+                anim_sets(self.sets, self.dt, self.gravity)
+                if self.stop_on_collision:
+                    clear_sets(self.sets)
+                    num = collide_spring_sets(self.sets, self.ksc)
+                    if num:
+                        self.message = "Number of collision: " + str(num)
+                        self.pause = True
+                update_sets(self.sets, self.meshes)
+                self.message = " Update: " + "{:.4f}".format(
+                    time.time() - prev_total) + " sg"
 
-            if self.collisions_check:
-                collide_spring_sets(self.sets, self.ksc)
-
-            for set in self.sets:
-                set.anim(self.dt, self.gravity)
-
-            if self.collisions_check and self.stop_on_collision:
-                for set in self.sets:
-                    set.clear()
-                num = collide_spring_sets(self.sets, self.ksc)
-                if (num):
-                    self.message = "Number of collision: " + str(num)
-                    self.pause = True
-
-            for set in self.sets:
-                set.update()
-
+            else:
+                clear_sets(self.sets)
+                if self.collisions_check:
+                    collide_spring_sets(self.sets, self.ksc)
+                anim_sets(self.sets, self.dt, self.gravity)
+                if self.stop_on_collision:
+                    clear_sets(self.sets)
+                    num = collide_spring_sets(self.sets, self.ksc)               
+                    if num:
+                        self.message = "Number of collision: " + str(num)
+                        self.pause = True
+                update_sets(self.sets, self.meshes)
+                
 
 if __name__ == "__main__":
     app = RenderSprings()
     app.set_background()
     app.ks = 1000.0
-    app.ksc = 10000.0
-    app.kd = 10
+    app.ksc = 50.0
+    app.kd = 1
     app.dt = 0.005
     app.scene.distance = 100
     app.scene.level = 20

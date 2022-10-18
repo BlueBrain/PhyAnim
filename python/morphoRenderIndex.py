@@ -21,7 +21,6 @@ def unique_gids(matches):
     np.unique(gids)
     return gids
 
-
 def unique_neurons(matches):
     gids = matches['gid']
     morphologies = matches['morphology']
@@ -48,7 +47,24 @@ def load_neuron(program, neuron):
     modelMat.translate(p)
     return (mesh, program, modelMat)
 
+def load_neuron_lines(program, neuron):
+    path = MORPHOLOGY_DIR + neuron[1] + ".asc"
+    try:
+        morpho = morphio.Morphology(path)
+        mesh = lines_from_morpho(morpho)
+        p = neuron[2]
+        r = neuron[3]
+        modelMat = mat4_from_rotation(r)
+        modelMat.translate(p)
+        return (mesh, program, modelMat)
+    except:
+        return None
 class MorphoRenderIndex(App):
+
+    def __init__(self):
+        App.__init__(self)
+        self.min = 0
+        self.max = 30
 
     def add_model(self, model):
         if model:
@@ -58,27 +74,18 @@ class MorphoRenderIndex(App):
         self.message = "Loading meshes " + str(int(self.processed/self.num_neurons*100))+"%"
 
 
-    def add_models(self, args):
-        program = ShaderProgram(
-            [("shaders/quads_tess.vert", ShaderType.VERTEX),
-             ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
-             ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
-             ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
-        # program = ShaderProgram(
-        #     [("shaders/lines.vert", ShaderType.VERTEX),
-        #      ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
-        program_soma = ShaderProgram(
-            [("shaders/quads_tess_const.vert", ShaderType.VERTEX),
-             ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
-             ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
-             ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES) 
-        self.min = float(0)
-        if len(args) > 0:
-            self.min = float(args[0])
-        self.max = float(60)
-        if len(args) > 1:
-            self.max = float(args[1])
-
+    def add_models(self, meshes):
+        if meshes:
+            program = ShaderProgram(
+                [("shaders/quads_tess.vert", ShaderType.VERTEX),
+                ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
+                ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
+                ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
+        else:
+            program = ShaderProgram(
+                [("shaders/lines.vert", ShaderType.VERTEX),
+                ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
+ 
         index = spatial_index.open_index(INDEX_DIR, max_cache_size_mb=1000)
         prev_time = time.time()
         neurons = unique_neurons(
@@ -96,7 +103,12 @@ class MorphoRenderIndex(App):
         
         with Pool(multiprocessing.cpu_count() - 2) as pool:
             for neuron in neurons:
-                pool.apply_async(load_neuron, args=(program,neuron,), callback=self.add_model)
+                if meshes:
+                    pool.apply_async(load_neuron, args=(program,neuron,), callback=self.add_model)
+                else:
+                    pool.apply_async(load_neuron_lines, args=(program, neuron,),
+                        callback=self.add_model)
+
             pool.close()
             pool.join()
         
@@ -111,13 +123,30 @@ class MorphoRenderIndex(App):
             " meshes with " + str(num_lines/1000.0) + "K lines and " +
             str(num_triangles/1000.0) + "K triangles in " +
             "{:.2f}".format(time.time() - prev_time) + " seconds." )
-        
+
+    
 
 if __name__ == "__main__":
+    
+    meshes = True
+    min = 0.0
+    max = 30.0
+    args = sys.argv[1:]
+    for i, arg in enumerate(args):
+        if arg == "-min":
+            min = float(args[i+1])
+        elif arg == "-max":
+            max = float(args[i+1])
+        elif arg == "-lines":
+            meshes = False
+
     app = MorphoRenderIndex()
+    app.min = min
+    app.max = max
     app.set_background()
-    app.scene.distance = 100.0
-    app.scene.level = 5
-    p = threading.Thread(target=app.add_models, args=(sys.argv[1:],))
+    app.scene.aabb = AABoundingBox()
+    p = threading.Thread(target=app.add_models, args=(meshes,))
     p.start()
+    app.scene.distance = 500.0
+    app.scene.level = 5
     app.run()

@@ -2,6 +2,7 @@
 
 from data.data import *
 from render.app import *
+from anim.geometry import *
 import sys
 import os
 
@@ -30,9 +31,11 @@ class MorphoRender(App):
         prev_time = time.time()
         for path in paths:
             try:
-                morpho = morphio.Morphology(path)
-                mesh = mesh_from_morpho(morpho)
-                self.scene.add_model((mesh, program, self.iMat))
+                morpho = Morphology(path)
+                self.scene.add_model((morpho.mesh, program, self.iMat))
+                
+                # mesh = mesh_from_morpho(morpho)
+                # self.scene.add_model((mesh, program, self.iMat))
                 # mesh = soma_mesh_from_morpho(morpho)
                 # self.scene.add_model((mesh, program_soma, self.iMat))
                 mesh_loaded += 1
@@ -52,12 +55,13 @@ class MorphoRender(App):
             " meshes with " + str(num_lines/1000.0) + "K lines and " +
             str(num_triangles/1000.0) + "K triangles in " +
             "{:.2f}".format(time.time() - prev_time) + " seconds." )
-        self.scene.distance = 25.0
-        self.scene.level = 10
+        
 
 
 if __name__ == "__main__":
     app = MorphoRender()
     app.set_background()
     app.add_models(sys.argv[1:])
+    app.scene.level = 5
+    app.scene.distance = 500
     app.run()

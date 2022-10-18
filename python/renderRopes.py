@@ -23,8 +23,8 @@ class RenderRopes(RenderSprings):
 
         inc = 0.2
 
-        for i in range(2):
-            for j in range(2):
+        for i in range(3):
+            for j in range(3):
                 self.sets.append(
                     rope(Vec3(i * inc, 0, j * inc),
                          1, 0.01, 10, self.ks, self.kd))

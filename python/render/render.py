@@ -218,8 +218,8 @@ class Scene:
         self._update_models = True
         translation = Vec3(model[2].data[0, 3],
                            model[2].data[1, 3], model[2].data[2, 3])
-        self.aabb.add_pos(model[0].aabb.min + translation)
-        self.aabb.add_pos(model[0].aabb.max + translation)
+        
+        self.aabb.add_aabb(model[0].aabb, translation)
         # self.lock.release()
 
     def render(self):
