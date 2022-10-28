@@ -1,11 +1,14 @@
-from abc import ABC, abstractmethod
+from cairo import LINE_CAP_ROUND
 import glfw
 from render.render import *
 import time
 import platform
+import seaborn as sns
 
 
-class App(ABC):
+LINE_CLEAR='\x1b[2K'
+
+class App():
 
     def __init__(self):
         self.width = 600
@@ -19,6 +22,12 @@ class App(ABC):
         self.iMat = Mat4()
         self.iMat.identity()
         self.message = ""
+        self.scene.distance = 50.0
+        self.scene.level = 60
+        self.num_models = 1
+        self.loaded_models = 0
+        self.palette = sns.color_palette()
+
 
     def __init_window(self):
         if not glfw.init():
@@ -27,6 +36,8 @@ class App(ABC):
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 1)
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.SAMPLES, 16)
+        
         self.window = glfw.create_window(
             self.width, self.height, "Morphology Render", None, None)
         if self.window is None:
@@ -124,6 +135,9 @@ class App(ABC):
         if platform.system() != 'Darwin':
             glViewport(0, 0, width, height)
 
+    def get_color(self, i):
+        c = self.palette[i % len(self.palette)]
+        return Vec3(c[0], c[1], c[2])
     def set_background(self):
         program = ShaderProgram(
             [("shaders/background.vert", ShaderType.VERTEX),
@@ -131,15 +145,22 @@ class App(ABC):
             GL_TRIANGLES)
         self.scene.add_model((QuadMesh(), program, self.iMat))
 
+    def add_model(self, model):
+        if model:
+            self.scene.add_model(model)
+            self.loaded_models += 1
+        self.message = "Loading models " + str(
+            int(self.loaded_models/self.num_models*100))+"%"
+
     def add_models(self):
         program = ShaderProgram(
             [("shaders/quads_tess_const.vert", ShaderType.VERTEX),
              ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
              ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
              ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
-        self.scene.add_model((SphereMesh(), program, self.iMat))
-        self.scene.distance = 50.0
-        self.scene.level = 60
+        self.num_models = 1
+        self.add_model((SphereMesh(), program, self.iMat))
+        
 
     def update(self):
         pass
@@ -162,10 +183,10 @@ class App(ABC):
                 step = current_time - prev_time
                 if step > 1.0:
                     prev_time = current_time
-                    print("\rFPS: " + str(int(fps / step)) + "    lod: " +
-                        str(self.scene.level) + "    distance: " +
-                        str(self.scene.distance) + "    " + self.message +
-                        "                               ", end='')
+                    print(end=LINE_CLEAR)
+                    print("\rFPS: " + str(int(fps / step)) + "  lod: " +
+                        str(self.scene.level) + "  distance: " +
+                        str(self.scene.distance) + "  " + self.message, end='')
                     fps = 0
                 glfw.poll_events()
         except:

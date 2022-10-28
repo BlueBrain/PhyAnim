@@ -23,7 +23,6 @@ class ShaderProgram:
         self.shader_descriptions = shader_descriptions
         self.primitives = primitives
         self._initialized = False
-        # print("shader created")
 
     def __del__(self):
         if not self.id is None:
@@ -38,7 +37,6 @@ class ShaderProgram:
         return None
 
     def __create_program(self, shader_descriptions):
-        # print("Creating program")
         self.shaders = []
         self.id = glCreateProgram()
         for shader_desc in shader_descriptions:
@@ -48,8 +46,6 @@ class ShaderProgram:
                 glAttachShader(self.id, shader, shader_desc[1])
         glLinkProgram(self.id)
         self.__register_uniforms()
-        # print("shader initialized")
-        # print(self.id)
 
     def __register_uniforms(self):
         self.uniforms = {}
@@ -82,21 +78,15 @@ class Camera:
         self._far = far
         self._fov = fov * math.pi / 360.0
         self._ratio = ratio
-
         self.__build_view()
         self.__build_proj()
 
     def __build_view(self):
         dir = Vec3(0, 0, 1)
-
         r = self._rotation
-
         r_t = r.transpose()
-
         dir = r_t * dir
-
         pos = r * (self._target + dir * self._radius)
-
         self.view = Mat4([r.data[0][0], r.data[0][1],
                           r.data[0][2], -pos.x,
                           r.data[1][0], r.data[1][1],
@@ -157,10 +147,9 @@ Model = (Mesh, ShaderProgram, Mat4)
 
 class Scene:
     def __init__(self):
-        # self.lock = threading.Lock()
         self.programs = []
         self.camera = Camera()
-        self.background_color = Vec3(1.0)
+        self.background_color = Vec3(0.2)
         glClearColor(self.background_color.x,
                      self.background_color.y, self.background_color.z, 1.0)
         self.color = Vec3(0.2, 0.8, 1.0)
@@ -172,6 +161,7 @@ class Scene:
         self._update_models = False
         glEnable(GL_CULL_FACE)
         glEnable(GL_DEPTH_TEST)
+        glEnable(GL_MULTISAMPLE)
 
     @ property
     def background_color(self):
@@ -185,7 +175,6 @@ class Scene:
 
     def update_models(self):
         if self._update_models:
-            # self.lock.acquire()    
             for model in self.models:
                 program = model[1]
                 if not program in self.programs:                    
@@ -207,23 +196,19 @@ class Scene:
                     if not uniform is None:
                         glUniform1f(uniform, self._distance)
             self._update_models = False
-            # self.lock.release()
             self.target = self.aabb.center()
             self.radius = self.aabb.radius()
 
 
     def add_model(self, model: Model):
-        # self.lock.acquire()
         self.models.append(model)
         self._update_models = True
         translation = Vec3(model[2].data[0, 3],
                            model[2].data[1, 3], model[2].data[2, 3])
         
         self.aabb.add_aabb(model[0].aabb, translation)
-        # self.lock.release()
 
     def render(self):
-
         self.update_models()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         for model in self.models:
@@ -259,14 +244,12 @@ class Scene:
 
     @target.setter
     def target(self, target: Vec3):
-        # self.lock.acquire()
         self.camera.target = target
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
                 glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
-        # self.lock.release()
 
     @property
     def rotation(self):
@@ -274,14 +257,12 @@ class Scene:
 
     @rotation.setter
     def rotation(self, rotation: Mat3):
-        # self.lock.acquire()
         self.camera.rotation = rotation
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
                 glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
-        # self.lock.release()
 
     @property
     def radius(self):
@@ -289,37 +270,32 @@ class Scene:
 
     @radius.setter
     def radius(self, value: float):
-        # self.lock.acquire()
         self.camera.radius = value
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
                 glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
-        # self.lock.release()
-
+    
     @property
     def ratio(self):
         return self.camera.ratio
 
     @ratio.setter
     def ratio(self, value: float):
-        # self.lock.acquire()
         self.camera.ratio = value
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("proj")
             if not uniform is None:
                 glUniformMatrix4fv(uniform, 1, 1, self.camera.proj.data)
-        # self.lock.release()
-
+    
     @property
     def level(self):
         return self._level
 
     @level.setter
     def level(self, level):
-        # self.lock.acquire()
         self._level = level
         if self._level < 1:
             self._level = 1
@@ -328,15 +304,13 @@ class Scene:
             uniform = program.uniforms.get("maxLevel")
             if not uniform is None:
                 glUniform1f(uniform, self._level)
-        # self.lock.release()
-
+    
     @property
     def distance(self):
         return self._distance
 
     @distance.setter
     def distance(self, distance):
-        # self.lock.acquire()
         self._distance = distance
         if self._distance <= 0:
             self._distance = 0.001
@@ -345,4 +319,4 @@ class Scene:
             uniform = program.uniforms.get("maxDistance")
             if not uniform is None:
                 glUniform1f(uniform, self._distance)
-        # self.lock.release()
+    

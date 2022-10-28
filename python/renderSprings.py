@@ -78,7 +78,7 @@ class RenderSprings(App):
 
     def generate_meshes(self):
         for set in self.sets:
-            mesh = mesh_springs(set.springs)
+            mesh = mesh_springs(set.springs, Vec3(0,1,0))
             self.meshes.append(mesh)
             self.scene.add_model((mesh, self.program, self.iMat))
 
@@ -98,7 +98,7 @@ class RenderSprings(App):
                     if num:
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
-                update_sets(self.sets, self.meshes)
+                update_sets(self.sets, self.meshes, Vec3(0,1,0))
                 self.message = " Update: " + "{:.4f}".format(
                     time.time() - prev_total) + " sg"
 
@@ -113,7 +113,7 @@ class RenderSprings(App):
                     if num:
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
-                update_sets(self.sets, self.meshes)
+                update_sets(self.sets, self.meshes, Vec3(0,1,0))
                 
 
 if __name__ == "__main__":

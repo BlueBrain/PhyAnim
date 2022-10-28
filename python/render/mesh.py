@@ -35,12 +35,13 @@ class AABoundingBox:
         self.min = self.min.min(o.min + p)
         self.max = self.max.max(o.max + p)
 
-    def update(self):
+    def update(self, recursive: bool = True):
         self.min = Vec3(1e24)
         self.max = Vec3(-1e24)
 
         for child in self.childs:
-            child.update()
+            if recursive:
+                child.update()
             self.add_aabb(child)
         for element in self.elements:
             self.min = self.min.min(element.min())
@@ -48,7 +49,7 @@ class AABoundingBox:
 
     def divide(self):
         self.update()
-        if len(self.elements) > 2:
+        if len(self.elements) > 4:
             diff = self.max - self.min
             if diff.x > diff.y and diff.x > diff.z:
                 self.elements.sort(key=sort_element_x)
@@ -65,16 +66,9 @@ class AABoundingBox:
             child0.divide()
             child1.divide()
             self.elements = []
-            self.update()
+            self.update(False)
             
-            # for i,ele in enumerate(self.elements):
-            #     print(centers[i].y, center.y)
-            #     if centers[i].y < center.y:
-            #         print("left")
-            #         child0.elements.append(ele)
-            #     else:
-            #         print("right")
-            #         child1.elements.append(ele)
+
            
 
     def is_colliding(self, other: 'AABoundingBox'):
@@ -97,8 +91,7 @@ class AABoundingBox:
                     pairs += self.colliding_pairs(o_child)
             else:
                 for child in self.childs:
-                    for o_child in other.childs:
-                        pairs += child.colliding_pairs(o_child)
+                    pairs += other.colliding_pairs(child)
         return pairs
 
 class Mesh:
@@ -341,7 +334,6 @@ class Mesh:
             glDrawElements(GL_PATCHES, self.num_quads,
                            GL_UNSIGNED_INT, ctypes.c_void_p(0))
 
-
 class TriangleMesh(Mesh):
     def __init__(self):
         lines = []
@@ -366,8 +358,10 @@ class QuadMesh(Mesh):
                      Vec3(1, -1, 0), Vec3(1, 1, 0.0)]
         normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
                    Vec3(0, 0, 1), Vec3(0, 0, 1)]
-        colors = [Vec3(1, 1, 1), Vec3(0.6, 0.6, 1),
-                  Vec3(0.6, 0.6, 1), Vec3(1, 1, 1)]
+        colors = [Vec3(0.9, 0.9, 0.9), Vec3(1, 1, 1),
+                  Vec3(1, 1, 1), Vec3(0.9, 0.9, 0.9)]
+        # colors = [Vec3(0.2, 0.2, 0.2), Vec3(0.1, 0.2, 0.2),
+        #           Vec3(0.1, 0.2, 0.2), Vec3(0.2, 0.2, 0.2)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 

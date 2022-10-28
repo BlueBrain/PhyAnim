@@ -1,6 +1,7 @@
 # pip install glfw numpy PyOpenGL PyOpenGL_accelerate
 
-from gc import is_finalized
+import argparse
+import os 
 import multiprocessing
 from random import randint, random
 import threading
@@ -9,12 +10,13 @@ import spatial_index
 from data.data import *
 from render.app import *
 import sys
+from anim.geometry import *
 
 from multiprocessing import Pool, Process
 
-CIRCUIT_2K = "/gpfs/bbp.cscs.ch/project/proj12/spatial_index/v4/circuit-2k/"
-INDEX_DIR = "/home/jjgarcia/projects/test-spatial-index/multi_index_2k"
-MORPHOLOGY_DIR = CIRCUIT_2K + "morphologies/ascii/"
+# CIRCUIT_2K = "/gpfs/bbp.cscs.ch/project/proj12/spatial_index/v4/circuit-2k/"
+# INDEX_DIR = "/home/jjgarcia/projects/test-spatial-index/multi_index_2k"
+# MORPHOLOGY_DIR = CIRCUIT_2K + "morphologies/ascii/"
 
 def unique_gids(matches):
     gids = matches['gid']
@@ -37,28 +39,31 @@ def unique_neurons(matches):
                 x[i], y[i], z[i]), Vec3(rx[i], ry[i], rz[i]))
     return gids_map.values()
 
-def load_neuron(program, neuron):
-    path = MORPHOLOGY_DIR + neuron[1] + ".asc"
-    morpho = morphio.Morphology(path)
-    mesh = mesh_from_morpho(morpho)
-    p = neuron[2]
-    r = neuron[3]
-    modelMat = mat4_from_rotation(r)
-    modelMat.translate(p)
-    return (mesh, program, modelMat)
-
-def load_neuron_lines(program, neuron):
-    path = MORPHOLOGY_DIR + neuron[1] + ".asc"
+def load_neuron(program, neuron, morphology_dir, color):
     try:
-        morpho = morphio.Morphology(path)
-        mesh = lines_from_morpho(morpho)
-        p = neuron[2]
-        r = neuron[3]
-        modelMat = mat4_from_rotation(r)
-        modelMat.translate(p)
-        return (mesh, program, modelMat)
-    except:
+        path = None
+        if os.path.exists(morphology_dir + neuron[1] + ".asc"):
+            path = morphology_dir + neuron[1] + ".asc"
+        elif os.path.exists(morphology_dir + neuron[1] + ".swc"):
+            path = morphology_dir + neuron[1] + ".swc"
+        elif os.path.exists(morphology_dir + neuron[1] + ".h5"):
+            path = morphology_dir + neuron[1] + ".h5"
+        if path:
+            morpho = Morphology(path, color)
+            if program.primitives == GL_LINES:
+                morpho.generate_lines()
+            elif program.primitives == GL_PATCHES:
+                morpho.generate_mesh()
+            if morpho.mesh:
+                p = neuron[2]
+                r = neuron[3]
+                modelMat = mat4_from_rotation(r)
+                modelMat.translate(p)
+                return (morpho.mesh, program, modelMat)
         return None
+    except morphio._morphio.UnknownFileType:
+        return None
+
 class MorphoRenderIndex(App):
 
     def __init__(self):
@@ -66,16 +71,8 @@ class MorphoRenderIndex(App):
         self.min = 0
         self.max = 30
 
-    def add_model(self, model):
-        if model:
-            self.scene.add_model(model)
-            self.mesh_loaded += 1
-        self.processed += 1
-        self.message = "Loading meshes " + str(int(self.processed/self.num_neurons*100))+"%"
-
-
-    def add_models(self, meshes):
-        if meshes:
+    def add_models(self, index_dir, morphology_dir, lines = False):
+        if not lines:
             program = ShaderProgram(
                 [("shaders/quads_tess.vert", ShaderType.VERTEX),
                 ("shaders/quads_tess.tesc", ShaderType.TESS_CONTROL),
@@ -86,8 +83,9 @@ class MorphoRenderIndex(App):
                 [("shaders/lines.vert", ShaderType.VERTEX),
                 ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
  
-        index = spatial_index.open_index(INDEX_DIR, max_cache_size_mb=1000)
+        index = spatial_index.open_index(index_dir, max_cache_size_mb=1000)
         prev_time = time.time()
+
         neurons = unique_neurons(
             index.box_query(
                 [self.min, self.min, self.min], [self.max, self.max, self.max],
@@ -96,18 +94,12 @@ class MorphoRenderIndex(App):
         print("\rNumber of neurons: " + str(len(neurons)) + " loaded from index in " + 
             "{:.2f}".format(time.time() - prev_time) + " seconds.")
 
-        self.num_neurons = len(neurons)
-        self.processed = 0
-        self.mesh_loaded = 0
+        self.num_models = len(neurons)
         prev_time = time.time()
         
         with Pool(multiprocessing.cpu_count() - 2) as pool:
-            for neuron in neurons:
-                if meshes:
-                    pool.apply_async(load_neuron, args=(program,neuron,), callback=self.add_model)
-                else:
-                    pool.apply_async(load_neuron_lines, args=(program, neuron,),
-                        callback=self.add_model)
+            for i,neuron in enumerate(neurons):
+                pool.apply_async(load_neuron, args=(program,neuron,morphology_dir,self.get_color(i)), callback=self.add_model)
 
             pool.close()
             pool.join()
@@ -119,7 +111,7 @@ class MorphoRenderIndex(App):
             num_lines += model[0].num_lines/2
             num_triangles += model[0].num_triangles/3
             num_triangles += model[0].num_quads/2
-        print("\rLoaded " + str(self.mesh_loaded) + "/" + str(len(neurons)) + 
+        print("\rLoaded " + str(self.loaded_models) + "/" + str(self.num_models) + 
             " meshes with " + str(num_lines/1000.0) + "K lines and " +
             str(num_triangles/1000.0) + "K triangles in " +
             "{:.2f}".format(time.time() - prev_time) + " seconds." )
@@ -128,24 +120,20 @@ class MorphoRenderIndex(App):
 
 if __name__ == "__main__":
     
-    meshes = True
-    min = 0.0
-    max = 30.0
-    args = sys.argv[1:]
-    for i, arg in enumerate(args):
-        if arg == "-min":
-            min = float(args[i+1])
-        elif arg == "-max":
-            max = float(args[i+1])
-        elif arg == "-lines":
-            meshes = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("index_dir", help="Directory containing the index")
+    parser.add_argument("morphology_dir", help="Directory containing the morphologies")
+    parser.add_argument('--lines', action='store_true', help="generate morphology meshes as lines")
+    parser.add_argument('-min', type=int, default=0)
+    parser.add_argument('-max', type=int, default=30)
+    args = parser.parse_args()
 
     app = MorphoRenderIndex()
-    app.min = min
-    app.max = max
+    app.min = args.min
+    app.max = args.max
     app.set_background()
     app.scene.aabb = AABoundingBox()
-    p = threading.Thread(target=app.add_models, args=(meshes,))
+    p = threading.Thread(target=app.add_models, args=(args.index_dir,args.morphology_dir, args.lines,))
     p.start()
     app.scene.distance = 500.0
     app.scene.level = 5

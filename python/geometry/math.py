@@ -144,14 +144,26 @@ def lerp(a, b, t):
 
 def project_position_segment(p, a, b):
     ba = b - a
+    if ba.dot(ba) == 0:
+        return (a, 0.5) 
     t = (p - a).dot(ba) / ba.dot(ba)
-    return lerp(a, b, clamp(t))
+    t = clamp(t)
+    return (lerp(a, b, t), t)
 
 
 def project_segment_segment(a, b, c, d):
+    ba = b-a 
     dc = d-c
-    dc_sqr_norm = dot(dc, dc)
 
+    if ba.dot(ba) == 0:
+        proj = project_position_segment(a, c, d)
+        return (a, 0.5, proj[0], proj[1])
+    if dc.dot(dc) == 0:
+        proj = project_position_segment(c, a, b)
+        return (proj[0], proj[1], c, 0.5)
+
+
+    dc_sqr_norm = dot(dc, dc)
     a_proj = a - (dc*(dot(a-c, dc)/dc_sqr_norm))
     b_proj = b - (dc*(dot(b-c, dc)/dc_sqr_norm))
     ba_proj = b_proj - a_proj
@@ -161,8 +173,8 @@ def project_segment_segment(a, b, c, d):
 
     ba_p = lerp(a, b, t)
     dc_p = project_position_segment(ba_p, c, d)
-    ba_p = project_position_segment(dc_p, a, b)
-    return (ba_p, dc_p)
+    ba_p = project_position_segment(dc_p[0], a, b)
+    return (ba_p[0], ba_p[1], dc_p[0], dc_p[1])
 
 
 class Mat3:
