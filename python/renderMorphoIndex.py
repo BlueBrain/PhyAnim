@@ -51,15 +51,15 @@ def load_neuron(program, neuron, morphology_dir, color):
         if path:
             morpho = Morphology(path, color)
             if program.primitives == GL_LINES:
-                morpho.generate_lines()
+                mesh = morpho.generate_lines()
             elif program.primitives == GL_PATCHES:
-                morpho.generate_mesh()
-            if morpho.mesh:
+                mesh = morpho.generate_mesh()
+            if mesh:
                 p = neuron[2]
                 r = neuron[3]
                 modelMat = mat4_from_rotation(r)
                 modelMat.translate(p)
-                return (morpho.mesh, program, modelMat)
+                return (mesh, program, modelMat)
         return None
     except morphio._morphio.UnknownFileType:
         return None
@@ -103,7 +103,7 @@ class MorphoRenderIndex(App):
 
             pool.close()
             pool.join()
-        
+
         self.message = ""
         num_lines = 0
         num_triangles = 0

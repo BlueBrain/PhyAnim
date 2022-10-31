@@ -3,7 +3,8 @@ from mailbox import NoSuchMailboxError
 from platform import node
 
 from render.mesh import *
-import morphio.mut 
+import morphio.mut
+
 
 class Node:
 
@@ -19,7 +20,7 @@ class Node:
         self.force = force
         self.collide = False
 
-    def update(self, dt: float, dynamic:bool=True):
+    def update(self, dt: float, dynamic: bool = True):
         if not self.fixed:
             a = self.force / self.mass
             v = self.velocity + a*dt
@@ -29,11 +30,11 @@ class Node:
 
     def clear(self):
         self.collide = False
-        self.force = Vec3()    
-
+        self.force = Vec3()
 
     def __str__(self):
         return "nodes.append(Node(Vec3" + str(self.position) + ", " + str(self.radius) + "))"
+
 
 class Spring:
 
@@ -44,7 +45,6 @@ class Spring:
         self._ks = ks
         self._kd = kd
         self._lenght = (node1.position - node0.position).norm()
-
 
     def __str__(self):
         return "\t" + str(self._node0) + " \n\t" + str(self._node1)
@@ -71,8 +71,9 @@ class Spring:
 
     def aabb(self):
         aabb = AABoundingBox()
-        aabb.add_pos(self.min)
-        aabb.add_pos(self.max)
+        aabb.add_pos(self.min())
+        aabb.add_pos(self.max())
+        return aabb
 
     def center(self):
         return (self._node0.position + self._node1.position)*0.5
@@ -89,9 +90,10 @@ class Spring:
             force = Vec3()
             if l > 0.0:
                 force = pd * (self._ks * (l / r - 1.0) +
-                    self._kd * (vd.dot(pd) / (l * r))) / l
+                              self._kd * (vd.dot(pd) / (l * r))) / l
                 self._node0.force += force
                 self._node1.force -= force
+
 
 class Section:
     def __init__(self):
@@ -107,23 +109,23 @@ class Section:
         section.add_node(self.nodes[-1])
         return section
 
-    def oriented_axis(self, t:Vec3):
+    def oriented_axis(self, t: Vec3):
         if t.norm() == 0:
-                t = Vec3(1, 0, 0)
+            t = Vec3(1, 0, 0)
         z = t.normalized()
         y = Vec3(0, 0, 1)
         x = (y.cross(z)).normalized()
         y = (z.cross(x)).normalized()
-        return (x,y,z)
+        return (x, y, z)
 
     def geometry(self, color_no_collision, color_collision):
         positions = []
         normals = []
         colors = []
-        for i,node in enumerate(self.nodes):
+        for i, node in enumerate(self.nodes):
             p = node.position
             r = node.radius
-            t = Vec3(1,0,0)
+            t = Vec3(1, 0, 0)
             if i == 0:
                 node0 = node
                 node1 = self.nodes[i+1]
@@ -133,15 +135,15 @@ class Section:
             else:
                 node0 = self.nodes[i-1]
                 node1 = self.nodes[i+1]
-            t = node1.position - node0.position   
-            x,y,z = self.oriented_axis(t)
+            t = node1.position - node0.position
+            x, y, z = self.oriented_axis(t)
             positions += [x*r+p, y*r+p, x*-r+p, y*-r+p]
             normals += [x*r, y*r, x*-r, y*-r]
             if node.collide:
                 colors += [color_collision] * 4
             else:
                 colors += [color_no_collision] * 4
-        
+
         p0 = self.nodes[0].position
         r0 = self.nodes[0].radius
         t0 = (self.nodes[1].position - p0)
@@ -165,10 +167,10 @@ class Section:
 
         return (positions, normals, colors)
 
-    def quads(self, id = 0):
+    def quads(self, id=0):
         quads = []
         for i in range(len(self.nodes)-1):
-            id0 = i * 4 + id 
+            id0 = i * 4 + id
             id1 = id0 + 4
             quads.append(Quad(id0, id0+1, id1, id1+1))
             quads.append(Quad(id0+1, id0+2, id1+1, id1+2))
@@ -176,13 +178,13 @@ class Section:
             quads.append(Quad(id0+3, id0, id1+3, id1))
 
         id0 = id
-        id1 = id + len(self.nodes)*4 
+        id1 = id + len(self.nodes)*4
         quads.append(Quad(id1, id1, id0, id0+1))
         quads.append(Quad(id1, id1, id0+1, id0+2))
         quads.append(Quad(id1, id1, id0+2, id0+3))
         quads.append(Quad(id1, id1, id0+3, id0))
 
-        id0 = id + (len(self.nodes) - 1 )* 4 
+        id0 = id + (len(self.nodes) - 1) * 4
         id1 = id + len(self.nodes)*4 + 1
         quads.append(Quad(id1, id1, id0, id0+3))
         quads.append(Quad(id1, id1, id0+3, id0+2))
@@ -196,20 +198,27 @@ class Section:
         colors = []
         for node in self.nodes:
             positions.append(node.position)
-            normals.append(Vec3(0,0,1))
+            normals.append(Vec3(0, 0, 1))
             colors.append(Vec3(0.4, 0.8, 0.4))
         return (positions, normals, colors)
 
-    def lines(self, id = 0):
+    def lines(self, id=0):
         lines = []
         for i in range(len(self.nodes)-1):
             lines.append(Line(id+i, id+i+1))
         return lines
 
+
 class Morphology:
 
+    def __init__(self, path, color=Vec3(0, 1, 0), color_collide=Vec3(1, 0, 0)):
+        morpho = morphio.mut.Morphology(path)
+        self._create_hierarchy(morpho)
+        self.color_collide = color_collide
+        self.color = color
+
     def _add_recursive_section(self, section: Section,
-                            original_sec: morphio.mut.Section, root=False):
+                               original_sec: morphio.mut.Section, root=False):
         for i, point in enumerate(original_sec.points):
             if i or root:
                 radius = original_sec.diameters[i]*0.5
@@ -226,14 +235,15 @@ class Morphology:
         self.soma_nodes = []
         self.soma_center = Vec3()
         self.soma_radius = 0
-        for i,p in enumerate(morpho.soma.points):
+        for i, p in enumerate(morpho.soma.points):
             point = Vec3(p)
             node = Node(point, morpho.soma.diameters[i] * 0.5)
             self.soma_nodes.append(node)
             self.soma_center += point
         self.soma_center /= len(morpho.soma.points)
         for node in self.soma_nodes:
-            self.soma_radius = max(self.soma_radius, distance(self.soma_center, node.position))
+            self.soma_radius = max(self.soma_radius, distance(
+                self.soma_center, node.position))
         for sec in morpho.root_sections:
             section = Section()
             self.root_sections.append(section)
@@ -245,10 +255,12 @@ class Morphology:
             for node in section.nodes:
                 unique_nodes[node] = node
         self.nodes = unique_nodes.values()
-        for i,node in enumerate(self.nodes):
+        for i, node in enumerate(self.nodes):
             node.id = i
 
     def generate_mesh(self):
+        prev = time.time()
+        
         quads = []
         positions = []
         normals = []
@@ -268,12 +280,17 @@ class Morphology:
             normals += nor
             colors += col
 
-        self.mesh = Mesh([], [], quads, positions, normals, colors)
-        self.mesh.aabb = AABoundingBox()
-        self.mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        self.mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
-        
+        mesh = Mesh([], [], quads, positions, normals, colors)
+        mesh.aabb = AABoundingBox()
+        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+
+        print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
+        return mesh
+
     def generate_lines(self):
+        prev = time.time()
+
         lines = []
         positions = []
         colors = []
@@ -288,19 +305,17 @@ class Morphology:
                 node1 = section.nodes[i+1]
                 lines.append(Line(node0.id, node1.id))
 
-        self.mesh = Mesh(lines, [], [], positions, [], colors)
-        self.mesh.aabb = AABoundingBox()
-        self.mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        self.mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
-
-    def __init__(self, path, color = Vec3(0,1,0), color_collide = Vec3(1,0,0)):
-        morpho = morphio.mut.Morphology(path)
-        self._create_hierarchy(morpho)
-        self.color_collide = color_collide
-        self.color = color
-        self.mesh = None
+        mesh = Mesh(lines, [], [], positions, [], colors)
+        mesh.aabb = AABoundingBox()
+        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
         
-    def update_mesh(self):
+        print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
+        return mesh
+
+    
+
+    def update_mesh(self, mesh):
         positions = []
         normals = []
         colors = []
@@ -316,11 +331,15 @@ class Morphology:
             positions += pos
             normals += nor
             colors += col
-        self.mesh.update_positions(positions)
-        self.mesh.update_normals(normals)
-        self.mesh.update_colors(colors)
-        
-    def update_lines(self):
+        mesh.update_positions(positions)
+        mesh.update_normals(normals)
+        mesh.update_colors(colors)
+
+        mesh.aabb = AABoundingBox()
+        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+
+    def update_lines(self, mesh):
         positions = []
         colors = []
 
@@ -330,27 +349,32 @@ class Morphology:
                 colors.append(self.color_collide)
             else:
                 colors.append(self.color)
-        self.mesh.update_positions(positions)
-        self.mesh.update_colors(colors)
+        mesh.update_positions(positions)
+        mesh.update_colors(colors)
+
+        mesh.aabb = AABoundingBox()
+        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
 
     def print_sections(self):
         for sec in self.sections:
             print("Section")
             for node in sec.nodes:
-                print("\t",node.position)
-           
+                print("\t", node.position)
+
     def get_springs(self, ks, kd):
         springs = []
         for section in self.sections:
             for i in range(len(section.nodes)-1):
-                springs.append(Spring(section.nodes[i], section.nodes[i+1], ks, kd))
+                springs.append(
+                    Spring(section.nodes[i], section.nodes[i+1], ks, kd))
         return springs
 
-def mesh_springs_geometry(springs, color_no_collision):
+
+def mesh_springs_geometry(springs, color, color_collision):
     positions = []
     normals = []
     colors = []
-    color_collision = Vec3(0.8, 0.2, 0.2)
     for spring in springs:
         node0 = spring._node0
         node1 = spring._node1
@@ -375,16 +399,17 @@ def mesh_springs_geometry(springs, color_no_collision):
         if node0.collide:
             colors += [color_collision] * 5
         else:
-            colors += [color_no_collision] * 5
+            colors += [color] * 5
         if node1.collide:
             colors += [color_collision] * 5
         else:
-            colors += [color_no_collision] * 5
+            colors += [color] * 5
     return (positions, normals, colors)
 
 
-def mesh_springs(springs, color_no_collision):
-    positions, normals, colors = mesh_springs_geometry(springs, color_no_collision)
+def mesh_springs(springs, color, color_collision):
+    positions, normals, colors = mesh_springs_geometry(
+        springs, color, color_collision)
     quads = []
     for i in range(len(springs)):
         id0 = i * 10
@@ -404,8 +429,9 @@ def mesh_springs(springs, color_no_collision):
     return Mesh([], [], quads, positions, normals, colors)
 
 
-def mesh_springs_update(springs, mesh, color_no_collision):
-    positions, normals, colors = mesh_springs_geometry(springs, color_no_collision)
+def mesh_springs_update(springs, mesh, color, color_collision):
+    positions, normals, colors = mesh_springs_geometry(
+        springs, color, color_collision)
     mesh.update_positions(positions)
     mesh.update_normals(normals)
     mesh.update_colors(colors)

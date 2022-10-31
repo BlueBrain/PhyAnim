@@ -2,7 +2,7 @@ import multiprocessing
 from anim.geometry import *
 
 
-def anim(nodes, springs, dt: float, gravity: bool = True, dynamic:bool = True):
+def anim(nodes, springs, dt: float, gravity: bool = True, dynamic: bool = True):
     if (gravity):
         for node in nodes:
             node.force += Vec3(0, -9.8, 0)*node.mass
@@ -41,9 +41,10 @@ class SpringSet:
         self.nodes = nodes
         self.springs = springs
         self.aabb = AABoundingBox()
-        for spring in self.springs:
-            self.aabb.elements.append(spring)
+        # for spring in self.springs:
+        self.aabb.elements += self.springs
         self.aabb.divide()
+        self.aabb.update()
 
     def clear(self):
         for node in self.nodes:
@@ -52,9 +53,6 @@ class SpringSet:
     def anim(self, dt: float, gravity: bool = True, dynamic: bool = True):
         anim(self.nodes, self.springs, dt, gravity, dynamic)
         self.aabb.update()
-
-    def update(self):
-        mesh_springs_update(self.springs, self.mesh)
 
 
 def collide_spring_set(set0, set1, ksc: float):
@@ -65,6 +63,7 @@ def collide_spring_set(set0, set1, ksc: float):
             collisions.append(pair)
     return collisions
 
+
 def collide_spring_sets(sets, ksc: float):
     n = len(sets)
     collisions = []
@@ -73,22 +72,26 @@ def collide_spring_sets(sets, ksc: float):
             collisions += collide_spring_set(sets[i], sets[j], ksc)
     return collisions
 
+
 def clear_sets(sets):
     for set in sets:
         set.clear()
 
+
 def anim_sets(sets, dt, gravity: bool = True, dynamic: bool = True):
-    for set in sets:    
+    for set in sets:
         set.anim(dt, gravity, dynamic)
 
-def update_sets(sets, meshes, color_no_collision):
-    for i,set in enumerate(sets):
-        mesh = meshes[i]
-        mesh_springs_update(set.springs, mesh, color_no_collision)
 
-def morphology_to_spring_set(morpho:Morphology):
+def update_sets(sets, meshes, color, color_collision):
+    for i, set in enumerate(sets):
+        mesh = meshes[i]
+        mesh_springs_update(set.springs, mesh, color, color_collision)
+
+
+def morphology_to_spring_set(morpho: Morphology):
     springs = []
     for section in morpho.sections:
         for i in range(len(section.nodes)-1):
-            springs.append(morpho.nodes[i],morpho.nodes[i+1])
+            springs.append(morpho.nodes[i], morpho.nodes[i+1])
     return SpringSet(morpho.nodes, springs)

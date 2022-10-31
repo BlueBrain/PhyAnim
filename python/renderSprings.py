@@ -78,7 +78,7 @@ class RenderSprings(App):
 
     def generate_meshes(self):
         for set in self.sets:
-            mesh = mesh_springs(set.springs, Vec3(0,1,0))
+            mesh = mesh_springs(set.springs, Vec3(0, 1, 0), Vec3(1, 0, 0))
             self.meshes.append(mesh)
             self.scene.add_model((mesh, self.program, self.iMat))
 
@@ -86,7 +86,7 @@ class RenderSprings(App):
         log = True
         if not self.pause:
             if log:
-               
+                
                 prev_total = time.time()
                 clear_sets(self.sets)
                 if self.collisions_check:
@@ -98,7 +98,8 @@ class RenderSprings(App):
                     if num:
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
-                update_sets(self.sets, self.meshes, Vec3(0,1,0))
+                update_sets(self.sets, self.meshes,
+                            Vec3(0, 1, 0), Vec3(1, 0, 0))
                 self.message = " Update: " + "{:.4f}".format(
                     time.time() - prev_total) + " sg"
 
@@ -109,12 +110,12 @@ class RenderSprings(App):
                 anim_sets(self.sets, self.dt, self.gravity)
                 if self.stop_on_collision:
                     clear_sets(self.sets)
-                    num = collide_spring_sets(self.sets, self.ksc)               
+                    num = collide_spring_sets(self.sets, self.ksc)
                     if num:
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
-                update_sets(self.sets, self.meshes, Vec3(0,1,0))
-                
+                update_sets(self.sets, self.meshes, Vec3(0, 1, 0))
+
 
 if __name__ == "__main__":
     app = RenderSprings()

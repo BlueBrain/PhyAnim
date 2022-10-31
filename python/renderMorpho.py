@@ -12,13 +12,13 @@ def generate_model(program, path, color):
     try:
         morpho = Morphology(path, color)
         if program.primitives == GL_LINES:
-            morpho.generate_lines()
+            mesh = morpho.generate_lines()
         elif program.primitives == GL_PATCHES:
-            morpho.generate_mesh()
-        if morpho.mesh:
+            mesh = morpho.generate_mesh()
+        if mesh:
             mat_i = Mat4()
             mat_i.identity()
-            return (morpho.mesh, program, mat_i)
+            return (mesh, program, mat_i)
         return None
     except morphio._morphio.UnknownFileType:
         return None
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     args = parser.parse_args()    
     
     app = MorphoRender()
-    app.set_background()
+    # app.set_background()
     p = threading.Thread(target=app.add_models, args=(args.paths,args.lines))
     p.start()
     app.scene.level = 5

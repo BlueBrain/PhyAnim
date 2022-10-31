@@ -1,4 +1,3 @@
-from cairo import LINE_CAP_ROUND
 import glfw
 from render.render import *
 import time
@@ -6,7 +5,8 @@ import platform
 import seaborn as sns
 
 
-LINE_CLEAR='\x1b[2K'
+LINE_CLEAR = '\x1b[2K'
+
 
 class App():
 
@@ -27,6 +27,7 @@ class App():
         self.num_models = 1
         self.loaded_models = 0
         self.palette = sns.color_palette()
+        self.verbose = True
 
 
     def __init_window(self):
@@ -37,7 +38,7 @@ class App():
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.SAMPLES, 16)
-        
+
         self.window = glfw.create_window(
             self.width, self.height, "Morphology Render", None, None)
         if self.window is None:
@@ -138,6 +139,7 @@ class App():
     def get_color(self, i):
         c = self.palette[i % len(self.palette)]
         return Vec3(c[0], c[1], c[2])
+
     def set_background(self):
         program = ShaderProgram(
             [("shaders/background.vert", ShaderType.VERTEX),
@@ -160,10 +162,13 @@ class App():
              ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
         self.num_models = 1
         self.add_model((SphereMesh(), program, self.iMat))
-        
 
     def update(self):
         pass
+
+    def update_run(self):
+        while 1:
+            self.update()
 
     def render(self):
         glfw.make_context_current(self.window)
@@ -173,8 +178,12 @@ class App():
     def run(self):
         fps = 0
         prev_time = time.time()
-        
+
         try:
+
+            # p = threading.Thread(target=self.update_run)
+            # p.start()
+
             while not glfw.window_should_close(self.window):
                 self.update()
                 self.render()
@@ -183,13 +192,14 @@ class App():
                 step = current_time - prev_time
                 if step > 1.0:
                     prev_time = current_time
-                    print(end=LINE_CLEAR)
-                    print("\rFPS: " + str(int(fps / step)) + "  lod: " +
-                        str(self.scene.level) + "  distance: " +
-                        str(self.scene.distance) + "  " + self.message, end='')
+                    if self.verbose:
+                        print(end=LINE_CLEAR)
+                        print("\rFPS: " + str(int(fps / step)) + "  lod: " +
+                          str(self.scene.level) + "  distance: " +
+                          str(self.scene.distance) + "  " + self.message, end='')
                     fps = 0
                 glfw.poll_events()
-        except:
-            pass
+        except Exception as e:
+            print(e)
         glfw.terminate()
         print()

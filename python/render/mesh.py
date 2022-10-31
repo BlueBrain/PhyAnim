@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from OpenGL.GL import *
 from geometry.geometry import *
 
@@ -35,38 +36,38 @@ class AABoundingBox:
         self.min = self.min.min(o.min + p)
         self.max = self.max.max(o.max + p)
 
-    def update(self, recursive: bool = True):
+    def update(self):
         self.min = Vec3(1e24)
         self.max = Vec3(-1e24)
 
         for child in self.childs:
-            if recursive:
-                child.update()
+            child.update()
             self.add_aabb(child)
         for element in self.elements:
             self.min = self.min.min(element.min())
             self.max = self.max.max(element.max())
 
     def divide(self):
-        self.update()
-        if len(self.elements) > 4:
-            diff = self.max - self.min
-            if diff.x > diff.y and diff.x > diff.z:
-                self.elements.sort(key=sort_element_x)
-            elif diff.y > diff.z:
-                self.elements.sort(key=sort_element_y)
-            else:
-                self.elements.sort(key=sort_element_z)
+        # self.update()
+        if len(self.elements) > 1:
+            # diff = self.max - self.min
+            # if diff.x > diff.y and diff.x > diff.z:
+            #     self.elements.sort(key=sort_element_x)
+            # elif diff.y > diff.z:
+            #     self.elements.sort(key=sort_element_y)
+            # else:
+            #     self.elements.sort(key=sort_element_z)
+
+            # self.elements.sort(key=sort_element_x)
             child0 = AABoundingBox()
             child1 = AABoundingBox()
             self.childs += [child0, child1]
             middle = len(self.elements) // 2
-            child0.elements += self.elements[:middle]
-            child1.elements += self.elements[middle:]
+            child0.elements = self.elements[:middle]
+            child1.elements = self.elements[middle:]
+            self.elements = []
             child0.divide()
             child1.divide()
-            self.elements = []
-            self.update(False)
 
     def is_colliding(self, other: 'AABoundingBox'):
         return not (other.min.x > self.max.x or other.max.x < self.min.x or
@@ -112,7 +113,7 @@ class Mesh:
         self.update_lines(lines)
         self.update_triangles(triangles)
         self.update_quads(quads)
-        self.update_positions(positions)
+        self.update_positions(positions, True)
         self.update_normals(normals)
         self.update_colors(colors)
         self.vbo_position = -1
@@ -131,6 +132,7 @@ class Mesh:
         self.__update_positions = True
         self.__update_normals = True
         self.__update_colors = True
+       
 
     def check_update(self): 
         if self.__update_positions:
@@ -146,46 +148,13 @@ class Mesh:
         if self.__update_quads:
             self._update_quads()
         
-
     def update_lines(self, lines):
-        self.lines = []
-        for l in lines:
-            self.lines += [l.id0, l.id1]
+        self.lines = np.empty([len(lines)*2], dtype=np.uint32)
+        for i,l in enumerate(lines):
+            self.lines[i*2] = l.id0
+            self.lines[i*2+1] = l.id1
         self.num_lines = len(lines)*2
         self.__update_lines = True
-
-    def update_triangles(self, triangles):
-        self.triangles = []
-        for t in triangles:
-            self.triangles += [t.id0, t.id1, t.id2]
-        self.num_triangles = len(triangles)*3
-        self.__update_triangles = True
-
-    def update_quads(self, quads):
-        self.quads = []
-        for q in quads:
-            self.quads += [q.id0, q.id1, q.id2, q.id3]
-        self.num_quads = len(quads)*4
-        self.__update_quads = True
-
-    def update_positions(self, positions):
-        self.positions = []
-        for position in positions:
-            self.aabb.add_pos(position)
-            self.positions.append([position.x, position.y, position.z])
-        self.__update_positions = True
-    
-    def update_normals(self, normals):
-        self.normals = []
-        for normal in normals:
-            self.normals.append([normal.x, normal.y, normal.z])
-        self.__update_normals = True
-    
-    def update_colors(self, colors):
-        self.colors = []
-        for color in colors:
-            self.colors.append([color.x, color.y, color.z])
-        self.__update_colors = True
 
     def _update_lines(self):
         self.__update_lines = False
@@ -206,13 +175,21 @@ class Mesh:
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                                     12, ctypes.c_void_p(0))
-            lines_vec = np.array(self.lines, dtype=np.uint32)
             self.vbo_lines = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_lines)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                        lines_vec.nbytes, lines_vec, GL_STATIC_DRAW)
+                        self.lines.nbytes, self.lines, GL_STATIC_DRAW)
             glBindVertexArray(0)
             self.lines = None
+
+    def update_triangles(self, triangles):
+        self.triangles = np.empty([len(triangles)*3], dtype=np.uint32)
+        for i,t in enumerate(triangles):
+            self.triangles[i*3] = t.id0
+            self.triangles[i*3+1] = t.id1
+            self.triangles[i*3+2] = t.id2
+        self.num_triangles = len(triangles)*3
+        self.__update_triangles = True
 
     def _update_triangles(self):
         self.__update_triangles = False
@@ -234,15 +211,24 @@ class Mesh:
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                                     12, ctypes.c_void_p(0))
-            triangles_vec = np.array(self.triangles, dtype=np.uint32)
             self.vbo_triangles = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_triangles)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                        triangles_vec.nbytes, triangles_vec, GL_STATIC_DRAW)
+                        self.triangles.nbytes, self.triangles, GL_STATIC_DRAW)
             glBindVertexArray(0)
             self.triangles = None
 
-    def _update_quads(self):
+    def update_quads(self, quads):
+        self.quads = np.empty([len(quads)*4], dtype=np.uint32)
+        for i,q in enumerate(quads):
+            self.quads[i*4] = q.id0
+            self.quads[i*4+1] = q.id1
+            self.quads[i*4+2] = q.id2
+            self.quads[i*4+3] = q.id3
+        self.num_quads = len(quads)*4
+        self.__update_quads = True
+
+    def _update_quads(self):   
         self.__update_quads = False
         self.num_quads = len(self.quads)*4
         if self.num_quads > 0:
@@ -263,16 +249,77 @@ class Mesh:
                 glEnableVertexAttribArray(2)
                 glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
                                     12, ctypes.c_void_p(0))
-            quads_vec = np.array(self.quads, dtype=np.uint32)
             self.vbo_quads = glGenBuffers(1)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.vbo_quads)
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                        quads_vec.nbytes, quads_vec, GL_STATIC_DRAW)
+                        self.quads.nbytes, self.quads, GL_STATIC_DRAW)
             glBindVertexArray(0)
+            self.quads = None
+
+    def update_positions(self, positions, compute_aabb = False):
+        prev = time.time()
+        if compute_aabb:
+            self.aabb = AABoundingBox()
+            for position in positions:
+                self.aabb.add_pos(position)
+
+        self.positions = np.empty([len(positions)*3], dtype=np.float32)
+        for i,position in enumerate(positions):
+            self.positions[i*3] = position.x
+            self.positions[i*3+1] =  position.y
+            self.positions[i*3+2] = position.z
+        self.__update_positions = True
+        # print("\n-Time to update {:.6f}".format(time.time()-prev))
+
+    def _update_positions(self):
+        self.__update_positions = False
+        if len(self.positions) > 0:
+            if self.vbo_position < 0:
+                self.vbo_position = glGenBuffers(1)
+            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
+            glBufferData(GL_ARRAY_BUFFER, self.positions.nbytes,
+                         self.positions, GL_STATIC_DRAW)
+            self.positions = None
+
+    def update_normals(self, normals):
+        self.normals = np.empty([len(normals)*3], dtype=np.float32)
+        for i,normal in enumerate(normals):
+            self.normals[i*3] = normal.x 
+            self.normals[i*3+1] = normal.y
+            self.normals[i*3+2] = normal.z
+        self.__update_normals = True
+    
+    def _update_normals(self):
+        self.__update_normals = False
+        if len(self.normals) > 0:
+            if self.vbo_normal < 0:
+                self.vbo_normal = glGenBuffers(1)
+            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
+            glBufferData(GL_ARRAY_BUFFER, self.normals.nbytes,
+                         self.normals, GL_STATIC_DRAW)
+            self.normals = None
+
+    def update_colors(self, colors):
+        self.colors = np.empty([len(colors)*3], dtype=np.float32)
+        for i, color in enumerate(colors):
+            self.colors[i*3] = color.x
+            self.colors[i*3+1] = color.y
+            self.colors[i*3+2] = color.z
+        self.__update_colors = True
+ 
+    def _update_colors(self):
+        self.__update_colors = False
+        if len(self.colors) > 0:
+            if self.vbo_color < 0:
+                self.vbo_color = glGenBuffers(1)
+            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
+            glBufferData(GL_ARRAY_BUFFER, self.colors.nbytes,
+                         self.colors, GL_STATIC_DRAW)
+            self.colors = None
 
     def __enter__(self) -> Mesh:
         return self
-    
+
     def __exit__(self, *_) -> None:
         if (self.vbo_position >= 0):
             glDeleteBuffers(1, self.vbo_position)
@@ -292,36 +339,6 @@ class Mesh:
             glDeleteVertexArrays(1, self.vao_triangles)
         if (self.vao_quads >= 0):
             glDeleteVertexArrays(1, self.vao_quads)
-
-    def _update_positions(self):
-        self.__update_positions = False
-        if len(self.positions) > 0:
-            if self.vbo_position < 0:
-                self.vbo_position = glGenBuffers(1)
-            positions_vec = np.array(self.positions, dtype=np.float32)
-            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_position)
-            glBufferData(GL_ARRAY_BUFFER, positions_vec.nbytes,
-                         positions_vec, GL_STATIC_DRAW)
-
-    def _update_normals(self):
-        self.__update_normals = False
-        if len(self.normals) > 0:
-            if self.vbo_normal < 0:
-                self.vbo_normal = glGenBuffers(1)
-            normals_vec = np.array(self.normals, dtype=np.float32)
-            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_normal)
-            glBufferData(GL_ARRAY_BUFFER, normals_vec.nbytes,
-                         normals_vec, GL_STATIC_DRAW)
-
-    def _update_colors(self):
-        self.__update_colors = False
-        if len(self.colors) > 0:
-            if self.vbo_color < 0:
-                self.vbo_color = glGenBuffers(1)
-            colors_vec = np.array(self.colors, dtype=np.float32)
-            glBindBuffer(GL_ARRAY_BUFFER, self.vbo_color)
-            glBufferData(GL_ARRAY_BUFFER, colors_vec.nbytes,
-                         colors_vec, GL_STATIC_DRAW)
 
     def render_lines(self):
         self.check_update()
@@ -359,7 +376,6 @@ class TriangleMesh(Mesh):
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 
-
 class QuadMesh(Mesh):
     def __init__(self):
         lines = []
@@ -369,13 +385,12 @@ class QuadMesh(Mesh):
                      Vec3(1, -1, 0), Vec3(1, 1, 0.0)]
         normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
                    Vec3(0, 0, 1), Vec3(0, 0, 1)]
-        colors = [Vec3(0.9, 0.9, 0.9), Vec3(1, 1, 1),
-                  Vec3(1, 1, 1), Vec3(0.9, 0.9, 0.9)]
-        # colors = [Vec3(0.2, 0.2, 0.2), Vec3(0.1, 0.2, 0.2),
-        #           Vec3(0.1, 0.2, 0.2), Vec3(0.2, 0.2, 0.2)]
+        # colors = [Vec3(0.9, 0.9, 0.9), Vec3(1, 1, 1),
+        #           Vec3(1, 1, 1), Vec3(0.9, 0.9, 0.9)]
+        colors = [Vec3(0.2, 0.2, 0.2), Vec3(0.1, 0.2, 0.2),
+                  Vec3(0.1, 0.2, 0.2), Vec3(0.2, 0.2, 0.2)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
-
 
 class SphereMesh(Mesh):
     def __init__(self):
@@ -386,7 +401,6 @@ class SphereMesh(Mesh):
         quads = s.get_quads()
         Mesh.__init__(self, [], triangles, quads,
                       positions, normals, colors)
-
 
 class CapsuleMesh(Mesh):
     def __init__(self, p0: Vec3, r0: float, p1: Vec3, r1: float):
