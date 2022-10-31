@@ -16,14 +16,15 @@ class Overlap(App):
         App.__init__(self)
         self.morphologies = []
         self.spring_sets = []
-        self.ks = 1000.0
-        self.ksc = 100.0
-        self.kd = 10.0
+
+        self.ks = 2000.0
+        self.ksc = 200.0
+        self.kd = 0.0
         self.dt = 0.001
         self.col = -1
         self.colSpring = 0
         self.pause = True
-        self.ksc_factor = 1.01
+        self.ksc_factor = 1.02
 
     def key_callback(self, window, key, scancode, action, mods):
         App.key_callback(self, window, key, scancode, action, mods)
@@ -151,8 +152,6 @@ class Overlap(App):
                 morpho.update_mesh()
             else:
                 morpho.update_lines()
-
-        # print("Previous length ", "{:.2f}".format(self.l))
             
         self.message = "Number of collisions: " + str(len(self.collisions))
         num_lines = 0
@@ -223,7 +222,7 @@ if __name__ == "__main__":
     app.set_background()
     app.ks = 2000.0
     app.ksc = 200.0
-    app.ksc_factor = 1.04
+    app.ksc_factor = 1.02
     app.kd = 0
     app.dt = 0.001
     app.add_models(args.paths, args.lines)

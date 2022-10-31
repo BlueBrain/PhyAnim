@@ -67,17 +67,16 @@ class AABoundingBox:
             child1.divide()
             self.elements = []
             self.update(False)
-            
-
-           
 
     def is_colliding(self, other: 'AABoundingBox'):
-        collide = True
-        if (other.min.x > self.max.x or other.max.x < self.min.x or
+        return not (other.min.x > self.max.x or other.max.x < self.min.x or
                 other.min.y > self.max.y or other.max.y < self.min.y or
-                other.min.z > self.max.z or other.max.z < self.min.z):
-            collide = False
-        return collide
+                other.min.z > self.max.z or other.max.z < self.min.z)
+
+    def is_inside(self, vec:Vec3):
+        return  not (vec.x < self.min.x or vec.x > self.max.x or
+            vec.y < self.min.y or vec.y > self.max.y or 
+            vec.z < self.min.z or vec.z > self.max.z)
 
     def colliding_pairs(self, other: 'AABoundingBox'):
         pairs = []
@@ -93,6 +92,18 @@ class AABoundingBox:
                 for child in self.childs:
                     pairs += other.colliding_pairs(child)
         return pairs
+    
+    def colliding_elements(self, other: 'AABoundingBox'):
+        elements = []
+        if self.is_colliding(other):
+            if not self.childs:
+                for element in self.elements:
+                    if other.is_colliding(element.aabb()):
+                        elements.append(element)
+            else:
+                for child in self.childs:
+                    elements += self.colliding_elements(other)
+        return elements
 
 class Mesh:
 
