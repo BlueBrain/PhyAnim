@@ -5,7 +5,7 @@ from anim.geometry import *
 def anim(nodes, springs, dt: float, gravity: bool = True, dynamic: bool = True):
     if (gravity):
         for node in nodes:
-            node.force += Vec3(0, -9.8, 0)*node.mass
+            node.force += vec3(0, -9.8, 0) * node.mass
     for spring in springs:
         spring.add_forces()
     for node in nodes:
@@ -19,9 +19,9 @@ def collide_spring(spring0, spring1, ksc):
     r0 = min(spring0._node0.radius, spring0._node1.radius)
     r1 = min(spring1._node0.radius, spring1._node1.radius)
     dir = p1 - p0
-    x = dir.norm() - (r0 + r1)
+    x = length(dir) - (r0 + r1)
     if x < 0.0:
-        dir.normalized()
+        dir = normalize(dir)
         f = dir*ksc*x
         spring0._node0.force += f * (1-a0)
         spring0._node1.force += f * a0

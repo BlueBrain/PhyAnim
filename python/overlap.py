@@ -53,8 +53,6 @@ class Overlap(App):
         self.col = -1
         self.ksc_factor = 1.02
 
-        self.mat_i = Mat4()
-        self.mat_i.identity()
         self.pause = True
         self.stop_on_solve = True
         self.solved = False
@@ -156,7 +154,7 @@ class Overlap(App):
             self.morpho_meshes.append(mesh)
 
         for mesh in self.morpho_meshes:
-            self.scene.add_model((mesh, self.program, self.mat_i))
+            self.scene.add_model((mesh, self.program, mat4()))
 
         self.message = "Number of collisions: " + str(len(self.collisions))
         self.total_start_time = time.time()
@@ -166,9 +164,6 @@ class Overlap(App):
             num_lines += model[0].num_lines/2
             num_triangles += model[0].num_triangles/3
             num_triangles += model[0].num_quads/2
-        if not self.verbose:
-            print(end=LINE_CLEAR)
-            print("\r", end="")
         print("Loaded " + str(self.loaded_models) + "/" + str(len(paths)) +
               " meshes with " + str(num_lines/1000.0) + "K lines and " +
               str(num_triangles/1000.0) + "K triangles in " +
@@ -196,7 +191,7 @@ class Overlap(App):
                             for spring in set.springs:
                                 l += spring.length()
                         
-                        if not self.verbose:
+                        if self.verbose:
                             print(end=LINE_CLEAR)
                             print("\r", end="")
                         print("- Collisions {:d}/{:d} solved in {:.04f} sc. Length {:.2f}/{:.2f} - diff: {:.2f}%".format(
@@ -236,15 +231,14 @@ class Overlap(App):
                                 morpho.update_lines(self.morpho_meshes[i])
                         self.scene.aabb = AABoundingBox()
                         for mesh in self.morpho_meshes:
-                            self.scene.add_model((mesh, self.program,
-                                                  self.mat_i))
+                            self.scene.add_model((mesh, self.program,mat4()))
 
                         self.message = ""
 
-                        if not self.verbose:
+                        if self.verbose:
                             print(end=LINE_CLEAR)
-                            print("\r",end="")
-                        print( "-- {:d} collisions solved in {:.04f} sc. Length {:.2f}/{:.2f} - diff: {:.6f}%".format(
+                            print("\r")
+                        print("-- {:d} collisions solved in {:.04f} sc. Length {:.2f}/{:.2f} - diff: {:.6f}%".format(
                             len(self.collisions),
                              time.time() - self.total_start_time, 
                              total_length, self.total_lenght, 
@@ -254,11 +248,13 @@ class Overlap(App):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lines', action='store_true',
+    parser.add_argument('-lines', action='store_true',
                         help="generate morphology meshes as lines")
     parser.add_argument(
-        '--cont', action='store_true',
+        '-cont', action='store_true',
         help="solve collisions in a continuous mode")
+    parser.add_argument(
+        '-nfps', action='store_true', help="deactivate fps show")
 
     parser.add_argument('paths', metavar='path', nargs='+',
                         help='path to neuron moprholgy file')
@@ -266,13 +262,13 @@ if __name__ == "__main__":
 
 
     app = Overlap()
-    app.verbose = False
+    app.verbose = not args.nfps
     app.set_background()
     app.ks = 2000.0
-    app.ksc = 200.0
-    app.ksc_factor = 1.02
+    app.ksc = 10.0
+    app.ksc_factor = 1.01
     app.kd = 0
-    app.dt = 0.001
+    app.dt = 0.0001
 
 
     app.stop_on_solve = not args.cont

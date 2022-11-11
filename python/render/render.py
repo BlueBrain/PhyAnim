@@ -67,9 +67,9 @@ class ShaderProgram:
 
 class Camera:
 
-    def __init__(self, target: Vec3 = Vec3(0),
-                 rotation: Mat3 = Mat3([1, 0, 0, 0, 1, 0, 0, 0, 1]),
-                 radius: float = 1.0,  up: Vec3 = Vec3(0, 1, 0), near: float = 0.01,
+    def __init__(self, target: vec3 = vec3(0),
+                 rotation: quat = quat(),
+                 radius: float = 1.0,  up: vec3 = vec3(0, 1, 0), near: float = 0.01,
                  far: float = 10000.0, fov: float = 90.0, ratio: float = 1.0):
         self._target = target
         self._rotation = rotation
@@ -77,41 +77,24 @@ class Camera:
         self._up = up
         self._near = near
         self._far = far
-        self._fov = fov * math.pi / 360.0
+        self._fov = radians(fov)
         self._ratio = ratio
         self.__build_view()
         self.__build_proj()
 
     def __build_view(self):
-        dir = Vec3(0, 0, 1)
-        r = self._rotation
-        r_t = r.transpose()
-        dir = r_t * dir
-        pos = r * (self._target + dir * self._radius)
-        self.view = Mat4([r.data[0][0], r.data[0][1],
-                          r.data[0][2], -pos.x,
-                          r.data[1][0], r.data[1][1],
-                          r.data[1][2], -pos.y,
-                          r.data[2][0], r.data[2][1],
-                          r.data[2][2], -pos.z,
-                          0, 0, 0, 1])
+        pos = vec3(0, 0, 1) * self._rotation * self._radius + self.target
+        self.view = lookAt(pos, self.target, vec3(0,1,0))
 
     def __build_proj(self):
-        nf = 1.0 / (self._near - self._far)
-        f = 1.0 / math.tan(self._fov)
-        data = [f / self.ratio, 0.0, 0.0, 0.0,
-                0.0, f, 0.0, 0.0,
-                0.0, 0.0, (self._far + self._near) * nf,  2.0 *
-                self._far * self._near * nf,
-                0.0, 0.0, -1.0, 0.0]
-        self.proj = Mat4(data)
+        self.proj = perspective(self._fov, self._ratio, self._near, self._far)
 
     @property
     def target(self):
         return self._target
 
     @target.setter
-    def target(self, target: Vec3):
+    def target(self, target: vec3):
         self._target = target
         self.__build_view()
 
@@ -120,7 +103,7 @@ class Camera:
         return self._rotation
 
     @rotation.setter
-    def rotation(self, value: Mat3):
+    def rotation(self, value: quat):
         self._rotation = value
         self.__build_view()
 
@@ -143,17 +126,17 @@ class Camera:
         self.__build_proj()
 
 
-Model = (Mesh, ShaderProgram, Mat4)
+Model = (Mesh, ShaderProgram, mat4)
 
 
 class Scene:
     def __init__(self):
         self.programs = []
         self.camera = Camera()
-        self.background_color = Vec3(0.2)
+        self.background_color = vec3(0.2)
         glClearColor(self.background_color.x,
                      self.background_color.y, self.background_color.z, 1.0)
-        self.color = Vec3(0.2, 0.8, 1.0)
+        self.color = vec3(0.2, 0.8, 1.0)
         self._level = 1
         self._distance = 1
         self.models = []
@@ -183,13 +166,14 @@ class Scene:
                     program.use()
                     uniform = program.uniforms.get("color")
                     if not uniform is None:
-                        glUniform3fv(uniform, 1, self.color.data)
+                        glUniform3fv(uniform, 1, value_ptr(self.color))
                     uniform = program.uniforms.get("view")
                     if not uniform is None:
-                        glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+                        glUniformMatrix4fv(uniform, 1, 0, value_ptr(self.camera.view))
                     uniform = program.uniforms.get("proj")
                     if not uniform is None:
-                        glUniformMatrix4fv(uniform, 1, 1, self.camera.proj.data)
+                        glUniformMatrix4fv(
+                            uniform, 1, 0, value_ptr(self.camera.proj))
                     uniform = program.uniforms.get("maxLevel")
                     if not uniform is None:
                         glUniform1f(uniform, self._level)
@@ -204,9 +188,8 @@ class Scene:
     def add_model(self, model: Model):
         self.models.append(model)
         self._update_models = True
-        translation = Vec3(model[2].data[0, 3],
-                           model[2].data[1, 3], model[2].data[2, 3])
-        
+        m = model[2]
+        translation = vec3(m[3])
         self.aabb.add_aabb(model[0].aabb, translation)
 
     def render(self):
@@ -221,7 +204,7 @@ class Scene:
             uniform = program.uniforms.get("model")
             if not uniform is None:
                 glDepthMask(GL_TRUE)
-                glUniformMatrix4fv(uniform, 1, 1, mat.data)
+                glUniformMatrix4fv(uniform, 1, 0, value_ptr(mat))
             else:
                 glDepthMask(GL_FALSE)
             if (program.primitives == GL_LINES):
@@ -244,26 +227,26 @@ class Scene:
         return self.camera.target
 
     @target.setter
-    def target(self, target: Vec3):
+    def target(self, target: vec3):
         self.camera.target = target
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
-                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+                glUniformMatrix4fv(uniform, 1, 0, value_ptr(self.camera.view))
 
     @property
     def rotation(self):
         return self.camera.rotation
 
     @rotation.setter
-    def rotation(self, rotation: Mat3):
+    def rotation(self, rotation: mat3):
         self.camera.rotation = rotation
         for program in self.programs:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
-                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+                glUniformMatrix4fv(uniform, 1, 0, value_ptr(self.camera.view))
 
     @property
     def radius(self):
@@ -276,7 +259,7 @@ class Scene:
             program.use()
             uniform = program.uniforms.get("view")
             if not uniform is None:
-                glUniformMatrix4fv(uniform, 1, 1, self.camera.view.data)
+                glUniformMatrix4fv(uniform, 1, 0, value_ptr(self.camera.view))
     
     @property
     def ratio(self):
@@ -289,7 +272,7 @@ class Scene:
             program.use()
             uniform = program.uniforms.get("proj")
             if not uniform is None:
-                glUniformMatrix4fv(uniform, 1, 1, self.camera.proj.data)
+                glUniformMatrix4fv(uniform, 1, 0, value_ptr(self.camera.proj))
     
     @property
     def level(self):

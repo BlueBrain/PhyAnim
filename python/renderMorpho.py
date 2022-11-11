@@ -16,8 +16,7 @@ def generate_model(program, path, color):
         elif program.primitives == GL_PATCHES:
             mesh = morpho.generate_mesh()
         if mesh:
-            mat_i = Mat4()
-            mat_i.identity()
+            mat_i = mat4()
             return (mesh, program, mat_i)
         return None
     except morphio._morphio.UnknownFileType:
@@ -49,6 +48,8 @@ class MorphoRender(App):
                         generate_model, args=(program, path, self.get_color(i)), callback=self.add_model)
             pool.close()
             pool.join()
+        # for i,path in enumerate(paths):
+        #     self.add_model(generate_model(program, path, self.get_color(i)))
         self.message = ""
         
         num_lines = 0
@@ -71,9 +72,10 @@ if __name__ == "__main__":
     args = parser.parse_args()    
     
     app = MorphoRender()
-    # app.set_background()
+    app.set_background()
     p = threading.Thread(target=app.add_models, args=(args.paths,args.lines))
     p.start()
+    # app.add_models(args.paths, args.lines)
     app.scene.level = 5
     app.scene.distance = 500
     app.run()

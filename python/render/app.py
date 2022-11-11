@@ -19,8 +19,7 @@ class App():
 
         self.__init_callbacks()
         self.scene = Scene()
-        self.iMat = Mat4()
-        self.iMat.identity()
+        self.iMat = mat4()
         self.message = ""
         self.scene.distance = 50.0
         self.scene.level = 60
@@ -67,15 +66,15 @@ class App():
     def key_callback(self, window, key, scancode, action, mods):
         if action == glfw.PRESS or action == glfw.REPEAT:
             r = self.scene.radius * 0.05
-            rot = self.scene.rotation.transpose()
+            rot = inverse(self.scene.rotation)
             if key == glfw.KEY_D:
-                self.scene.target += rot*Vec3(r, 0, 0)
+                self.scene.target += rot*vec3(r, 0, 0)
             elif key == glfw.KEY_A:
-                self.scene.target += rot*Vec3(-r, 0, 0)
+                self.scene.target += rot*vec3(-r, 0, 0)
             elif key == glfw.KEY_W:
-                self.scene.target += rot*Vec3(0.0, 0, -r)
+                self.scene.target += rot*vec3(0.0, 0, -r)
             elif key == glfw.KEY_S:
-                self.scene.target += rot*Vec3(0.0, 0, r)
+                self.scene.target += rot*vec3(0.0, 0, r)
             elif key == glfw.KEY_M:
                 self.scene.render_mode()
             elif key == glfw.KEY_LEFT_SHIFT:
@@ -121,11 +120,12 @@ class App():
         y_diff = y - self.y
         if self.translate:
             r = self.scene.radius * 0.005
-            rot = self.scene.rotation.transpose()
-            self.scene.target += rot * Vec3(-r*x_diff, r*y_diff, 0)
+            rot = self.scene.rotation
+            self.scene.target += vec3(-r*x_diff, r*y_diff, 0) * rot
         elif self.rotate:
-            rot = rotation_from_yaw_pitch(x_diff*0.01, y_diff*0.01)
-            self.scene.rotation = rot * self.scene.rotation
+            v = normalize(vec3(x_diff*0.01, -y_diff*0.01, 1))
+            rot = quatLookAtLH(v, vec3(0,1,0))
+            self.scene.rotation *= rot
 
         self.x = x
         self.y = y
@@ -138,7 +138,7 @@ class App():
 
     def get_color(self, i):
         c = self.palette[i % len(self.palette)]
-        return Vec3(c[0], c[1], c[2])
+        return vec3(c[0], c[1], c[2])
 
     def set_background(self):
         program = ShaderProgram(
@@ -179,27 +179,27 @@ class App():
         fps = 0
         prev_time = time.time()
 
-        try:
+        # try:
 
             # p = threading.Thread(target=self.update_run)
             # p.start()
 
-            while not glfw.window_should_close(self.window):
-                self.update()
-                self.render()
-                fps += 1
-                current_time = time.time()
-                step = current_time - prev_time
-                if step > 1.0:
-                    prev_time = current_time
-                    if self.verbose:
-                        print(end=LINE_CLEAR)
-                        print("\rFPS: " + str(int(fps / step)) + "  lod: " +
-                          str(self.scene.level) + "  distance: " +
-                          str(self.scene.distance) + "  " + self.message, end='')
-                    fps = 0
-                glfw.poll_events()
-        except Exception as e:
-            print(e)
+        while not glfw.window_should_close(self.window):
+            self.update()
+            self.render()
+            fps += 1
+            current_time = time.time()
+            step = current_time - prev_time
+            if step > 1.0:
+                prev_time = current_time
+                if self.verbose:
+                    print(end=LINE_CLEAR)
+                    print("\rFPS: " + str(int(fps / step)) + "  lod: " +
+                        str(self.scene.level) + "  distance: " +
+                        str(self.scene.distance) + "  " + self.message, end='')
+                fps = 0
+            glfw.poll_events()
+    # except Exception as e:
+    #         print(e)
         glfw.terminate()
         print()

@@ -12,5 +12,7 @@ void main()
 
     float diff = clamp(dot(L, teNormal), 0, 1);
 
-    oColor = vec4(teColor*(diff*0.8+0.2), 1.0);
+    vec3 c = teColor;
+
+    oColor = vec4(c*(diff*0.8+0.2), 1.0);
 }

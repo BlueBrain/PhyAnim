@@ -68,20 +68,19 @@ class Quad:
 
 
 class Sphere:
-    def __init__(self, position: Vec3, radius: float):
+    def __init__(self, position: vec3, radius: float):
         self.position = position
         self.radius = radius
 
-    def get_geometry(self, color: Vec3):
-        axis_x = Vec3(1, 0, 0) * self.radius
-        axis_y = Vec3(0, 1, 0) * self.radius
-        axis_z = Vec3(0, 0, 1) * self.radius
+    def get_geometry(self, color: vec3):
+        axis_x = vec3(self.radius, 0, 0)
+        axis_y = vec3(0, self.radius, 0)
+        axis_z = vec3(0, 0, self.radius)
 
-        positions = [axis_x + self.position, axis_x * (-1) + self.position,
-                     axis_y + self.position, axis_y * (-1) + self.position,
-                     axis_z + self.position, axis_z * (-1) + self.position]
-        normals = [axis_x, axis_x * (-1), axis_y,
-                   axis_y * (-1), axis_z, axis_z * (-1)]
+        positions = [self.position + axis_x, self.position - axis_x,
+                     self.position + axis_y, self.position - axis_y,
+                     self.position + axis_z, self.position - axis_z]
+        normals = [axis_x, -axis_x, axis_y, -axis_y, axis_z, -axis_z]
         colors = [color, color, color, color, color, color]
         return (positions, normals, colors)
 
@@ -101,20 +100,20 @@ class Sphere:
 
 
 class Capsule:
-    def __init__(self, p0: Vec3, r0: float, p1: Vec3, r1: float):
+    def __init__(self, p0: vec3, r0: float, p1: vec3, r1: float):
         self.p0 = p0
         self.r0 = r0
         self.p1 = p1
         self.r1 = r1
 
-    def get_geometry(self, color: Vec3):
+    def get_geometry(self, color: vec3):
         axis_x = (self.p1 - self.p0).normalized()
         if axis_x.norm() == 0:
-            axis_x = Vec3(1, 0, 0)
+            axis_x = vec3(1, 0, 0)
         if axis_x.y == 1.0 or axis_x.y == -1.0:
-            axis_y = Vec3(-1, 0, 0)
+            axis_y = vec3(-1, 0, 0)
         else:
-            axis_y = Vec3(0, 1, 0)
+            axis_y = vec3(0, 1, 0)
         axis_z = (axis_x.cross(axis_y)).normalized()
         axis_y = (axis_z.cross(axis_x)).normalized()
 

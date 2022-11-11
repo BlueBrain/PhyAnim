@@ -32,11 +32,12 @@ def unique_neurons(matches):
     rx = matches['orientation_x']
     ry = matches['orientation_y']
     rz = matches['orientation_z']
+    rw = matches['orientation_w']
     gids_map = {}
     for i, gid in enumerate(gids):
         if gid not in gids_map:
-            gids_map[gid] = (gid, morphologies[i], Vec3(
-                x[i], y[i], z[i]), Vec3(rx[i], ry[i], rz[i]))
+            gids_map[gid] = (gid, morphologies[i], vec3(
+                x[i], y[i], z[i]), normalize(quat(rw[i],rx[i], ry[i], rz[i])))
     return gids_map.values()
 
 def load_neuron(program, neuron, morphology_dir, color):
@@ -57,8 +58,8 @@ def load_neuron(program, neuron, morphology_dir, color):
             if mesh:
                 p = neuron[2]
                 r = neuron[3]
-                modelMat = mat4_from_rotation(r)
-                modelMat.translate(p)
+                modelMat = mat4(r)
+                modelMat = translate(modelMat,p)
                 return (mesh, program, modelMat)
         return None
     except morphio._morphio.UnknownFileType:
@@ -90,7 +91,7 @@ class MorphoRenderIndex(App):
             index.box_query(
                 [self.min, self.min, self.min], [self.max, self.max, self.max],
                 fields=['gid', 'morphology', 'x', 'y', 'z', 'orientation_x',
-                        'orientation_y', 'orientation_z']))
+                        'orientation_y', 'orientation_z', 'orientation_w']))
         print("\rNumber of neurons: " + str(len(neurons)) + " loaded from index in " + 
             "{:.2f}".format(time.time() - prev_time) + " seconds.")
 

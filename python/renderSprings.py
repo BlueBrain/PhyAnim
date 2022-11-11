@@ -3,10 +3,10 @@ from render.app import *
 from anim.massSpring import *
 
 
-def line(pos: Vec3, dir: Vec3, length: float, radius: float, num: int,
+def line(pos: vec3, dir: vec3, length: float, radius: float, num: int,
          ks: float, kd: float):
     id = 0
-    dir.normalized()
+    dir = normalize(dir)
     dir *= length / (num-1)
     nodes = []
     springs = []
@@ -69,16 +69,16 @@ class RenderSprings(App):
                     self.pause = False
 
     def add_models(self):
-        self.sets.append(line(Vec3(-1, 0, 0),
-                              Vec3(1, 0, 0),
+        self.sets.append(line(vec3(-1, 0, 0),
+                              vec3(1, 0, 0),
                               2.0, 0.1, 10, self.ks, self.kd))
-        self.sets.append(line(Vec3(0, -1.0, 0.01),
-                              Vec3(0, 1.0, 0),
+        self.sets.append(line(vec3(0, -1.0, 0.01),
+                              vec3(0, 1.0, 0),
                               2.0, 0.1, 10, self.ks, self.kd))
 
     def generate_meshes(self):
         for set in self.sets:
-            mesh = mesh_springs(set.springs, Vec3(0, 1, 0), Vec3(1, 0, 0))
+            mesh = mesh_springs(set.springs, vec3(0, 1, 0), vec3(1, 0, 0))
             self.meshes.append(mesh)
             self.scene.add_model((mesh, self.program, self.iMat))
 
@@ -99,7 +99,7 @@ class RenderSprings(App):
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
                 update_sets(self.sets, self.meshes,
-                            Vec3(0, 1, 0), Vec3(1, 0, 0))
+                            vec3(0, 1, 0), vec3(1, 0, 0))
                 self.message = " Update: " + "{:.4f}".format(
                     time.time() - prev_total) + " sg"
 
@@ -114,7 +114,7 @@ class RenderSprings(App):
                     if num:
                         self.message = "Number of collision: " + str(num)
                         self.pause = True
-                update_sets(self.sets, self.meshes, Vec3(0, 1, 0))
+                update_sets(self.sets, self.meshes, vec3(0, 1, 0))
 
 
 if __name__ == "__main__":

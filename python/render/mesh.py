@@ -2,6 +2,7 @@ from __future__ import annotations
 import time
 from OpenGL.GL import *
 from geometry.geometry import *
+import numpy as np
 
 def sort_element_x(element):
     return element.center().x
@@ -15,8 +16,8 @@ def sort_element_z(element):
 class AABoundingBox:
 
     def __init__(self):
-        self.min = Vec3(1e24)
-        self.max = Vec3(-1e24)
+        self.min = vec3(1e24)
+        self.max = vec3(-1e24)
         self.childs = []
         self.elements = []
 
@@ -26,26 +27,26 @@ class AABoundingBox:
     def radius(self):
         if self.max.x < -1e23:
             return 1.0
-        return (self.max - self.center()).norm()
+        return length(self.max - self.center())
 
-    def add_pos(self, position: Vec3):
-        self.min = self.min.min(position)
-        self.max = self.max.max(position)
+    def add_pos(self, position: vec3):
+        self.min = min(self.min, position)
+        self.max = max(self.max, position)
 
-    def add_aabb(self, o: 'AABoundingBox', p:Vec3 = Vec3()):
-        self.min = self.min.min(o.min + p)
-        self.max = self.max.max(o.max + p)
+    def add_aabb(self, o: 'AABoundingBox', p: vec3 = vec3()):
+        self.min = min(self.min, o.min + p)
+        self.max = max(self.max, o.max + p)
 
     def update(self):
-        self.min = Vec3(1e24)
-        self.max = Vec3(-1e24)
+        self.min = vec3(1e24)
+        self.max = vec3(-1e24)
 
         for child in self.childs:
             child.update()
             self.add_aabb(child)
         for element in self.elements:
-            self.min = self.min.min(element.min())
-            self.max = self.max.max(element.max())
+            self.min = min(self.min,element.min())
+            self.max = max(self.max,element.max())
 
     def divide(self):
         # self.update()
@@ -74,7 +75,7 @@ class AABoundingBox:
                 other.min.y > self.max.y or other.max.y < self.min.y or
                 other.min.z > self.max.z or other.max.z < self.min.z)
 
-    def is_inside(self, vec:Vec3):
+    def is_inside(self, vec:vec3):
         return  not (vec.x < self.min.x or vec.x > self.max.x or
             vec.y < self.min.y or vec.y > self.max.y or 
             vec.z < self.min.z or vec.z > self.max.z)
@@ -367,12 +368,12 @@ class TriangleMesh(Mesh):
         lines = []
         triangles = [Triangle(0, 1, 2)]
         quads = []
-        positions = [Vec3(-1, 1, 0.0), Vec3(-1, -1, 0.0),
-                     Vec3(1, -1, 0)]
-        normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
-                   Vec3(0, 0, 1)]
-        colors = [Vec3(1, 0, 0), Vec3(0, 1, 0),
-                  Vec3(0, 0, 1)]
+        positions = [vec3(-1, 1, 0.0), vec3(-1, -1, 0.0),
+                     vec3(1, -1, 0)]
+        normals = [vec3(0, 0, 1), vec3(0, 0, 1),
+                   vec3(0, 0, 1)]
+        colors = [vec3(1, 0, 0), vec3(0, 1, 0),
+                  vec3(0, 0, 1)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 
@@ -381,21 +382,21 @@ class QuadMesh(Mesh):
         lines = []
         triangles = [Triangle(0, 1, 2), Triangle(0, 2, 3)]
         quads = [Quad(0, 1, 3, 2)]
-        positions = [Vec3(-1, 1, 0.0), Vec3(-1, -1, 0.0),
-                     Vec3(1, -1, 0), Vec3(1, 1, 0.0)]
-        normals = [Vec3(0, 0, 1), Vec3(0, 0, 1),
-                   Vec3(0, 0, 1), Vec3(0, 0, 1)]
-        # colors = [Vec3(0.9, 0.9, 0.9), Vec3(1, 1, 1),
-        #           Vec3(1, 1, 1), Vec3(0.9, 0.9, 0.9)]
-        colors = [Vec3(0.2, 0.2, 0.2), Vec3(0.1, 0.2, 0.2),
-                  Vec3(0.1, 0.2, 0.2), Vec3(0.2, 0.2, 0.2)]
+        positions = [vec3(-1, 1, 0.0), vec3(-1, -1, 0.0),
+                     vec3(1, -1, 0), vec3(1, 1, 0.0)]
+        normals = [vec3(0, 0, 1), vec3(0, 0, 1),
+                   vec3(0, 0, 1), vec3(0, 0, 1)]
+        # colors = [vec3(0.9, 0.9, 0.9), vec3(1, 1, 1),
+        #           vec3(1, 1, 1), vec3(0.9, 0.9, 0.9)]
+        colors = [vec3(0.2, 0.2, 0.2), vec3(0.1, 0.2, 0.2),
+                  vec3(0.1, 0.2, 0.2), vec3(0.2, 0.2, 0.2)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 
 class SphereMesh(Mesh):
     def __init__(self):
-        color = Vec3(0.8, 0.8, 1)
-        s = Sphere(Vec3(), 1.0)
+        color = vec3(0.8, 0.8, 1)
+        s = Sphere(vec3(), 1.0)
         (positions, normals, colors) = s.get_geometry(color)
         triangles = s.get_triangles()
         quads = s.get_quads()
@@ -403,8 +404,8 @@ class SphereMesh(Mesh):
                       positions, normals, colors)
 
 class CapsuleMesh(Mesh):
-    def __init__(self, p0: Vec3, r0: float, p1: Vec3, r1: float):
-        color = Vec3(0.8, 1, 1)
+    def __init__(self, p0: vec3, r0: float, p1: vec3, r1: float):
+        color = vec3(0.8, 1, 1)
         c = Capsule(p0, r0, p1, r1)
         (positions, normals, colors) = c.get_geometry(color)
         triangles = c.get_triangles()

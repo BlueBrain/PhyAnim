@@ -8,9 +8,9 @@ import morphio.mut
 
 class Node:
 
-    def __init__(self, position: Vec3, radius: float = 1.0, id: int = 0,
-                 fixed: bool = False, mass: float = 1.0, velocity: Vec3 = Vec3(),
-                 force: Vec3 = Vec3()):
+    def __init__(self, position: vec3, radius: float = 1.0, id: int = 0,
+                 fixed: bool = False, mass: float = 1.0, velocity: vec3 = vec3(),
+                 force: vec3 = vec3()):
         self.position = position
         self.radius = radius
         self.id = id
@@ -30,10 +30,10 @@ class Node:
 
     def clear(self):
         self.collide = False
-        self.force = Vec3()
+        self.force = vec3()
 
     def __str__(self):
-        return "nodes.append(Node(Vec3" + str(self.position) + ", " + str(self.radius) + "))"
+        return "nodes.append(Node(vec3" + str(self.position) + ", " + str(self.radius) + "))"
 
 
 class Spring:
@@ -44,7 +44,7 @@ class Spring:
         self._node1 = node1
         self._ks = ks
         self._kd = kd
-        self._lenght = (node1.position - node0.position).norm()
+        self._lenght = length(node1.position - node0.position)
 
     def __str__(self):
         return "\t" + str(self._node0) + " \n\t" + str(self._node1)
@@ -62,12 +62,12 @@ class Spring:
         return self._node1.id
 
     def min(self):
-        return (self._node0.position - Vec3(self._node0.radius)).min(
-            self._node1.position - Vec3(self._node1.radius))
+        return min(self._node0.position - vec3(self._node0.radius),
+            self._node1.position - vec3(self._node1.radius))
 
     def max(self):
-        return (self._node0.position + Vec3(self._node0.radius)).max(
-            self._node1.position + Vec3(self._node1.radius))
+        return max(self._node0.position + vec3(self._node0.radius),
+            self._node1.position + vec3(self._node1.radius))
 
     def aabb(self):
         aabb = AABoundingBox()
@@ -85,12 +85,12 @@ class Spring:
         r = self._lenght
         if r > 0.0:
             pd = self._node1.position - self._node0.position
-            l = pd.norm()
+            l = length(pd)
             vd = self._node1.velocity - self._node0.velocity
-            force = Vec3()
+            force = vec3()
             if l > 0.0:
                 force = pd * (self._ks * (l / r - 1.0) +
-                              self._kd * (vd.dot(pd) / (l * r))) / l
+                              self._kd * (dot(vd,pd) / (l * r))) / l
                 self._node0.force += force
                 self._node1.force -= force
 
@@ -109,13 +109,13 @@ class Section:
         section.add_node(self.nodes[-1])
         return section
 
-    def oriented_axis(self, t: Vec3):
-        if t.norm() == 0:
-            t = Vec3(1, 0, 0)
-        z = t.normalized()
-        y = Vec3(0, 0, 1)
-        x = (y.cross(z)).normalized()
-        y = (z.cross(x)).normalized()
+    def oriented_axis(self, t: vec3):
+        if length(t) == 0:
+            t = vec3(1, 0, 0)
+        z = normalize(t)
+        y = vec3(0, 0, 1)
+        x = normalize(cross(y,z))
+        y = normalize(cross(z,x))
         return (x, y, z)
 
     def geometry(self, color_no_collision, color_collision):
@@ -125,7 +125,7 @@ class Section:
         for i, node in enumerate(self.nodes):
             p = node.position
             r = node.radius
-            t = Vec3(1, 0, 0)
+            t = vec3(1, 0, 0)
             if i == 0:
                 node0 = node
                 node1 = self.nodes[i+1]
@@ -198,8 +198,8 @@ class Section:
         colors = []
         for node in self.nodes:
             positions.append(node.position)
-            normals.append(Vec3(0, 0, 1))
-            colors.append(Vec3(0.4, 0.8, 0.4))
+            normals.append(vec3(0, 0, 1))
+            colors.append(vec3(0.4, 0.8, 0.4))
         return (positions, normals, colors)
 
     def lines(self, id=0):
@@ -211,7 +211,7 @@ class Section:
 
 class Morphology:
 
-    def __init__(self, path, color=Vec3(0, 1, 0), color_collide=Vec3(1, 0, 0)):
+    def __init__(self, path, color=vec3(0, 1, 0), color_collide=vec3(1, 0, 0)):
         morpho = morphio.mut.Morphology(path)
         self._create_hierarchy(morpho)
         self.color_collide = color_collide
@@ -222,7 +222,7 @@ class Morphology:
         for i, point in enumerate(original_sec.points):
             if i or root:
                 radius = original_sec.diameters[i]*0.5
-                node = Node(Vec3(point), radius, 0, False, radius)
+                node = Node(vec3(point), radius, 0, False, radius)
                 section.add_node(node)
         for original_child in original_sec.children:
             section_child = section.new_child()
@@ -233,10 +233,10 @@ class Morphology:
         self.root_sections = []
         self.sections = []
         self.soma_nodes = []
-        self.soma_center = Vec3()
+        self.soma_center = vec3()
         self.soma_radius = 0
         for i, p in enumerate(morpho.soma.points):
-            point = Vec3(p)
+            point = vec3(p)
             node = Node(point, morpho.soma.diameters[i] * 0.5)
             self.soma_nodes.append(node)
             self.soma_center += point
@@ -260,7 +260,7 @@ class Morphology:
 
     def generate_mesh(self):
         prev = time.time()
-        
+
         quads = []
         positions = []
         normals = []
@@ -282,10 +282,10 @@ class Morphology:
 
         mesh = Mesh([], [], quads, positions, normals, colors)
         mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
-        print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
+        # print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
         return mesh
 
     def generate_lines(self):
@@ -307,10 +307,10 @@ class Morphology:
 
         mesh = Mesh(lines, [], [], positions, [], colors)
         mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
         
-        print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
+        # print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
         return mesh
 
     
@@ -336,8 +336,8 @@ class Morphology:
         mesh.update_colors(colors)
 
         mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
     def update_lines(self, mesh):
         positions = []
@@ -353,8 +353,8 @@ class Morphology:
         mesh.update_colors(colors)
 
         mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + Vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - Vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
+        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
     def print_sections(self):
         for sec in self.sections:
@@ -382,12 +382,12 @@ def mesh_springs_geometry(springs, color, color_collision):
         r0 = node0.radius
         p1 = node1.position
         r1 = node1.radius
-        t = (p1-p0).normalized()
-        if t.norm() == 0:
-            t = Vec3(1, 0, 0)
-        axis1 = Vec3(0, 0, 1)
-        axis0 = (axis1.cross(t)).normalized()
-        axis1 = (t.cross(axis0)).normalized()
+        t = normalize(p1-p0)
+        if length(t) == 0:
+            t = vec3(1, 0, 0)
+        axis1 = vec3(0, 0, 1)
+        axis0 = normalize(cross(axis1,t))
+        axis1 = normalize(cross(t,axis0))
         positions += [axis0 * r0 + p0, axis1 * r0 + p0,
                       axis0 * -r0 + p0, axis1 * -r0 + p0, t * -r0 + p0,
                       axis0 * r1 + p1, axis1 * r1 + p1,
