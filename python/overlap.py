@@ -265,10 +265,10 @@ if __name__ == "__main__":
     app.verbose = not args.nfps
     app.set_background()
     app.ks = 2000.0
-    app.ksc = 10.0
-    app.ksc_factor = 1.01
+    app.ksc = 100.0
+    app.ksc_factor = 1.05
     app.kd = 0
-    app.dt = 0.0001
+    app.dt = 0.001
 
 
     app.stop_on_solve = not args.cont

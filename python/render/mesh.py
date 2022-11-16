@@ -49,15 +49,15 @@ class AABoundingBox:
             self.max = max(self.max,element.max())
 
     def divide(self):
-        # self.update()
+        self.update()
         if len(self.elements) > 1:
-            # diff = self.max - self.min
-            # if diff.x > diff.y and diff.x > diff.z:
-            #     self.elements.sort(key=sort_element_x)
-            # elif diff.y > diff.z:
-            #     self.elements.sort(key=sort_element_y)
-            # else:
-            #     self.elements.sort(key=sort_element_z)
+            diff = abs(self.max - self.min)
+            if diff.x > diff.y and diff.x > diff.z:
+                self.elements.sort(key=sort_element_x)
+            elif diff.y > diff.z:
+                self.elements.sort(key=sort_element_y)
+            else:
+                self.elements.sort(key=sort_element_z)
 
             # self.elements.sort(key=sort_element_x)
             child0 = AABoundingBox()
