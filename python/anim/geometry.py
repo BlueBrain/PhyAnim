@@ -211,18 +211,20 @@ class Section:
 
 class Morphology:
 
-    def __init__(self, path, color=vec3(0, 1, 0), color_collide=vec3(1, 0, 0)):
+    def __init__(self, path, model, color=vec3(0, 1, 0), color_collide=vec3(1, 0, 0)):
         morpho = morphio.mut.Morphology(path)
+        self.model = model
         self._create_hierarchy(morpho)
         self.color_collide = color_collide
         self.color = color
+        
 
     def _add_recursive_section(self, section: Section,
                                original_sec: morphio.mut.Section, root=False):
         for i, point in enumerate(original_sec.points):
             if i or root:
                 radius = original_sec.diameters[i]*0.5
-                node = Node(vec3(point), radius, 0, False, radius)
+                node = Node(self.model*vec3(point), radius, 0, False, radius)
                 section.add_node(node)
         for original_child in original_sec.children:
             section_child = section.new_child()
@@ -236,7 +238,7 @@ class Morphology:
         self.soma_center = vec3()
         self.soma_radius = 0
         for i, p in enumerate(morpho.soma.points):
-            point = vec3(p)
+            point = self.model*vec3(p)
             node = Node(point, morpho.soma.diameters[i] * 0.5)
             self.soma_nodes.append(node)
             self.soma_center += point

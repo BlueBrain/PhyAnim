@@ -412,3 +412,20 @@ class CapsuleMesh(Mesh):
         quads = c.get_quads()
         Mesh.__init__(self, [], triangles, quads,
                       positions, normals, colors)
+
+class CubeMesh(Mesh):
+    def __init__(self, min:vec3, max:vec3):
+        lines = [Line(0, 1), Line(0, 2), Line(1, 3), Line(2, 3),
+                 Line(4, 5), Line(4, 6), Line(5, 7), Line(6, 7),
+                 Line(0, 4), Line(1, 5), Line(2, 6), Line(3, 7)]
+        triangles = []
+        quads = []
+        positions = [vec3(min.x, min.y, min.z), vec3(max.x, min.y, min.z),
+                     vec3(min.x, max.y, min.z), vec3(max.x, max.y, min.z),
+                     vec3(min.x, min.y, max.z), vec3(max.x, min.y, max.z),
+                     vec3(min.x, max.y, max.z), vec3(max.x, max.y, max.z)]
+        normals = []
+        colors = [vec3(1, 0, 0), vec3(1, 0, 0), vec3(1, 0, 0), vec3(1, 0, 0),
+                  vec3(0,1,0), vec3(0,1,0), vec3(0,1,0), vec3(0,1,0)]
+        Mesh.__init__(self, lines, triangles, quads,
+                      positions, normals, colors)

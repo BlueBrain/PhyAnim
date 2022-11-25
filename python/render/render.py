@@ -70,7 +70,7 @@ class Camera:
     def __init__(self, target: vec3 = vec3(0),
                  rotation: quat = quat(),
                  radius: float = 1.0,  up: vec3 = vec3(0, 1, 0), near: float = 0.01,
-                 far: float = 10000.0, fov: float = 90.0, ratio: float = 1.0):
+                 far: float = 100000.0, fov: float = 90.0, ratio: float = 1.0):
         self._target = target
         self._rotation = rotation
         self._radius = radius
