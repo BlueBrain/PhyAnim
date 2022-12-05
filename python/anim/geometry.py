@@ -1,3 +1,4 @@
+from __future__ import annotations
 from calendar import c
 from mailbox import NoSuchMailboxError
 from platform import node
@@ -260,6 +261,8 @@ class Morphology:
         for i, node in enumerate(self.nodes):
             node.id = i
 
+    
+
     def generate_mesh(self):
         prev = time.time()
 
@@ -315,7 +318,6 @@ class Morphology:
         # print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
         return mesh
 
-    
 
     def update_mesh(self, mesh):
         positions = []
@@ -372,6 +374,13 @@ class Morphology:
                     Spring(section.nodes[i], section.nodes[i+1], ks, kd))
         return springs
 
+
+def collide(morpho: Morphology, aabb: AABoundingBox):
+    for section in morpho.sections:
+        for node in section.nodes:
+            if aabb.is_inside(node.position):
+                return True
+    return False
 
 def mesh_springs_geometry(springs, color, color_collision):
     positions = []

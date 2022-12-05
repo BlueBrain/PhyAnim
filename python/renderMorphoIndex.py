@@ -6,7 +6,7 @@ import multiprocessing
 from random import randint, random
 import threading
 from time import sleep
-import spatial_index
+# import spatial_index
 from data.data import *
 from render.app import *
 import sys
@@ -47,6 +47,7 @@ def get_neurons(sonata_file: str, population_name=None, ids=None):
             print("All",len(ids))
             selection = libsonata.Selection(ids[-11:-1])
 
+        print(selection)
 
         morpho_names = population.get_attribute("morphology", selection)
         xs = population.get_attribute("x", selection)
@@ -80,11 +81,11 @@ def load_neuron(program, neuron, color):
     except morphio._morphio.UnknownFileType:
         return None
 
-def get_spatial_indices(index_path, min, max):
-    index = spatial_index.open_index(index_path, max_cache_size_mb=1000)
-    prev_time = time.time()
-    matches = index.box_query(min, max, fields=['gid'])
-    return np.unique(matches['gid'])
+# def get_spatial_indices(index_path, min, max):
+#     index = spatial_index.open_index(index_path, max_cache_size_mb=1000)
+#     prev_time = time.time()
+#     matches = index.box_query(min, max, fields=['gid'])
+#     return np.unique(matches['gid'])
     
 class MorphoRenderIndex(App):
 
@@ -93,7 +94,7 @@ class MorphoRenderIndex(App):
         self.min = vec3()
         self.max = vec3(30)
 
-    def add_models(self, index_file, sonata_file, population_name, lines = False):
+    def add_models(self, sonata_file, population_name, ids, lines = False):
         program = ShaderProgram(
             [("shaders/lines.vert", ShaderType.VERTEX),
              ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
@@ -106,10 +107,10 @@ class MorphoRenderIndex(App):
                 ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
                 ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
 
-        gids = []
-        prev = time.time()
-        gids = get_spatial_indices(index_file, self.min, self.max)
-        print("{:d} neurons loaded in {:0.2f} s".format(len(gids), time.time()-prev))
+        gids = ids
+        # prev = time.time()
+        # gids = get_spatial_indices(index_file, self.min, self.max)
+        # print("{:d} neurons loaded in {:0.2f} s".format(len(gids), time.time()-prev))
 
         neurons = []
         neurons = get_neurons(sonata_file, population_name, gids)
@@ -139,9 +140,11 @@ class MorphoRenderIndex(App):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("index_file", help="Directory containing the index")
+    # parser.add_argument("index_file", help="Directory containing the index")
     parser.add_argument("sonata_file", help="Sonata file")
     parser.add_argument("population_name", help="Population name")
+    parser.add_argument('ids', metavar='id', nargs='+', type=int,
+                        help='id')
     parser.add_argument('--lines', action='store_true', help="generate morphology meshes as lines")
     parser.add_argument('-min', type=int, default=0)
     parser.add_argument('-max', type=int, default=30)
@@ -153,7 +156,7 @@ if __name__ == "__main__":
     app.set_background()
     app.scene.aabb = AABoundingBox()
     p = threading.Thread(target=app.add_models, 
-        args=(args.index_file, args.sonata_file, args.population_name, args.lines,))
+        args=(args.sonata_file, args.population_name, args.ids, args.lines,))
     p.start()
     app.scene.distance = 500.0
     app.scene.level = 5

@@ -25,16 +25,16 @@ class RenderSphere(App):
 
         t = abs(sin(self.t))
 
-        match int(self.t / pi()) % 3:
-            case 0:
-                pos = vec3(10*t, 0, 0)
-                color = vec3(t*0.5+0.5, 0, 0)
-            case 1:
-                pos = vec3(0, 10*t, 0)
-                color = vec3(0, t*0.5+0.5, 0)
-            case 2:
-                pos = vec3(0, 0, 10*t)
-                color = vec3(0, 0, t*0.5+0.5)
+        axis = int(self.t / pi()) % 3
+        if axis == 0:
+            pos = vec3(10*t, 0, 0)
+            color = vec3(t*0.5+0.5, 0, 0)
+        elif axis == 1:
+            pos = vec3(0, 10*t, 0)
+            color = vec3(0, t*0.5+0.5, 0)
+        elif axis == 2:
+            pos = vec3(0, 0, 10*t)
+            color = vec3(0, 0, t*0.5+0.5)
 
         m = translate(mat4(), pos)
         model = self.scene.models[0]
