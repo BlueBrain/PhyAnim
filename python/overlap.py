@@ -107,7 +107,7 @@ class Overlap(App):
     def add_morphology(self, path):
         try:
             color = self.get_color(self.loaded_models)
-            morpho = Morphology(path, color*0.5, color)
+            morpho = Morphology(path, mat4(), color*0.5, color)
 
             if morpho:
                 self.morphologies.append(morpho)

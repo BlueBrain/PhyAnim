@@ -9,84 +9,24 @@ from time import sleep
 # import spatial_index
 from data.data import *
 from render.app import *
-import sys
 from anim.geometry import *
-import libsonata
-
-
 from multiprocessing import Pool, Process
 
+def load_neuron(neuron_info):
+      morpho = get_morpho(neuron_info[0])
+      model = neuron_info[1]
+      color = neuron_info[2]
+      program = neuron_info[3]
+      aabb = neuron_info[4]
+      morpho = Morphology(morpho, model, color*0.7)
+      morpho.cut(aabb)
+      mesh = None
+      if program.primitives == GL_LINES:
+          mesh = morpho.generate_lines()
+      elif program.primitives == GL_PATCHES:
+          mesh = morpho.generate_mesh()
+      return mesh
 
-def get_neurons(sonata_file: str, population_name=None, ids=None):
-    try:
-        folder = os.path.dirname(os.path.abspath(sonata_file)) + "/"
-        config = libsonata.CircuitConfig.from_file(sonata_file)
-        populations = list(config.node_populations)
-        if population_name not in populations:
-            population_name = populations[0]
-        print("Loading population", population_name)
-        population = config.node_population(population_name)
-
-        properties = config.node_population_properties(population_name)
-        morpho_dir = properties.morphologies_dir
-        morpho_ext = ".swc"
-
-        if folder == morpho_dir:
-            alternate_dir = properties.alternate_morphology_formats
-            if 'h5v1' in alternate_dir:
-                morpho_dir = alternate_dir['h5v1'] + "/"
-                morpho_ext = ".h5"
-            elif 'neurolucida-asc' in alternate_dir:
-                morpho_dir = alternate_dir['neurolucida-asc'] + "/"
-                morpho_ext = ".asc"
-
-        if len(ids) > 0:
-            selection = libsonata.Selection(ids)
-        else:
-            ids = population.select_all().flatten()
-            print("All",len(ids))
-            selection = libsonata.Selection(ids[-11:-1])
-
-        print(selection)
-
-        morpho_names = population.get_attribute("morphology", selection)
-        xs = population.get_attribute("x", selection)
-        ys = population.get_attribute("y", selection)
-        zs = population.get_attribute("z", selection)
-        rot_xs = population.get_attribute("orientation_x", selection)
-        rot_ys = population.get_attribute("orientation_y", selection)
-        rot_zs = population.get_attribute("orientation_z", selection)
-        rot_ws = population.get_attribute("orientation_w", selection)
-
-        morphos = []
-        for i, morpho_name in enumerate(morpho_names):
-            
-            morpho_path = morpho_dir + morpho_name + morpho_ext
-            model = mat4(normalize(quat(rot_ws[i],rot_xs[i],rot_ys[i],rot_zs[i])))
-            model = translate(model, vec3(xs[i], ys[i], zs[i]))
-            morphos.append((morpho_path, model))
-        return morphos
-    except:
-        return None
-
-def load_neuron(program, neuron, color):
-    try:
-        morpho = Morphology(neuron[0], neuron[1], color)
-        if program.primitives == GL_LINES:
-            mesh = morpho.generate_lines()
-        elif program.primitives == GL_PATCHES:
-            mesh = morpho.generate_mesh()
-        if mesh:
-            return (mesh, program, mat4())
-    except morphio._morphio.UnknownFileType:
-        return None
-
-# def get_spatial_indices(index_path, min, max):
-#     index = spatial_index.open_index(index_path, max_cache_size_mb=1000)
-#     prev_time = time.time()
-#     matches = index.box_query(min, max, fields=['gid'])
-#     return np.unique(matches['gid'])
-    
 class MorphoRenderIndex(App):
 
     def __init__(self):
@@ -94,7 +34,9 @@ class MorphoRenderIndex(App):
         self.min = vec3()
         self.max = vec3(30)
 
-    def add_models(self, sonata_file, population_name, ids, lines = False):
+
+    
+    def add_models(self, index_file, sonata_file, population_name, lines=False):
         program = ShaderProgram(
             [("shaders/lines.vert", ShaderType.VERTEX),
              ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
@@ -107,22 +49,26 @@ class MorphoRenderIndex(App):
                 ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
                 ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
 
-        gids = ids
-        # prev = time.time()
-        # gids = get_spatial_indices(index_file, self.min, self.max)
-        # print("{:d} neurons loaded in {:0.2f} s".format(len(gids), time.time()-prev))
+        aabb = AABoundingBox()
+        aabb.add_pos(self.min)
+        aabb.add_pos(self.max)
+        gids = get_spatial_indices(index_file, self.min, self.max)
+        print(LINE_CLEAR, end='')
+        print("\rLoading {:d} neurons".format(len(gids)))
 
+        
+        morpho_models = get_morpho_model(sonata_file, population_name, gids)
+        
         neurons = []
-        neurons = get_neurons(sonata_file, population_name, gids)
-        if neurons:
-            self.num_models = len(neurons)
+        for i,info in enumerate(morpho_models):
+            neurons.append((info[0], info[1], get_color(i), program, aabb))
 
-        prev_time = time.time()        
-        with Pool(multiprocessing.cpu_count() - 2) as pool:
-            for i,neuron in enumerate(neurons):
-                pool.apply_async(load_neuron, args=(program,neuron,self.get_color(i)), callback=self.add_model)
-            pool.close()
-            pool.join()
+        prev_time = time.time()   
+        if len(neurons) > 0:
+            self.num_models = len(neurons)
+            with multiprocessing.Pool(multiprocessing.cpu_count() - 2) as pool:
+                for mesh in pool.imap(load_neuron, neurons):
+                   self.add_model((mesh, program, mat4()))
 
         self.message = ""
         num_lines = 0
@@ -140,23 +86,27 @@ class MorphoRenderIndex(App):
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
-    # parser.add_argument("index_file", help="Directory containing the index")
+    parser.add_argument("index_file", help="Directory containing the index")
     parser.add_argument("sonata_file", help="Sonata file")
     parser.add_argument("population_name", help="Population name")
-    parser.add_argument('ids', metavar='id', nargs='+', type=int,
-                        help='id')
+  
     parser.add_argument('--lines', action='store_true', help="generate morphology meshes as lines")
-    parser.add_argument('-min', type=int, default=0)
-    parser.add_argument('-max', type=int, default=30)
+    parser.add_argument('-min_x', type=float, default=0)
+    parser.add_argument('-min_y', type=float, default=0)
+    parser.add_argument('-min_z', type=float, default=0)
+    parser.add_argument('-max_x', type=float, default=30)
+    parser.add_argument('-max_y', type=float, default=30)
+    parser.add_argument('-max_z', type=float, default=30)
     args = parser.parse_args()
 
     app = MorphoRenderIndex()
-    app.min = vec3(args.min)
-    app.max = vec3(args.max)
+
+    app.min = vec3(args.min_x, args.min_y, args.min_z)
+    app.max = vec3(args.max_x, args.max_y, args.max_z)
     app.set_background()
     app.scene.aabb = AABoundingBox()
-    p = threading.Thread(target=app.add_models, 
-        args=(args.sonata_file, args.population_name, args.ids, args.lines,))
+    p = threading.Thread(target=app.add_models, args=(
+        args.index_file, args.sonata_file, args.population_name, args.lines,))
     p.start()
     app.scene.distance = 500.0
     app.scene.level = 5

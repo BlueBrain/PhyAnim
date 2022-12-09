@@ -2,7 +2,6 @@ import glfw
 from render.render import *
 import time
 import platform
-import seaborn as sns
 
 
 LINE_CLEAR = '\x1b[2K'
@@ -203,3 +202,4 @@ class App():
     #         print(e)
         glfw.terminate()
         print()
+

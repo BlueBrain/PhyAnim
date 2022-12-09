@@ -59,8 +59,11 @@ def get_spatial_indices(index_path, min, max):
         if gid not in found_ids:
             found_ids.append(gid)
             morpho_path = MORPHOLOGY_DIR + morpho_names[i] + ".asc"
+           
+            
+
             model = mat4(normalize(quat(rot_ws[i],rot_xs[i],rot_ys[i],rot_zs[i])))
-            model = translate(model, vec3(xs[i], ys[i], zs[i]))
+            model = translate(vec3(xs[i], ys[i], zs[i])) * model
             morphos.append((morpho_path, model))
     return morphos
 

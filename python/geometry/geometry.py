@@ -1,5 +1,10 @@
 from geometry.math import *
+import seaborn as sns
 
+def get_color(i):
+    palette = sns.color_palette()
+    c = palette[i % len(palette)]
+    return vec3(c[0], c[1], c[2])
 
 class Line:
 

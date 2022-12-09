@@ -100,9 +100,11 @@ class Section:
     def __init__(self):
         self.children = []
         self.nodes = []
+        self.aabb = AABoundingBox()
 
     def add_node(self, node: Node):
         self.nodes.append(node)
+        self.aabb.add_pos(node.position)
 
     def new_child(self):
         section = Section()
@@ -212,14 +214,12 @@ class Section:
 
 class Morphology:
 
-    def __init__(self, path, model, color=vec3(0, 1, 0), color_collide=vec3(1, 0, 0)):
-        morpho = morphio.mut.Morphology(path)
+    def __init__(self, morphology, model=mat4(), color=vec3(0, 1, 0), color_collide=vec3(1, 0, 0)):
         self.model = model
-        self._create_hierarchy(morpho)
+        self._create_hierarchy(morphology)
         self.color_collide = color_collide
         self.color = color
         
-
     def _add_recursive_section(self, section: Section,
                                original_sec: morphio.mut.Section, root=False):
         for i, point in enumerate(original_sec.points):
@@ -261,22 +261,33 @@ class Morphology:
         for i, node in enumerate(self.nodes):
             node.id = i
 
-    
+    def cut(self, aabb):
+        soma_aabb = AABoundingBox()
+        soma_aabb.add_pos(self.soma_center + self.soma_radius)
+        soma_aabb.add_pos(self.soma_center - self.soma_radius)
+
+        if not soma_aabb.is_colliding(aabb):
+            self.soma_nodes = None
+        
+        sections = []
+        for section in self.sections:
+            if section.aabb.is_colliding(aabb):
+                sections.append(section)
+        self.sections = sections
 
     def generate_mesh(self):
-        prev = time.time()
-
         quads = []
         positions = []
         normals = []
         colors = []
 
-        sphere = Sphere(self.soma_center, self.soma_radius)
-        quads += sphere.get_quads(0)
-        pos, nor, col = sphere.get_geometry(self.color)
-        positions += pos
-        normals += nor
-        colors += col
+        if self.soma_nodes:
+            sphere = Sphere(self.soma_center, self.soma_radius)
+            quads += sphere.get_quads(0)
+            pos, nor, col = sphere.get_geometry(self.color)
+            positions += pos
+            normals += nor
+            colors += col
 
         for section in self.sections:
             quads += section.quads(len(positions))
@@ -286,16 +297,10 @@ class Morphology:
             colors += col
 
         mesh = Mesh([], [], quads, positions, normals, colors)
-        mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
-        # print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
         return mesh
 
-    def generate_lines(self):
-        prev = time.time()
-
+    def generate_lines(self, aabb = None):
         lines = []
         positions = []
         colors = []
@@ -311,24 +316,19 @@ class Morphology:
                 lines.append(Line(node0.id, node1.id))
 
         mesh = Mesh(lines, [], [], positions, [], colors)
-        mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
-        
-        # print("* Mesh generation: {:0.6f} sc".format(time.time()-prev))
         return mesh
 
-
-    def update_mesh(self, mesh):
+    def update_mesh(self, mesh, aabb = None):
         positions = []
         normals = []
         colors = []
 
-        sphere = Sphere(self.soma_center, self.soma_radius)
-        pos, nor, col = sphere.get_geometry(self.color)
-        positions += pos
-        normals += nor
-        colors += col
+        if self.soma_nodes:
+            sphere = Sphere(self.soma_center, self.soma_radius)
+            pos, nor, col = sphere.get_geometry(self.color)
+            positions += pos
+            normals += nor
+            colors += col
 
         for section in self.sections:
             pos, nor, col = section.geometry(self.color, self.color_collide)
@@ -338,10 +338,6 @@ class Morphology:
         mesh.update_positions(positions)
         mesh.update_normals(normals)
         mesh.update_colors(colors)
-
-        mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
     def update_lines(self, mesh):
         positions = []
@@ -355,10 +351,6 @@ class Morphology:
                 colors.append(self.color)
         mesh.update_positions(positions)
         mesh.update_colors(colors)
-
-        mesh.aabb = AABoundingBox()
-        mesh.aabb.add_pos(self.soma_center + vec3(self.soma_radius * 2.0))
-        mesh.aabb.add_pos(self.soma_center - vec3(self.soma_radius * 2.0))
 
     def print_sections(self):
         for sec in self.sections:
