@@ -125,48 +125,49 @@ class Section:
         positions = []
         normals = []
         colors = []
-        for i, node in enumerate(self.nodes):
-            p = node.position
-            r = node.radius
-            t = vec3(1, 0, 0)
-            if i == 0:
-                node0 = node
-                node1 = self.nodes[i+1]
-            elif i == len(self.nodes)-1:
-                node0 = self.nodes[i-1]
-                node1 = node
-            else:
-                node0 = self.nodes[i-1]
-                node1 = self.nodes[i+1]
-            t = node1.position - node0.position
-            x, y, z = self.oriented_axis(t)
-            positions += [x*r+p, y*r+p, x*-r+p, y*-r+p]
-            normals += [x*r, y*r, x*-r, y*-r]
-            if node.collide:
-                colors += [color_collision] * 4
-            else:
-                colors += [color_no_collision] * 4
+        if len(self.nodes) > 1:
+            for i, node in enumerate(self.nodes):
+                p = node.position
+                r = node.radius
+                t = vec3(1, 0, 0)
+                if i == 0:
+                    node0 = node
+                    node1 = self.nodes[i+1]
+                elif i == len(self.nodes)-1:
+                    node0 = self.nodes[i-1]
+                    node1 = node
+                else:
+                    node0 = self.nodes[i-1]
+                    node1 = self.nodes[i+1]
+                t = node1.position - node0.position
+                x, y, z = self.oriented_axis(t)
+                positions += [x*r+p, y*r+p, x*-r+p, y*-r+p]
+                normals += [x*r, y*r, x*-r, y*-r]
+                if node.collide:
+                    colors += [color_collision] * 4
+                else:
+                    colors += [color_no_collision] * 4
 
-        p0 = self.nodes[0].position
-        r0 = self.nodes[0].radius
-        t0 = (self.nodes[1].position - p0)
-        x, y, z = self.oriented_axis(t0)
-        positions.append(z*-r0+p0)
-        normals.append(z*-r0)
-        if self.nodes[0].collide:
-            colors.append(color_collision)
-        else:
-            colors.append(color_no_collision)
-        pi = self.nodes[-1].position
-        ri = self.nodes[-1].radius
-        ti = (self.nodes[-2].position - pi)
-        x, y, z = self.oriented_axis(ti)
-        positions.append(z*-ri+pi)
-        normals.append(z*-ri)
-        if self.nodes[-1].collide:
-            colors.append(color_collision)
-        else:
-            colors.append(color_no_collision)
+            p0 = self.nodes[0].position
+            r0 = self.nodes[0].radius
+            t0 = (self.nodes[1].position - p0)
+            x, y, z = self.oriented_axis(t0)
+            positions.append(z*-r0+p0)
+            normals.append(z*-r0)
+            if self.nodes[0].collide:
+                colors.append(color_collision)
+            else:
+                colors.append(color_no_collision)
+            pi = self.nodes[-1].position
+            ri = self.nodes[-1].radius
+            ti = (self.nodes[-2].position - pi)
+            x, y, z = self.oriented_axis(ti)
+            positions.append(z*-ri+pi)
+            normals.append(z*-ri)
+            if self.nodes[-1].collide:
+                colors.append(color_collision)
+            else:
+                colors.append(color_no_collision)
 
         return (positions, normals, colors)
 
@@ -272,6 +273,11 @@ class Morphology:
         sections = []
         for section in self.sections:
             if section.aabb.is_colliding(aabb):
+                nodes = []
+                for node in section.nodes:
+                    if aabb.is_inside(node.position):
+                        nodes.append(node)
+                section.nodes = nodes
                 sections.append(section)
         self.sections = sections
 
@@ -296,8 +302,9 @@ class Morphology:
             normals += nor
             colors += col
 
-        mesh = Mesh([], [], quads, positions, normals, colors)
-
+        mesh = None
+        if len(positions) > 0:
+            mesh = Mesh([], [], quads, positions, normals, colors)
         return mesh
 
     def generate_lines(self, aabb = None):
@@ -314,8 +321,9 @@ class Morphology:
                 node0 = section.nodes[i]
                 node1 = section.nodes[i+1]
                 lines.append(Line(node0.id, node1.id))
-
-        mesh = Mesh(lines, [], [], positions, [], colors)
+        mesh = None
+        if len(positions) > 0:
+            mesh = Mesh(lines, [], [], positions, [], colors)
         return mesh
 
     def update_mesh(self, mesh, aabb = None):

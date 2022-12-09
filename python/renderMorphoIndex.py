@@ -68,7 +68,8 @@ class MorphoRenderIndex(App):
             self.num_models = len(neurons)
             with multiprocessing.Pool(multiprocessing.cpu_count() - 2) as pool:
                 for mesh in pool.imap(load_neuron, neurons):
-                   self.add_model((mesh, program, mat4()))
+                    if mesh:
+                        self.add_model((mesh, program, mat4()))
 
         self.message = ""
         num_lines = 0
