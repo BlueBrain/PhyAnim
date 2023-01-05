@@ -10,7 +10,7 @@ import os
 
 def generate_model(program, path, color):
     try:
-        morpho = Morphology(path, mat4(), color)
+        morpho = Morphology(get_morpho(path), mat4(), color)
         if program.primitives == GL_LINES:
             mesh = morpho.generate_lines()
         elif program.primitives == GL_PATCHES:

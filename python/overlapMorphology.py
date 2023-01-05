@@ -107,7 +107,7 @@ class Overlap(App):
     def add_morphology(self, path):
         try:
             color = self.get_color(self.loaded_models)
-            morpho = Morphology(path, mat4(), color*0.5, color)
+            morpho = Morphology(get_morpho(path), mat4(), color*0.5, color)
 
             if morpho:
                 self.morphologies.append(morpho)
@@ -138,7 +138,8 @@ class Overlap(App):
 
         self.total_lenght = 0.0
         for morpho in self.morphologies:
-            set = SpringSet(morpho.nodes, morpho.get_springs(self.ks, self.kd))
+            nodes, springs = morpho.get_springs(self.ks, self.kd) 
+            set = SpringSet(nodes, springs)
             self.spring_sets.append(set)
             for spring in set.springs:
                 self.total_lenght += spring.length()

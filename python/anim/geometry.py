@@ -273,11 +273,11 @@ class Morphology:
         sections = []
         for section in self.sections:
             if section.aabb.is_colliding(aabb):
-                nodes = []
-                for node in section.nodes:
-                    if aabb.is_inside(node.position):
-                        nodes.append(node)
-                section.nodes = nodes
+                # nodes = []
+                # for node in section.nodes:
+                #     if aabb.is_inside(node.position):
+                #         nodes.append(node)
+                # section.nodes = nodes
                 sections.append(section)
         self.sections = sections
 
@@ -366,13 +366,20 @@ class Morphology:
             for node in sec.nodes:
                 print("\t", node.position)
 
-    def get_springs(self, ks, kd):
+    def get_springs(self, ks, kd, aabb = None):
+        nodes = {}
         springs = []
         for section in self.sections:
-            for i in range(len(section.nodes)-1):
-                springs.append(
-                    Spring(section.nodes[i], section.nodes[i+1], ks, kd))
-        return springs
+            if not aabb or aabb.is_colliding(section.aabb):
+                for i in range(len(section.nodes)-1):
+                    node0 = section.nodes[i]
+                    node1 = section.nodes[i+1]
+                    if not aabb or aabb.is_inside(node0.position) or aabb.is_inside(node1.position): 
+                        springs.append(Spring(node0, node1, ks, kd))
+                        nodes[node0] = node0
+                        nodes[node1] = node1
+        nodes = list(nodes)
+        return (nodes, springs)
 
 
 def collide(morpho: Morphology, aabb: AABoundingBox):
@@ -417,7 +424,6 @@ def mesh_springs_geometry(springs, color, color_collision):
             colors += [color] * 5
     return (positions, normals, colors)
 
-
 def mesh_springs(springs, color, color_collision):
     positions, normals, colors = mesh_springs_geometry(
         springs, color, color_collision)
@@ -438,7 +444,6 @@ def mesh_springs(springs, color, color_collision):
         quads.append(Quad(id0+2, id0+3, id1+2, id1+3))
         quads.append(Quad(id0+3, id0, id1+3, id1))
     return Mesh([], [], quads, positions, normals, colors)
-
 
 def mesh_springs_update(springs, mesh, color, color_collision):
     positions, normals, colors = mesh_springs_geometry(
