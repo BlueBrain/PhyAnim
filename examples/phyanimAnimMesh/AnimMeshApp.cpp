@@ -25,16 +25,14 @@ void AnimMeshApp::_actionLoop()
     double dt = 0.01;
     double damping = 1.0;
     double density = 1.0;
-    phyanim::AnimSystem* animSys = new phyanim::ImplicitFEMSystem(dt);
 
-    phyanim::Meshes meshes;
+    phyanim::AnimSystem* animSys = new phyanim::ImplicitFEMSystem(dt);
 
     phyanim::AxisAlignedBoundingBox limits;
 
     for (uint64_t i = 0; i < _args.size(); ++i)
     {
-        auto mesh =
-            new phyanim::DrawableMesh(stiffness, density, damping, poisson);
+        auto mesh = new phyanim::Mesh(stiffness, density, damping, poisson);
         std::string file = _args[i];
 
         if (file.find(".node") != std::string::npos)
@@ -50,18 +48,17 @@ void AnimMeshApp::_actionLoop()
 
         mesh->compute();
 
-        meshes.push_back(mesh);
+        _meshes.push_back(mesh);
         mesh->boundingBox =
             new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-        mesh->updateColor();
-
         limits.unite(*mesh->boundingBox);
         _setCameraPos(limits);
 
-        _scene->addMesh(mesh);
+        _scene->meshes.push_back(
+            generateMesh(mesh->nodes, mesh->surfaceTriangles));
     }
 
-    animSys->preprocessMesh(meshes);
+    animSys->preprocessMesh(_meshes);
 
     phyanim::Vec3 halfSides = limits.upperLimit() - limits.center();
     limits.lowerLimit(limits.lowerLimit() - halfSides);
@@ -71,22 +68,21 @@ void AnimMeshApp::_actionLoop()
     {
         if (_getAnim())
         {
-            for (auto mesh : meshes) mesh->nodesForceZero();
+            for (auto mesh : _meshes) mesh->nodesForceZero();
 
-            phyanim::CollisionDetection::computeCollisions(
-                meshes, collisionStiffness, true);
+            phyanim::CollisionDetection::computeCollisions(_meshes,
+                                                           collisionStiffness);
 
-            animSys->step(meshes);
+            animSys->step(_meshes);
 
-            for (auto mesh : meshes) mesh->boundingBox->update();
+            for (auto mesh : _meshes) mesh->boundingBox->update();
 
-            phyanim::CollisionDetection::computeCollisions(meshes, limits);
+            phyanim::CollisionDetection::computeCollisions(_meshes, limits);
 
-            for (auto mesh : meshes)
+            for (uint32_t i = 0; i < _meshes.size(); ++i)
             {
-                auto drawMesh = dynamic_cast<phyanim::DrawableMesh*>(mesh);
-                drawMesh->updatedPositions = true;
-                drawMesh->updateColors();
+                setGeometry(_scene->meshes[i], _meshes[i]->nodes);
+                setColorByCollision(_scene->meshes[i], _meshes[i]->nodes);
             }
         }
     }

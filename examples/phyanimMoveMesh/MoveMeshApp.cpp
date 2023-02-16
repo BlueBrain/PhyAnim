@@ -15,7 +15,8 @@ namespace examples
 {
 MoveMeshApp::MoveMeshApp(int argc, char** argv)
     : GLFWApp(argc, argv)
-    , _mesh(nullptr)
+    , _animMesh(nullptr)
+    , _renderMesh(nullptr)
 {
 }
 
@@ -40,20 +41,12 @@ void MoveMeshApp::_actionLoop()
     }
 
     _loadMeshes(_fileNames);
-    for (auto mesh : _meshes)
-        _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
-
-    _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
-    _sortAABBs(_aabbs);
 
     for (auto aabb : _aabbs)
-        std::cout << "rdaius: " << aabb->radius() << std::endl;
+        std::cout << "radius: " << aabb->radius() << std::endl;
 
-    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
-    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0, true);
-    _coloredMeshes();
-    _collisionId = 0;
+    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0);
+    _colorMeshes();
     if (_aabbs.size() > 0)
     {
         std::cout << "Collision id: " << _collisionId
@@ -62,34 +55,40 @@ void MoveMeshApp::_actionLoop()
     }
 }
 
-void MoveMeshApp::_coloredMeshes()
+void MoveMeshApp::_colorMeshes()
 {
-    phyanim::Vec3 baseColor(0.4, 0.4, 0.8);
-    phyanim::Vec3 baseSelectedColor(0.0, 0.0, 1.0);
+    phyanim::Vec3 baseColor(0, 0.8, 0.8);
+    phyanim::Vec3 baseSelectedColor(0.0, 0.2, 0.8);
 
-    phyanim::Vec3 collisionColor(1.0, 0.0, 0.0);
-    phyanim::Vec3 collisionSelectedColor(1.0, 0.0, 0.0);
+    phyanim::Vec3 collisionColor(0.8, 0.2, 0.0);
+    phyanim::Vec3 collisionSelectedColor(0.8, 0.2, 0.0);
 
-    for (auto mesh : _meshes)
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < _meshes.size(); ++i)
     {
         phyanim::Vec3 color = baseColor;
         phyanim::Vec3 collColor = collisionColor;
-
-        if (mesh == _mesh)
+        phyanim::MeshPtr mesh = _meshes[i];
+        if (mesh == _animMesh)
         {
             color = baseSelectedColor;
             collColor = collisionSelectedColor;
         }
 
         uint64_t nodeSize = mesh->nodes.size();
-        for (uint64_t i = 0; i < nodeSize; ++i)
+        std::vector<double> colors(nodeSize * 3);
+
+        for (uint64_t j = 0; j < nodeSize; ++j)
         {
-            auto node = mesh->nodes[i];
             phyanim::Vec3 nodeColor = color;
-            if (node->collide) nodeColor = collColor;
-            node->color = nodeColor;
+            if (mesh->nodes[j]->collide) nodeColor = collColor;
+            colors[j * 3] = nodeColor.x();
+            colors[j * 3 + 1] = nodeColor.y();
+            colors[j * 3 + 2] = nodeColor.z();
         }
-        dynamic_cast<phyanim::DrawableMesh*>(mesh)->updatedColors = true;
+        _scene->meshes[i]->uploadColors(colors);
     }
 }
 
@@ -121,32 +120,37 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
+        glfwGetCursorPos(window, &_mouseX, &_mouseY);
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (action == GLFW_PRESS)
             {
                 _leftButtonPressed = true;
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
                 uint32_t pickedId = _scene->picking(_mouseX, _mouseY);
-                if (pickedId != 0) _mesh = _meshes[pickedId - 1];
-                _coloredMeshes();
+                if (pickedId != 0)
+                {
+                    _animMesh = _meshes[pickedId - 1];
+                    _renderMesh = _scene->meshes[pickedId - 1];
+                    _colorMeshes();
+                }
             }
             else if (action == GLFW_RELEASE)
             {
                 _leftButtonPressed = false;
-                if (_mesh)
+                if (_animMesh)
                 {
-                    _mesh->boundingBox->update();
+                    _animMesh->boundingBox->update();
                     _aabbs =
                         phyanim::CollisionDetection::collisionBoundingBoxes(
                             _meshes, _bbFactor);
                     _sortAABBs(_aabbs);
                     std::cout << "Number of collisions: " << _aabbs.size()
                               << std::endl;
-                    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0,
-                                                                   true);
-                    _mesh = nullptr;
-                    _coloredMeshes();
+                    phyanim::CollisionDetection::computeCollisions(_meshes,
+                                                                   0.0);
+                    _animMesh = nullptr;
+                    _renderMesh = nullptr;
+                    _colorMeshes();
                 }
             }
         }
@@ -155,8 +159,6 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _middleButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {
@@ -168,8 +170,6 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _rightButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {
@@ -190,15 +190,15 @@ void MoveMeshApp::_mousePositionCallback(GLFWwindow* window,
         _mouseX = xpos;
         _mouseY = ypos;
         phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.1f, diffY * _scene->cameraDistance() * 0.1f, 0.0);
+            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.01f,
+                          diffY * _scene->cameraDistance() * 0.01f, 0.0);
         if (_leftButtonPressed)
         {
-            if (_mesh)
+            if (_animMesh)
             {
                 dxyz = _scene->cameraRotation() * dxyz;
-                for (auto node : _mesh->nodes) node->position -= dxyz;
-                dynamic_cast<phyanim::DrawableMesh*>(_mesh)->updatedPositions =
-                    true;
+                for (auto node : _animMesh->nodes) node->position -= dxyz;
+                setGeometry(_renderMesh, _animMesh->nodes);
             }
         }
         if (_middleButtonPressed)

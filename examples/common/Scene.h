@@ -1,12 +1,12 @@
 #ifndef __EXAMPLES_SCENE__
 #define __EXAMPLES_SCENE__
 
-#include <Camera.h>
-#include <RenderProgram.h>
-
 #include <chrono>
 #include <mutex>
 
+#include "Camera.h"
+#include "Mesh.h"
+#include "RenderProgram.h"
 #include "SkyBox.h"
 
 namespace examples
@@ -18,7 +18,7 @@ public:
 
     ~Scene();
 
-    void addMesh(phyanim::DrawableMesh* mesh);
+    void addMesh(Mesh* mesh);
 
     void render();
 
@@ -54,7 +54,7 @@ private:
 public:
     bool showFPS;
 
-    std::vector<phyanim::DrawableMesh*> meshes;
+    std::vector<Mesh*> meshes;
 
 private:
     typedef enum RenderMode
@@ -73,8 +73,6 @@ private:
 
     RenderMode _renderMode;
     bool _renderModeChanged;
-
-    std::mutex _meshesMutex;
 
     RenderProgram* _program;
     RenderProgram* _pickingProgram;

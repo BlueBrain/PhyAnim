@@ -3,7 +3,6 @@
 
 #include <AxisAlignedBoundingBox.h>
 #include <CollisionDetection.h>
-#include <DrawableMesh.h>
 #include <Edge.h>
 #include <ExplicitFEMSystem.h>
 #include <ExplicitMassSpringSystem.h>

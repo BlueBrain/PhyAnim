@@ -2,6 +2,7 @@
 #define __PHYANIM_HIERARCHICAL_AABB__
 
 #include "AxisAlignedBoundingBox.h"
+#include "Edge.h"
 
 namespace phyanim
 {
@@ -18,6 +19,8 @@ public:
 
     HierarchicalAABB(Primitives& primitives, uint64_t cellSize = 10);
 
+    HierarchicalAABB(Edges& edges, uint64_t cellSize = 10);
+
     ~HierarchicalAABB();
 
     void update();
@@ -26,8 +29,12 @@ public:
 
     Primitives insidePrimitives(
         const AxisAlignedBoundingBox& axisAlignedBoundingBox);
-
+    Primitives collidingPrimitives(
+        const AxisAlignedBoundingBox& axisAlignedBoundingBox);
     PrimitivePairs collidingPrimitives(HierarchicalAABBPtr hierarchicalAABB);
+
+    Edges insideEdges(const AxisAlignedBoundingBox& axisAlignedBoundingBox);
+    Edges collidingEdges(const AxisAlignedBoundingBox& axisAlignedBoundingBox);
 
 protected:
     void _update();
@@ -38,6 +45,10 @@ protected:
 
     void _insidePrimitives(const AxisAlignedBoundingBox& axisAlignedBoundingBox,
                            Primitives& primitives);
+
+    void _collidingPrimitives(
+        const AxisAlignedBoundingBox& axisAlignedBoundingBox,
+        Primitives& primitives);
 
     void _collidingPrimitives(HierarchicalAABBPtr aabb0,
                               HierarchicalAABBPtr aabb1,

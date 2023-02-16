@@ -1,9 +1,9 @@
 #ifndef __EXAMPLES_OVERLAP_COLLISIONS_APP__
 #define __EXAMPLES_OVERLAP_COLLISIONS_APP__
 
-#include <GLFWApp.h>
-
 #include <chrono>
+
+#include "../common/GLFWApp.h"
 
 namespace examples
 {

@@ -7,6 +7,7 @@ Triangle::Triangle(Node* n0_, Node* n1_, Node* n2_)
     , node1(n1_)
     , node2(n2_)
 {
+    update();
 }
 
 Triangle::~Triangle() {}

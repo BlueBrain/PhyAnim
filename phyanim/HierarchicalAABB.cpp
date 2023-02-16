@@ -5,10 +5,17 @@
 namespace phyanim
 {
 HierarchicalAABB::HierarchicalAABB(Primitives& primitives, uint64_t cellSize)
-    : AxisAlignedBoundingBox(primitives)
-    , _child0(nullptr)
+    : _child0(nullptr)
     , _child1(nullptr)
 {
+    _divide(primitives, cellSize);
+}
+
+HierarchicalAABB::HierarchicalAABB(Edges& edges, uint64_t cellSize)
+    : _child0(nullptr)
+    , _child1(nullptr)
+{
+    Primitives primitives(edges.begin(), edges.end());
     _divide(primitives, cellSize);
 }
 
@@ -22,6 +29,7 @@ HierarchicalAABB::~HierarchicalAABB()
     {
         delete _child1;
     }
+    _primitives.clear();
 }
 
 void HierarchicalAABB::update() { _update(); }
@@ -42,12 +50,42 @@ Primitives HierarchicalAABB::insidePrimitives(
     return primitives;
 }
 
+Primitives HierarchicalAABB::collidingPrimitives(
+    const AxisAlignedBoundingBox& axisAlignedBoundingBox)
+{
+    Primitives primitives;
+    _collidingPrimitives(axisAlignedBoundingBox, primitives);
+    return primitives;
+}
+
 PrimitivePairs HierarchicalAABB::collidingPrimitives(
     HierarchicalAABBPtr hierarchicalAABB)
 {
     PrimitivePairs primitivePairs;
     _collidingPrimitives(this, hierarchicalAABB, primitivePairs);
     return primitivePairs;
+}
+
+Edges HierarchicalAABB::insideEdges(
+    const AxisAlignedBoundingBox& axisAlignedBoundingBox)
+{
+    Primitives primitives;
+    _insidePrimitives(axisAlignedBoundingBox, primitives);
+    Edges edges;
+    for (auto prim : primitives)
+        if (auto edge = dynamic_cast<Edge*>(prim)) edges.push_back(edge);
+    return edges;
+}
+
+Edges HierarchicalAABB::collidingEdges(
+    const AxisAlignedBoundingBox& axisAlignedBoundingBox)
+{
+    Primitives primitives;
+    _collidingPrimitives(axisAlignedBoundingBox, primitives);
+    Edges edges;
+    for (auto prim : primitives)
+        if (auto edge = dynamic_cast<Edge*>(prim)) edges.push_back(edge);
+    return edges;
 }
 
 void HierarchicalAABB::_update()
@@ -178,6 +216,32 @@ void HierarchicalAABB::_insidePrimitives(const AxisAlignedBoundingBox& aabb,
         for (auto primitive : _primitives)
         {
             if (aabb.isInside(*primitive))
+            {
+                primitives.push_back(primitive);
+            }
+        }
+    }
+}
+
+void HierarchicalAABB::_collidingPrimitives(const AxisAlignedBoundingBox& aabb,
+                                            Primitives& primitives)
+{
+    if (_child0 && _child1)
+    {
+        if (aabb.isColliding(*_child0))
+        {
+            _child0->_collidingPrimitives(aabb, primitives);
+        }
+        if (aabb.isColliding(*_child1))
+        {
+            _child1->_collidingPrimitives(aabb, primitives);
+        }
+    }
+    else
+    {
+        for (auto primitive : _primitives)
+        {
+            if (aabb.isColliding(*primitive))
             {
                 primitives.push_back(primitive);
             }

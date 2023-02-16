@@ -34,6 +34,7 @@ public:
 
     float radius() const;
 
+    bool isColliding(const Node& node) const;
     bool isColliding(const Primitive& primitive) const;
     bool isColliding(const AxisAlignedBoundingBox& other) const;
 
@@ -51,6 +52,9 @@ public:
     void update(const AxisAlignedBoundingBox& other);
 
     void resize(double resizeFactor);
+
+    void fixOutNodes(Nodes& nodes);
+    void delimit(Nodes& nodes);
 
 protected:
     void _clear();

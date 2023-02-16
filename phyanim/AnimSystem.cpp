@@ -4,7 +4,7 @@
 
 namespace phyanim
 {
-AnimSystem::AnimSystem(double dt) : gravity(true), _dt(dt) {}
+AnimSystem::AnimSystem(double dt) : gravity(true), inertia(true), _dt(dt) {}
 
 AnimSystem::~AnimSystem() {}
 
@@ -65,6 +65,87 @@ void AnimSystem::step(Meshes meshes)
         }
 
         _step(mesh);
+    }
+}
+
+void AnimSystem::clearForce(Nodes& nodes)
+{
+    uint32_t size = nodes.size();
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < size; ++i) nodes[i]->force = Vec3::Zero();
+}
+
+void AnimSystem::clearCollision(Nodes& nodes)
+{
+    uint32_t size = nodes.size();
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < size; ++i) nodes[i]->collide = false;
+}
+
+void AnimSystem::clearCollision(Edges& edges)
+{
+    for (auto edge : edges)
+    {
+        edge->node0->collide = false;
+        edge->node1->collide = false;
+    }
+}
+
+void AnimSystem::_addGravity(Nodes& nodes)
+{
+    if (gravity)
+    {
+        uint32_t size = nodes.size();
+        Vec3 g = Vec3(0, -9.8f, 0);
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (uint32_t i = 0; i < size; ++i)
+            nodes[i]->force += g * nodes[i]->mass;
+    }
+}
+
+void AnimSystem::_update(Nodes& nodes)
+{
+    uint32_t size = nodes.size();
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        auto node = nodes[i];
+        if (!node->fix && !node->isSoma)
+        {
+            Vec3 a = node->force / node->mass;
+            Vec3 v = node->velocity + a * _dt;
+            Vec3 x = node->position + v * _dt;
+            node->position = x;
+            if (inertia) node->velocity = v;
+        }
+    }
+}
+
+void AnimSystem::_updateIfCollide(Nodes& nodes)
+{
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < nodes.size(); ++i)
+    {
+        auto node = nodes[i];
+        if (!node->fix && !node->isSoma && node->collide)
+        {
+            Vec3 a = node->force / node->mass;
+            Vec3 v = node->velocity + a * _dt;
+            Vec3 x = node->position + v * _dt;
+            node->position = x;
+            if (inertia) node->velocity = v;
+        }
     }
 }
 

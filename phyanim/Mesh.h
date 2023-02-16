@@ -1,8 +1,8 @@
 #ifndef __PHYANIM_MESH__
 #define __PHYANIM_MESH__
 
+#include <Edge.h>
 #include <HierarchicalAABB.h>
-#include <Primitive.h>
 
 #include <Eigen/Sparse>
 
@@ -65,6 +65,8 @@ public:
                             double& min_,
                             double& rms_);
 
+    void computeNormals();
+
     Nodes nodes;
 
     Primitives surfaceTriangles;
@@ -112,8 +114,6 @@ private:
     void _writeOBJ(const std::string& file_);
 
     void _writeTET(const std::string& file_);
-
-    void _computeNormals();
 
     bool _normalsLoaded;
 };

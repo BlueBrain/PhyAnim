@@ -5,19 +5,40 @@
 
 namespace examples
 {
+
+typedef enum
+{
+    SOFT = 0,
+    CONTRAST
+} PaletteType;
+
 class ColorPalette
 {
 public:
-    ColorPalette()
+    ColorPalette(PaletteType type = SOFT)
     {
-        _addColor((uint8_t)0x9f, (uint8_t)0x9f, (uint8_t)0x9d);
-        _addColor((uint8_t)0x8e, (uint8_t)0xb9, (uint8_t)0xd1);
-        _addColor((uint8_t)0xea, (uint8_t)0x90, (uint8_t)0x90);
-        _addColor((uint8_t)0xa2, (uint8_t)0xd2, (uint8_t)0x9e);
-        _addColor((uint8_t)0xf9, (uint8_t)0xc1, (uint8_t)0x98);
-        _addColor((uint8_t)0xb7, (uint8_t)0x97, (uint8_t)0xbd);
-        _addColor((uint8_t)0xd6, (uint8_t)0xa1, (uint8_t)0x8c);
-        _addColor((uint8_t)0xd9, (uint8_t)0xaa, (uint8_t)0xc6);
+        switch (type)
+        {
+        case SOFT:
+            _addColor((uint8_t)0x9f, (uint8_t)0x9f, (uint8_t)0x9d);
+            _addColor((uint8_t)0x8e, (uint8_t)0xb9, (uint8_t)0xd1);
+            _addColor((uint8_t)0xea, (uint8_t)0x90, (uint8_t)0x90);
+            _addColor((uint8_t)0xa2, (uint8_t)0xd2, (uint8_t)0x9e);
+            _addColor((uint8_t)0xf9, (uint8_t)0xc1, (uint8_t)0x98);
+            _addColor((uint8_t)0xb7, (uint8_t)0x97, (uint8_t)0xbd);
+            _addColor((uint8_t)0xd6, (uint8_t)0xa1, (uint8_t)0x8c);
+            _addColor((uint8_t)0xd9, (uint8_t)0xaa, (uint8_t)0xc6);
+            break;
+
+        case CONTRAST:
+            _addColor((uint8_t)0x89, (uint8_t)0x31, (uint8_t)0xef);
+            _addColor((uint8_t)0xf2, (uint8_t)0xca, (uint8_t)0x19);
+            _addColor((uint8_t)0xff, (uint8_t)0x00, (uint8_t)0xbd);
+            _addColor((uint8_t)0x00, (uint8_t)0x57, (uint8_t)0xe9);
+            _addColor((uint8_t)0x87, (uint8_t)0xe9, (uint8_t)0x11);
+            _addColor((uint8_t)0xe1, (uint8_t)0x18, (uint8_t)0x45);
+            break;
+        }
     };
 
     phyanim::Vec3 color(uint32_t id)

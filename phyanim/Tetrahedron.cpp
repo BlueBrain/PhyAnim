@@ -12,6 +12,7 @@ Tetrahedron::Tetrahedron(Node* n0_, Node* n1_, Node* n2_, Node* n3_)
     , _volume(0.0)
     , _volumeComputed(false)
 {
+    update();
 }
 
 double Tetrahedron::initVolume()

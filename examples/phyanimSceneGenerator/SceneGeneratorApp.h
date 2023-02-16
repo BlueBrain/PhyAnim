@@ -1,7 +1,7 @@
 #ifndef __EXAMPLES_MOVE_MESH_APP__
 #define __EXAMPLES_MOVE_MESH_APP__
 
-#include <GLFWApp.h>
+#include "../common/GLFWApp.h"
 
 namespace examples
 {
@@ -28,9 +28,9 @@ protected:
 
     void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
 
-    phyanim::Meshes _meshes;
     std::vector<std::string> _fileNames;
-    phyanim::Mesh* _mesh;
+    phyanim::Mesh* _animMesh;
+    Mesh* _renderMesh;
 
     std::chrono::steady_clock::time_point _pickingTime;
 };

@@ -4,6 +4,7 @@ namespace phyanim
 {
 Node::Node(Vec3 position,
            unsigned int id,
+           double radius,
            Vec3 velocity,
            Vec3 force,
            double mass,
@@ -11,14 +12,15 @@ Node::Node(Vec3 position,
            bool fix)
     : initPosition(position)
     , position(position)
+    , radius(radius)
     , normal(Vec3::UnitZ())
     , id(id)
     , velocity(velocity)
     , force(force)
-    , color(0.4, 0.4, 0.8)
     , mass(mass)
     , surface(surface)
     , fix(fix)
+    , isSoma(false)
     , anim(false)
     , collide(false)
 {

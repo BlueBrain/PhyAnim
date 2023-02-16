@@ -1,10 +1,10 @@
 #ifndef __PHYANIM_PRIMITIVE__
 #define __PHYANIM_PRIMITIVE__
 
+#include <Node.h>
+
 #include <iostream>
 #include <vector>
-
-#include "Edge.h"
 
 namespace phyanim
 {
@@ -32,12 +32,13 @@ public:
         for (auto node : nodes())
         {
             Vec3 pos = node->position;
-            _lowerLimit.x() = std::min(pos.x(), _lowerLimit.x());
-            _lowerLimit.y() = std::min(pos.y(), _lowerLimit.y());
-            _lowerLimit.z() = std::min(pos.z(), _lowerLimit.z());
-            _upperLimit.x() = std::max(pos.x(), _upperLimit.x());
-            _upperLimit.y() = std::max(pos.y(), _upperLimit.y());
-            _upperLimit.z() = std::max(pos.z(), _upperLimit.z());
+            double r = node->radius;
+            _lowerLimit.x() = std::min(pos.x() - r, _lowerLimit.x());
+            _lowerLimit.y() = std::min(pos.y() - r, _lowerLimit.y());
+            _lowerLimit.z() = std::min(pos.z() - r, _lowerLimit.z());
+            _upperLimit.x() = std::max(pos.x() + r, _upperLimit.x());
+            _upperLimit.y() = std::max(pos.y() + r, _upperLimit.y());
+            _upperLimit.z() = std::max(pos.z() + r, _upperLimit.z());
         }
     };
 
@@ -48,8 +49,6 @@ public:
     Vec3 center() const { return (_lowerLimit + _upperLimit) * 0.5; };
 
     virtual Nodes nodes() const = 0;
-
-    virtual Edges edges() const = 0;
 
     bool areLimitsColliding(PrimitivePtr primitive) const
     {
@@ -65,6 +64,13 @@ public:
                (thisLowerLimit.z() <= otherUpperLimit.z()) &&
                (thisUpperLimit.z() >= otherLowerLimit.z());
     };
+
+    bool isSoma()
+    {
+        bool isSoma = true;
+        for (auto node : nodes()) isSoma = isSoma && node->isSoma;
+        return isSoma;
+    }
 
 protected:
     Vec3 _lowerLimit;

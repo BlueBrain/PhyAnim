@@ -10,7 +10,7 @@ namespace examples
 {
 Icosphere::Icosphere(phyanim::Vec3 pos, double radius)
 {
-    _mesh = new phyanim::DrawableMesh();
+    _mesh = new phyanim::Mesh();
     _mesh->load(PATH_TO_ICO);
 
     for (auto meshNode : _mesh->nodes)
@@ -31,7 +31,7 @@ Icosphere::Icosphere(phyanim::Vec3 pos, double radius)
     surfaceNodes.insert(surfaceNodes.begin(), sNodes.begin(), sNodes.end());
 }
 
-phyanim::DrawableMesh* Icosphere::mesh() { return _mesh; }
+phyanim::Mesh* Icosphere::mesh() { return _mesh; }
 
 std::vector<Spring*> Icosphere::springs(double stiffness)
 {

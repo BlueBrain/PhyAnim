@@ -1,7 +1,7 @@
 #ifndef __PHYANIM_COLLISIONDETECTION__
 #define __PHYANIM_COLLISIONDETECTION__
 
-#include "DrawableMesh.h"
+#include "Mesh.h"
 #include "Tetrahedron.h"
 #include "Triangle.h"
 
@@ -10,35 +10,43 @@ namespace phyanim
 class CollisionDetection
 {
 public:
-    static bool computeCollisions(Meshes& meshes,
-                                  double stiffness = 1000.0,
-                                  bool setColor = false);
+    static bool computeCollisions(HierarchicalAABBs& aabbs, double stiffness);
 
-    static bool computeCollisions(Meshes& dynamics,
-                                  Meshes& statics,
-                                  double stiffness = 1000.0,
-                                  bool setColor = false);
+    static bool computeCollisions(Meshes& meshes, double stiffness);
+
+    static void computeCollisions(HierarchicalAABBs& aabbs,
+                                  const AxisAlignedBoundingBox& aabb);
 
     static void computeCollisions(Meshes& meshes,
                                   const AxisAlignedBoundingBox& aabb);
 
     static AxisAlignedBoundingBoxes collisionBoundingBoxes(
+        HierarchicalAABBs& aabbs,
+        double sizeFactor = 1.0);
+
+    static AxisAlignedBoundingBoxes collisionBoundingBoxes(
         Meshes& meshes,
-        double sizeFactor = 10);
+        double sizeFactor = 1.0);
 
 protected:
-    static bool _checkMeshesCollision(MeshPtr mesh0,
-                                      MeshPtr mesh1,
-                                      double stiffness);
+    static bool _computeCollision(HierarchicalAABBPtr aabb0,
+                                  HierarchicalAABBPtr aabb1,
+                                  double stiffness);
 
-    static bool _checkMeshesCollisionAndSetColor(MeshPtr mesh0,
-                                                 MeshPtr mesh1,
-                                                 double stiffness);
+    static bool _checkCollision(PrimitivePtr p0,
+                                PrimitivePtr p1,
+                                double stiffness,
+                                bool setForces = true);
 
-    static bool _checkTrianglesCollision(TrianglePtr t0,
-                                         TrianglePtr t1,
-                                         double stiffness,
-                                         bool setForces = true);
+    static bool _checkCollision(TrianglePtr t0,
+                                TrianglePtr t1,
+                                double stiffness,
+                                bool setForces = true);
+
+    static bool _checkCollision(Edge* e0,
+                                Edge* e1,
+                                double stiffness,
+                                bool setForces = true);
 
     static void _checkAndSetForce(NodePtr node,
                                   Vec3 normal,
@@ -46,9 +54,6 @@ protected:
                                   double stiffness);
 
     static void _mergeBoundingBoxes(AxisAlignedBoundingBoxes& aabbs);
-
-    static const Vec3 _color;
-    static const Vec3 _collisionColor;
 };
 
 }  // namespace phyanim

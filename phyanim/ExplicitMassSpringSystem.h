@@ -12,6 +12,12 @@ public:
 
     virtual ~ExplicitMassSpringSystem(void);
 
+    void step(Nodes& nodes,
+              Edges& edges,
+              AxisAlignedBoundingBox& limits,
+              double ks,
+              double kd);
+
 protected:
     void _step(Mesh* mesh);
 };

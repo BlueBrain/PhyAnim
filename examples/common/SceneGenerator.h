@@ -76,6 +76,7 @@ public:
                         position += pos;
                         node->initPosition = position;
                         node->position = position;
+                        node->normal = rot * node->normal;
                     }
                     mesh->boundingBox->update();
 

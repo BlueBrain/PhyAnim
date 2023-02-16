@@ -1,7 +1,7 @@
 #ifndef __EXAMPLES_MOVE_MESH_APP__
 #define __EXAMPLES_MOVE_MESH_APP__
 
-#include <GLFWApp.h>
+#include "../common/GLFWApp.h"
 
 namespace examples
 {
@@ -13,7 +13,7 @@ public:
 protected:
     void _actionLoop();
 
-    void _coloredMeshes();
+    void _colorMeshes();
 
     virtual void _keyCallback(GLFWwindow* window,
                               int key,
@@ -29,7 +29,8 @@ protected:
     void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
 
     std::vector<std::string> _fileNames;
-    phyanim::Mesh* _mesh;
+    phyanim::Mesh* _animMesh;
+    Mesh* _renderMesh;
 };
 
 }  // namespace examples

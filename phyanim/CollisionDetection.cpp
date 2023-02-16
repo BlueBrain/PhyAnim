@@ -4,73 +4,43 @@
 
 namespace phyanim
 {
-const Vec3 CollisionDetection::_color = Vec3(1, 0.6, 0.6);
 
-const Vec3 CollisionDetection::_collisionColor = Vec3(1, 0, 0);
-
-bool CollisionDetection::computeCollisions(Meshes& dynamics,
-                                           double stiffness,
-                                           bool setColor)
+bool CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
+                                           double stiffness)
 {
-    Meshes statics;
-    return computeCollisions(dynamics, statics, stiffness, setColor);
-}
-
-bool CollisionDetection::computeCollisions(Meshes& dynamics,
-                                           Meshes& statics,
-                                           double stiffness,
-                                           bool setColor)
-{
-    unsigned int size = dynamics.size();
     bool detectedCollision = false;
-    bool (*checkMeshesCollision)(MeshPtr, MeshPtr, double);
-    if (setColor)
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i = 0; i < aabbs.size(); ++i)
     {
-        checkMeshesCollision = _checkMeshesCollisionAndSetColor;
-        for (auto mesh : dynamics)
+        auto aabb0 = aabbs[i];
+        for (unsigned int j = i + 1; j < aabbs.size(); ++j)
         {
-            for (auto node : mesh->nodes)
+            auto aabb1 = aabbs[j];
+            bool colliding = _computeCollision(aabb0, aabb1, stiffness);
+#pragma omp critical
             {
-                node->collide = false;
+                detectedCollision |= colliding;
             }
-        }
-        for (auto mesh : statics)
-        {
-            for (auto node : mesh->nodes)
-            {
-                node->collide = false;
-            }
-        }
-    }
-    else
-    {
-        checkMeshesCollision = _checkMeshesCollision;
-    }
-    for (unsigned int i = 0; i < size; ++i)
-    {
-        auto dynamic0 = dynamics[i];
-        for (unsigned int j = i + 1; j < size; ++j)
-        {
-            auto dynamic1 = dynamics[j];
-            detectedCollision |=
-                checkMeshesCollision(dynamic0, dynamic1, stiffness);
-        }
-        for (unsigned int j = 0; j < statics.size(); j++)
-        {
-            auto dynamic1 = statics[j];
-            detectedCollision |=
-                checkMeshesCollision(dynamic0, dynamic1, stiffness);
         }
     }
     return detectedCollision;
 }
 
-void CollisionDetection::computeCollisions(Meshes& meshes,
+bool CollisionDetection::computeCollisions(Meshes& meshes, double stiffness)
+{
+    HierarchicalAABBs aabbs;
+    for (auto mesh : meshes) aabbs.push_back(mesh->boundingBox);
+    return computeCollisions(aabbs, stiffness);
+}
+
+void CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
                                            const AxisAlignedBoundingBox& aabb)
 {
-    for (auto mesh : meshes)
+    for (auto aabb0 : aabbs)
     {
-        auto nodes = mesh->boundingBox->outterNodes(aabb);
+        auto nodes = aabb0->outterNodes(aabb);
 
         Vec3 lowerLimit = aabb.lowerLimit();
         Vec3 upperLimit = aabb.upperLimit();
@@ -122,138 +92,120 @@ void CollisionDetection::computeCollisions(Meshes& meshes,
     }
 }
 
+void CollisionDetection::computeCollisions(Meshes& meshes,
+                                           const AxisAlignedBoundingBox& aabb)
+{
+    HierarchicalAABBs aabbs;
+    for (auto mesh : meshes) aabbs.push_back(mesh->boundingBox);
+    computeCollisions(aabbs, aabb);
+}
+
 AxisAlignedBoundingBoxes CollisionDetection::collisionBoundingBoxes(
-    Meshes& meshes,
+    HierarchicalAABBs& aabbs,
     double sizeFactor)
 {
     AxisAlignedBoundingBoxes boundingBoxes;
 
-    for (uint64_t i = 0; i < meshes.size(); ++i)
+    uint32_t numSomas = 0;
+    std::unordered_set<PrimitivePtr> uPrims;
+
+    for (uint64_t i = 0; i < aabbs.size(); ++i)
     {
-        for (uint64_t j = i + 1; j < meshes.size(); ++j)
+        for (uint64_t j = i + 1; j < aabbs.size(); ++j)
         {
-            auto mesh0 = meshes[i];
-            auto mesh1 = meshes[j];
-            auto trianglesPairs =
-                mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
-            UniqueTriangles uTriangles;
-            for (auto tPair : trianglesPairs)
+            auto aabb0 = aabbs[i];
+            auto aabb1 = aabbs[j];
+            auto pairs = aabb0->collidingPrimitives(aabb1);
+
+            for (auto pair : pairs)
             {
-                auto t0 = dynamic_cast<TrianglePtr>(tPair.first);
-                auto t1 = dynamic_cast<TrianglePtr>(tPair.second);
-                if (_checkTrianglesCollision(t0, t1, 1000, false))
+                if (_checkCollision(pair.first, pair.second, 0, false))
                 {
-                    uTriangles.insert(t0);
-                    uTriangles.insert(t1);
+                    uPrims.insert(pair.first);
+                    uPrims.insert(pair.second);
                 }
-            }
-            for (auto t : uTriangles)
-            {
-                auto bb = new AxisAlignedBoundingBox(t->lowerLimit(),
-                                                     t->upperLimit());
-                bb->resize(sizeFactor);
-                boundingBoxes.push_back(bb);
             }
         }
     }
 
-    _mergeBoundingBoxes(boundingBoxes);
+    for (auto p : uPrims)
+    {
+        if (!p->isSoma())
+        {
+            auto bb =
+                new AxisAlignedBoundingBox(p->lowerLimit(), p->upperLimit());
+            bb->resize(sizeFactor);
+            boundingBoxes.push_back(bb);
+        }
+        else
+        {
+            ++numSomas;
+        }
+    }
+    // std::cout << "Num somas: " << numSomas << std::endl;
+    // std::cout << "Num prim colliding: " << boundingBoxes.size() << std::endl;
 
-    // for (auto bb : boundingBoxes)
-    // {
-    //     bb->resize(sizeFactor);
-    // }
+    _mergeBoundingBoxes(boundingBoxes);
 
     return boundingBoxes;
 }
 
-bool CollisionDetection::_checkMeshesCollision(MeshPtr mesh0,
-                                               MeshPtr mesh1,
-                                               double stiffness)
+AxisAlignedBoundingBoxes CollisionDetection::collisionBoundingBoxes(
+    Meshes& meshes,
+    double sizeFactor)
+{
+    HierarchicalAABBs aabbs;
+    for (auto mesh : meshes) aabbs.push_back(mesh->boundingBox);
+    return collisionBoundingBoxes(aabbs, sizeFactor);
+}
+
+bool CollisionDetection::_computeCollision(HierarchicalAABBPtr aabb0,
+                                           HierarchicalAABBPtr aabb1,
+                                           double stiffness)
 {
     bool detectedCollision = false;
-    auto trianglePairs =
-        mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
-#ifdef PHYANIM_USES_OPENMP
-    omp_lock_t writelock;
-    omp_init_lock(&writelock);
-#pragma omp parallel for
-#endif
-    for (unsigned int i = 0; i < trianglePairs.size(); i++)
+    auto pairs = aabb0->collidingPrimitives(aabb1);
+    for (unsigned int i = 0; i < pairs.size(); i++)
     {
-        auto tPair = trianglePairs[i];
-        bool collision = _checkTrianglesCollision(
-            dynamic_cast<TrianglePtr>(tPair.first),
-            dynamic_cast<TrianglePtr>(tPair.second), stiffness);
-#ifdef PHYANIM_USES_OPENMP
-        omp_set_lock(&writelock);
-#endif
-        detectedCollision |= collision;
-#ifdef PHYANIM_USES_OPENMP
-        omp_unset_lock(&writelock);
-#endif
+        auto pair = pairs[i];
+        detectedCollision |=
+            _checkCollision(pair.first, pair.second, stiffness);
     }
-#ifdef PHYANIM_USES_OPENMP
-    omp_destroy_lock(&writelock);
-#endif
     return detectedCollision;
 }
 
-bool CollisionDetection::_checkMeshesCollisionAndSetColor(MeshPtr mesh0,
-                                                          MeshPtr mesh1,
-                                                          double stiffness)
+bool CollisionDetection::_checkCollision(PrimitivePtr p0,
+                                         PrimitivePtr p1,
+                                         double stiffness,
+                                         bool setForces)
 {
-    bool detectedCollision = false;
-    auto trianglePairs =
-        mesh0->boundingBox->collidingPrimitives(mesh1->boundingBox);
-#ifdef PHYANIM_USES_OPENMP
-    omp_lock_t writelock;
-    omp_init_lock(&writelock);
-#pragma omp parallel for
-#endif
-    for (unsigned int i = 0; i < trianglePairs.size(); i++)
+    auto t0 = dynamic_cast<TrianglePtr>(p0);
+    auto t1 = dynamic_cast<TrianglePtr>(p1);
+    if (t0 && t1)
     {
-        auto tPair = trianglePairs[i];
-        bool collision = _checkTrianglesCollision(
-            dynamic_cast<TrianglePtr>(tPair.first),
-            dynamic_cast<TrianglePtr>(tPair.second), stiffness);
-        if (collision)
-        {
-            for (auto node : tPair.first->nodes())
-            {
-                node->collide = true;
-            }
-            for (auto node : tPair.second->nodes())
-            {
-                node->collide = true;
-            }
-        }
-#ifdef PHYANIM_USES_OPENMP
-        omp_set_lock(&writelock);
-#endif
-        detectedCollision |= collision;
-#ifdef PHYANIM_USES_OPENMP
-        omp_unset_lock(&writelock);
-#endif
+        return _checkCollision(t0, t1, stiffness, setForces);
     }
-#ifdef PHYANIM_USES_OPENMP
-    omp_destroy_lock(&writelock);
-#endif
-    return detectedCollision;
+    else
+    {
+        auto e0 = dynamic_cast<Edge*>(p0);
+        auto e1 = dynamic_cast<Edge*>(p1);
+        return _checkCollision(e0, e1, stiffness, setForces);
+    }
+    return false;
 }
 
-bool CollisionDetection::_checkTrianglesCollision(TrianglePtr t0_,
-                                                  TrianglePtr t1_,
-                                                  double stiffness,
-                                                  bool setForces)
+bool CollisionDetection::_checkCollision(TrianglePtr t0,
+                                         TrianglePtr t1,
+                                         double stiffness,
+                                         bool setForces)
 {
     Vec3 vt0[3], vt1[3];
-    vt0[0] = t0_->node0->position;
-    vt0[1] = t0_->node1->position;
-    vt0[2] = t0_->node2->position;
-    vt1[0] = t1_->node0->position;
-    vt1[1] = t1_->node1->position;
-    vt1[2] = t1_->node2->position;
+    vt0[0] = t0->node0->position;
+    vt0[1] = t0->node1->position;
+    vt0[2] = t0->node2->position;
+    vt1[0] = t1->node0->position;
+    vt1[1] = t1->node1->position;
+    vt1[2] = t1->node2->position;
 
     Vec3 n0 = (vt0[1] - vt0[0]).cross(vt0[2] - vt0[0]);
     double d0 = -n0.dot(vt0[0]);
@@ -368,13 +320,57 @@ bool CollisionDetection::_checkTrianglesCollision(TrianglePtr t0_,
     {
         n0.normalize();
         n1.normalize();
-        _checkAndSetForce(t0_->node0, n1, dt0[0], stiffness);
-        _checkAndSetForce(t0_->node1, n1, dt0[1], stiffness);
-        _checkAndSetForce(t0_->node2, n1, dt0[2], stiffness);
-        _checkAndSetForce(t1_->node0, n0, dt1[0], stiffness);
-        _checkAndSetForce(t1_->node1, n0, dt1[1], stiffness);
-        _checkAndSetForce(t1_->node2, n0, dt1[2], stiffness);
+        _checkAndSetForce(t0->node0, n1, dt0[0], stiffness);
+        _checkAndSetForce(t0->node1, n1, dt0[1], stiffness);
+        _checkAndSetForce(t0->node2, n1, dt0[2], stiffness);
+        _checkAndSetForce(t1->node0, n0, dt1[0], stiffness);
+        _checkAndSetForce(t1->node1, n0, dt1[1], stiffness);
+        _checkAndSetForce(t1->node2, n0, dt1[2], stiffness);
     }
+
+    t0->node0->collide = true;
+    t0->node1->collide = true;
+    t0->node2->collide = true;
+    t1->node0->collide = true;
+    t1->node1->collide = true;
+    t1->node2->collide = true;
+    return true;
+}
+
+bool CollisionDetection::_checkCollision(Edge* e0,
+                                         Edge* e1,
+                                         double stiffness,
+                                         bool setForces)
+{
+    auto a = e0->node0->position;
+    auto b = e0->node1->position;
+    auto c = e1->node0->position;
+    auto d = e1->node1->position;
+    auto r0 = std::max(e0->node0->radius, e0->node1->radius);
+    auto r1 = std::max(e1->node0->radius, e1->node1->radius);
+
+    Vec3 p0, p1;
+    double t0, t1;
+    project(a, b, c, d, p0, t0, p1, t1);
+
+    Vec3 dir = (p1 - p0);
+    double dist = (dir.norm() - (r0 + r1));
+    if (dist >= 0.0) return false;
+
+    dir.normalize();
+    auto f = dir * stiffness * dist;
+
+    if (setForces)
+    {
+        e0->node0->force += f * (1 - t0);
+        e0->node1->force += f * t0;
+        e1->node0->force -= f * (1 - t1);
+        e1->node1->force -= f * t1;
+    }
+    e0->node0->collide = true;
+    e0->node1->collide = true;
+    e1->node0->collide = true;
+    e1->node1->collide = true;
     return true;
 }
 

@@ -155,7 +155,7 @@ void resolveCollision(phyanim::AxisAlignedBoundingBoxPtr aabb)
     {
         for (auto mesh : slicedMeshes) mesh->nodesForceZero();
         collision = phyanim::CollisionDetection::computeCollisions(
-            slicedMeshes, collisionStiffness, true);
+            slicedMeshes, collisionStiffness);
         if (collision)
         {
             animSys->step(slicedMeshes);

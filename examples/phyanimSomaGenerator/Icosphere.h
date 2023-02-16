@@ -1,7 +1,7 @@
 #ifndef __EXAMPLES_ICOSPHERE__
 #define __EXAMPLES_ICOSPHERE__
 
-#include <DrawableMesh.h>
+#include <Mesh.h>
 
 #include "Tet.h"
 
@@ -14,7 +14,7 @@ public:
 
     virtual ~Icosphere(){};
 
-    phyanim::DrawableMesh* mesh();
+    phyanim::Mesh* mesh();
 
     std::vector<Spring*> springs(double stiffness = 100.0);
 
@@ -29,7 +29,7 @@ public:
     std::vector<Triangle*> triangles;
 
 private:
-    phyanim::DrawableMesh* _mesh;
+    phyanim::Mesh* _mesh;
 
     void _insert(Spring* spring, UniqueSprings& springs);
 

@@ -17,7 +17,8 @@ SomaGenerator::SomaGenerator(Samples starts,
     _soma.radius *= alphaSoma;
     _ico = new Icosphere(_soma.position, _soma.radius);
     _nodes = _ico->nodes;
-    _mesh = _ico->mesh();
+    _animMesh = _ico->mesh();
+    _renderMesh = generateMesh(_animMesh->nodes, _animMesh->surfaceTriangles);
     _tets = _ico->tets();
     _updateNodes();
 
@@ -74,8 +75,6 @@ void SomaGenerator::pull(float alpha)
             node->position = node->initPosition + increment;
     }
 }
-
-phyanim::DrawableMesh* SomaGenerator::mesh() { return _mesh; }
 
 void SomaGenerator::_addVec3ToVec(uint64_t id,
                                   const phyanim::Vec3& value,
@@ -150,9 +149,10 @@ void SomaGenerator::_fixCenterNodes(double radialDist)
 
 void SomaGenerator::_updateNodes()
 {
-    for (uint64_t i = 0; i < _mesh->nodes.size(); ++i)
-        _mesh->nodes[i]->position = _ico->nodes[i]->position;
-    _mesh->updatedPositions = true;
+    for (uint64_t i = 0; i < _animMesh->nodes.size(); ++i)
+        _animMesh->nodes[i]->position = _ico->nodes[i]->position;
+    _animMesh->computeNormals();
+    setGeometry(_renderMesh, _animMesh->nodes);
 }
 
 }  // namespace examples

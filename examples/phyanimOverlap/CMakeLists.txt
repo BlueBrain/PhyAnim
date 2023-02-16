@@ -1,7 +1,5 @@
 set(APP_NAME phyanimOverlap)
 
-include_directories(${CMAKE_BINARY_DIR}/include)
-
 file(GLOB ${APP_NAME}_SOURCE_FILES "*.cpp")
 file(GLOB ${APP_NAME}_HEADER_FILES "*.h")
 

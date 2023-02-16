@@ -1,6 +1,8 @@
 #ifndef __EXAMPLES_GLFW_APP__
 #define __EXAMPLES_GLFW_APP__
 
+#ifdef PHYANIM_USES_GLFW3
+
 #include <GLFW/glfw3.h>
 
 #include "Scene.h"
@@ -23,10 +25,14 @@ protected:
 
     static void _actionThread(GLFWApp* app);
 
-    void _loadMeshes(std::vector<std::string> files);
+    void _loadMeshes(std::vector<std::string>& files,
+                     double stiffnes = 1000.0,
+                     double density = 1.0,
+                     double damping = 1.0,
+                     double poissonRatio = 0.49);
 
-    void _writeMeshes(phyanim::Meshes meshes,
-                      std::vector<std::string> files,
+    void _writeMeshes(phyanim::Meshes& meshes,
+                      std::vector<std::string>& files,
                       std::string extension = "");
 
     void _sortAABBs(phyanim::AxisAlignedBoundingBoxes& aabbs)
@@ -100,6 +106,7 @@ protected:
     GLFWwindow* _window;
 
     Scene* _scene;
+    phyanim::Meshes _meshes;
 
     uint32_t _width;
     uint32_t _height;
@@ -117,12 +124,13 @@ protected:
     std::mutex _animMutex;
 
     phyanim::AxisAlignedBoundingBox _limits;
-    phyanim::Meshes _meshes;
     phyanim::AxisAlignedBoundingBoxes _aabbs;
     int32_t _collisionId;
     double _bbFactor;
 };
 
 }  // namespace examples
+
+#endif
 
 #endif

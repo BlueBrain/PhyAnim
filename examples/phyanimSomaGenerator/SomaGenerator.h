@@ -1,6 +1,7 @@
 #ifndef __EXAMPLES_SOMA_GENERATOR__
 #define __EXAMPLES_SOMA_GENERATOR__
 
+#include "../common/Mesh.h"
 #include "Icosphere.h"
 #include "Sample.h"
 #include "StiffnessMatrix.h"
@@ -26,7 +27,8 @@ public:
 
     void pull(float alpha);
 
-    phyanim::DrawableMesh* mesh();
+    phyanim::Mesh* animMesh() { return _animMesh; };
+    Mesh* renderMesh() { return _renderMesh; };
 
 private:
     void _addVec3ToVec(uint64_t id,
@@ -40,7 +42,8 @@ private:
     void _updateNodes();
 
     Icosphere* _ico;
-    phyanim::DrawableMesh* _mesh;
+    phyanim::Mesh* _animMesh;
+    Mesh* _renderMesh;
     std::vector<Node*> _nodes;
     Tets _tets;
     StiffnessMatrix _kMat;

@@ -1,9 +1,8 @@
 #ifndef __EXAMPLES_DEMO_APP__
 #define __EXAMPLES_DEMO_APP__
 
-#include <GLFWApp.h>
-
-#include "ColorPalette.h"
+#include "../common/ColorPalette.h"
+#include "../common/GLFWApp.h"
 
 namespace examples
 {
@@ -33,7 +32,8 @@ protected:
     void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
 
     std::vector<std::string> _fileNames;
-    phyanim::Mesh* _mesh;
+    phyanim::Mesh* _animMesh;
+    Mesh* _renderMesh;
 
     ColorPalette _palette;
 };

@@ -1,7 +1,7 @@
 #ifndef __EXAMPLES_ANIM_MESH_APP__
 #define __EXAMPLES_ANIM_MESH_APP__
 
-#include <GLFWApp.h>
+#include "../common/GLFWApp.h"
 
 namespace examples
 {

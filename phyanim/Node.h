@@ -18,6 +18,7 @@ class Node
 public:
     Node(Vec3 position_,
          unsigned int id_ = 0,
+         double radius = 1.0,
          Vec3 velocity_ = Vec3::Zero(),
          Vec3 force_ = Vec3::Zero(),
          double mass_ = 1.0,
@@ -34,13 +35,13 @@ public:
 
     Vec3 position;
 
+    double radius;
+
     Vec3 normal;
 
     Vec3 velocity;
 
     Vec3 force;
-
-    Vec3 color;
 
     double mass;
 
@@ -49,6 +50,8 @@ public:
     bool surface;
 
     bool fix;
+
+    bool isSoma;
 
     bool anim;
 

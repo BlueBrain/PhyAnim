@@ -77,7 +77,7 @@ void Mesh::load(const std::string& file_)
     {
         surfaceTriangles = triangles;
     }
-    if (!_normalsLoaded) _computeNormals();
+    if (!_normalsLoaded) computeNormals();
 }
 
 void Mesh::load(const std::string& nodeFile_, const std::string& eleFile_)
@@ -203,7 +203,7 @@ void Mesh::trianglesToEdges()
 {
     for (auto tri : triangles)
     {
-        auto triEdges = tri->edges();
+        auto triEdges = dynamic_cast<Triangle*>(tri)->edges();
         edges.insert(edges.end(), triEdges.begin(), triEdges.end());
     }
 }
@@ -227,7 +227,7 @@ void Mesh::tetsToEdges()
     UniqueEdges uniqueEdges;
     for (auto tet : tetrahedra)
     {
-        for (auto edge : tet->edges())
+        for (auto edge : dynamic_cast<TetrahedronPtr>(tet)->edges())
         {
             uniqueEdges.insert(edge);
         }
@@ -330,6 +330,7 @@ Mesh* Mesh::copy(bool surfaceTriangles_,
     for (auto node : nodes)
     {
         auto newNode = new Node(node->position, node->id);
+        newNode->normal = node->normal;
         mesh->nodes.push_back(newNode);
         nodesDicc[node] = newNode;
     }
@@ -403,6 +404,34 @@ void Mesh::positionDifference(double& mean_,
         }
         mean_ /= size;
     }
+}
+
+void Mesh::computeNormals()
+{
+    std::vector<uint32_t> w(nodes.size());
+
+    for (uint32_t i = 0; i < nodes.size(); ++i)
+    {
+        nodes[i]->normal = Vec3::Zero();
+        w[i] = 0;
+    }
+
+    for (auto prim : surfaceTriangles)
+    {
+        auto triangle = dynamic_cast<TrianglePtr>(prim);
+        uint32_t id0 = triangle->node0->id;
+        uint32_t id1 = triangle->node1->id;
+        uint32_t id2 = triangle->node2->id;
+        auto normal = triangle->normal();
+        nodes[id0]->normal += normal;
+        nodes[id1]->normal += normal;
+        nodes[id2]->normal += normal;
+        w[id0] += 1;
+        w[id1] += 1;
+        w[id2] += 1;
+    }
+
+    for (uint32_t i = 0; i < nodes.size(); ++i) nodes[i]->normal /= w[i];
 }
 
 void Mesh::_split(const std::string& string_,
@@ -748,34 +777,6 @@ void Mesh::_writeTET(const std::string& file_)
            << " " << tet->node3->id << "\n";
     }
     os.close();
-}
-
-void Mesh::_computeNormals()
-{
-    std::vector<uint32_t> w(nodes.size());
-
-    for (uint32_t i = 0; i < nodes.size(); ++i)
-    {
-        nodes[i]->normal = Vec3::Zero();
-        w[i] = 0;
-    }
-
-    for (auto prim : surfaceTriangles)
-    {
-        auto triangle = dynamic_cast<TrianglePtr>(prim);
-        uint32_t id0 = triangle->node0->id;
-        uint32_t id1 = triangle->node1->id;
-        uint32_t id2 = triangle->node2->id;
-        auto normal = triangle->normal();
-        nodes[id0]->normal += normal;
-        nodes[id1]->normal += normal;
-        nodes[id2]->normal += normal;
-        w[id0] += 1;
-        w[id1] += 1;
-        w[id2] += 1;
-    }
-
-    for (uint32_t i = 0; i < nodes.size(); ++i) nodes[i]->normal /= w[i];
 }
 
 }  // namespace phyanim

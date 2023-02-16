@@ -90,7 +90,8 @@ void SomaApp::_actionLoop()
     std::cout << "stiffness: " << stiffness << std::endl;
     std::cout << "poissonRatio: " << poissonRatio << std::endl;
     std::cout << "alphaSoma: " << alphaSoma << std::endl;
-    phyanim::DrawableMesh* mesh = somaGen->mesh();
+    phyanim::Mesh* mesh = somaGen->animMesh();
+    _meshes.push_back(mesh);
     phyanim::AxisAlignedBoundingBox limits;
     limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
     phyanim::Vec3 center = limits.center();
@@ -98,7 +99,7 @@ void SomaApp::_actionLoop()
 
     limits.upperLimit(center + axis);
     limits.lowerLimit(center - axis);
-    _scene->addMesh(mesh);
+    _scene->meshes.push_back(somaGen->renderMesh());
     _setCameraPos(limits);
 
     _anim = true;
@@ -136,7 +137,7 @@ void SomaApp::_actionLoop()
                         endTime - startTime;
                     std::cout << iters
                               << " irations in: " << elapsedTime.count()
-                              << "seconds" << std::endl;
+                              << " seconds" << std::endl;
                 }
                 std::cout << "Iteration: " << iter << std::endl;
             }

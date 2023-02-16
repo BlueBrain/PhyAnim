@@ -1,6 +1,6 @@
-#include <GLFWApp.h>
-
 #include <thread>
+
+#include "../common/GLFWApp.h"
 
 int main(int argc, char* argv[])
 {

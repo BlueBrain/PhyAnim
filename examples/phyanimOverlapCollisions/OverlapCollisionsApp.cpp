@@ -119,36 +119,19 @@ void OverlapCollisionsApp::_actionLoop()
     phyanim::AnimSystem* animSys = new phyanim::ImplicitFEMSystem(dt);
     animSys->gravity = false;
 
-    std::vector<phyanim::HierarchicalAABBPtr> tetAABBs;
+    _loadMeshes(files, stiffness, density, damping, poissonRatio);
 
-    _loadMeshes(files);
-    for (auto mesh : _meshes)
-        _scene->addMesh(dynamic_cast<phyanim::DrawableMesh*>(mesh));
-    tetAABBs.resize(_meshes.size());
-
+    std::vector<phyanim::HierarchicalAABBPtr> tetAABBs(_meshes.size());
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
     for (uint32_t i = 0; i < _meshes.size(); ++i)
     {
-        auto mesh = _meshes[i];
-        mesh->stiffness = stiffness;
-        mesh->damping = damping;
-        mesh->density = density;
-        mesh->poissonRatio = poissonRatio;
-        auto tetAABB = new phyanim::HierarchicalAABB(mesh->tetrahedra);
-        tetAABBs[i] = tetAABB;
-        _setSurfaceNodes(mesh);
+        _setSurfaceNodes(_meshes[i]);
+        tetAABBs[i] = new phyanim::HierarchicalAABB(_meshes[i]->tetrahedra);
     }
-    _setCameraPos(_limits);
+
     auto startTime = std::chrono::steady_clock::now();
-
-    _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, bbFactor);
-    _sortAABBs(_aabbs);
-    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
-    _collisionId = 0;
-
     if (stepByStep)
     {
         for (uint32_t i = 0; i < _aabbs.size(); ++i)
@@ -158,7 +141,8 @@ void OverlapCollisionsApp::_actionLoop()
             std::cout << "Collision id: " << _collisionId << std::endl;
 
             phyanim::Meshes slicedMeshes;
-            phyanim::Meshes completeMeshes;
+            phyanim::Meshes animMeshes;
+            std::vector<Mesh*> renderMeshes;
             for (uint32_t j = 0; j < _meshes.size(); ++j)
             {
                 auto slicedMesh = _sliceMesh(tetAABBs[j], *aabb, stiffness,
@@ -166,9 +150,11 @@ void OverlapCollisionsApp::_actionLoop()
                 if (slicedMesh)
                 {
                     slicedMeshes.push_back(slicedMesh);
-                    completeMeshes.push_back(_meshes[j]);
+                    animMeshes.push_back(_meshes[j]);
+                    renderMeshes.push_back(_scene->meshes[j]);
                 }
             }
+
             _setCameraPos(*aabb);
 
             animSys->preprocessMesh(slicedMeshes);
@@ -178,16 +164,21 @@ void OverlapCollisionsApp::_actionLoop()
             double collisionStiffness = initCollisionStiffness;
 
             bool collision = phyanim::CollisionDetection::computeCollisions(
-                slicedMeshes, collisionStiffness, true);
-            for (auto mesh : completeMeshes)
-                dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColors();
+                slicedMeshes, collisionStiffness);
+            for (uint32_t meshId = 0; meshId < animMeshes.size(); ++meshId)
+            {
+                auto animMesh = animMeshes[meshId];
+                auto renderMesh = renderMeshes[meshId];
+                setGeometry(renderMesh, animMesh->nodes);
+                setColorByCollision(renderMesh, animMesh->nodes);
+            }
             while (collision)
             {
                 if (_getAnim())
                 {
                     for (auto mesh : slicedMeshes) mesh->nodesForceZero();
                     collision = phyanim::CollisionDetection::computeCollisions(
-                        slicedMeshes, collisionStiffness, true);
+                        slicedMeshes, collisionStiffness);
                     if (collision)
                     {
                         animSys->step(slicedMeshes);
@@ -195,85 +186,95 @@ void OverlapCollisionsApp::_actionLoop()
                             mesh->boundingBox->update();
                         phyanim::CollisionDetection::computeCollisions(
                             slicedMeshes, _limits);
-                        for (auto mesh : completeMeshes)
-                            dynamic_cast<phyanim::DrawableMesh*>(mesh)
-                                ->updatedPositions = true;
                         collisionStiffness += initCollisionStiffness *
                                               collisionStiffnessMultiplier;
                     }
-                    for (auto mesh : completeMeshes)
-                        dynamic_cast<phyanim::DrawableMesh*>(mesh)
-                            ->updateColors();
+                    for (uint32_t meshId = 0; meshId < animMeshes.size();
+                         ++meshId)
+                    {
+                        setColorByCollision(renderMeshes[meshId],
+                                            animMeshes[meshId]->nodes);
+                        setGeometry(renderMeshes[meshId],
+                                    animMeshes[meshId]->nodes);
+                    }
                 }
             }
         }
     }
-    else
-    {
-        double progress = 0.0;
-        std::cout << "\rSolving collisions " << progress << "%" << std::flush;
-        uint32_t id = 0;
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-        for (uint32_t i = 0; i < _aabbs.size(); ++i)
-        {
-            uint32_t cId = i;
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp critical
-            {
-                cId = id;
-                ++id;
-            }
-#endif
-            auto aabb = _aabbs[cId];
-
-            phyanim::Meshes slicedMeshes;
-            phyanim::Meshes completeMeshes;
-            for (uint32_t j = 0; j < _meshes.size(); ++j)
-            {
-                auto slicedMesh = _sliceMesh(tetAABBs[j], *aabb, stiffness,
-                                             density, damping, poissonRatio);
-                if (slicedMesh)
-                {
-                    slicedMeshes.push_back(slicedMesh);
-                    completeMeshes.push_back(_meshes[j]);
-                }
-            }
-
-            animSys->preprocessMesh(slicedMeshes);
-            double currentCollisionStiffness = initCollisionStiffness;
-
-            bool collision = true;
-            while (collision)
-            {
-                for (auto mesh : slicedMeshes) mesh->nodesForceZero();
-                collision = phyanim::CollisionDetection::computeCollisions(
-                    slicedMeshes, currentCollisionStiffness, true);
-                if (collision)
-                {
-                    animSys->step(slicedMeshes);
-                    for (auto mesh : slicedMeshes) mesh->boundingBox->update();
-                    phyanim::CollisionDetection::computeCollisions(slicedMeshes,
-                                                                   _limits);
-                    for (auto mesh : completeMeshes)
-                        dynamic_cast<phyanim::DrawableMesh*>(mesh)
-                            ->updatedPositions = true;
-                    currentCollisionStiffness +=
-                        initCollisionStiffness * collisionStiffnessMultiplier;
-                }
-                for (auto mesh : completeMeshes)
-                    dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColors();
-            }
-#pragma omp critical
-            {
-                progress += 100.0f / _aabbs.size();
-                std::cout << "\rSolving collisions " << progress << "%"
-                          << std::flush;
-            }
-        }
-        std::cout << std::endl;
-    }
+    //     else
+    //     {
+    //         double progress = 0.0;
+    //         std::cout << "\rSolving collisions " << progress << "%"
+    //         << std::flush; uint32_t id = 0;
+    // #ifdef PHYANIM_USES_OPENMP
+    // #pragma omp parallel for
+    // #endif
+    //         for (uint32_t i = 0; i < _aabbs.size(); ++i)
+    //         {
+    //             uint32_t cId = i;
+    // #ifdef PHYANIM_USES_OPENMP
+    // #pragma omp critical
+    //             {
+    //                 cId = id;
+    //                 ++id;
+    //             }
+    // #endif
+    //             auto aabb = _aabbs[cId];
+    //
+    //             phyanim::Meshes slicedMeshes;
+    //             phyanim::Meshes completeMeshes;
+    //             for (uint32_t j = 0; j < _meshes.size(); ++j)
+    //             {
+    //                 auto slicedMesh = _sliceMesh(tetAABBs[j], *aabb,
+    //                 stiffness,
+    //                                              density, damping,
+    //                                              poissonRatio);
+    //                 if (slicedMesh)
+    //                 {
+    //                     slicedMeshes.push_back(slicedMesh);
+    //                     completeMeshes.push_back(_meshes[j]);
+    //                 }
+    //             }
+    //
+    //             animSys->preprocessMesh(slicedMeshes);
+    //             double currentCollisionStiffness =
+    //             initCollisionStiffness;
+    //
+    //             bool collision = true;
+    //             while (collision)
+    //             {
+    //                 for (auto mesh : slicedMeshes)
+    //                 mesh->nodesForceZero(); collision =
+    //                 phyanim::CollisionDetection::computeCollisions(
+    //                     slicedMeshes, currentCollisionStiffness,
+    //                     true);
+    //                 if (collision)
+    //                 {
+    //                     animSys->step(slicedMeshes);
+    //                     for (auto mesh : slicedMeshes)
+    //                     mesh->boundingBox->update();
+    //                     phyanim::CollisionDetection::computeCollisions(slicedMeshes,
+    //                                                                    _limits);
+    //                     for (auto mesh : completeMeshes)
+    //                         dynamic_cast<phyanim::DrawableMesh*>(mesh)
+    //                             ->updatedPositions = true;
+    //                     currentCollisionStiffness +=
+    //                         initCollisionStiffness *
+    //                         collisionStiffnessMultiplier;
+    //                 }
+    //                 for (auto mesh : completeMeshes)
+    //                     dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColors();
+    //             }
+    // #pragma omp critical
+    //             {
+    //                 progress += 100.0f / _aabbs.size();
+    //                 std::cout << "\rSolving collisions " << progress
+    //                 << "%"
+    //                           << std::flush;
+    //             }
+    //         }
+    //         std::cout << std::endl;
+    //     }
 
     _setCameraPos(_limits);
     auto endTime = std::chrono::steady_clock::now();
@@ -281,7 +282,7 @@ void OverlapCollisionsApp::_actionLoop()
     std::cout << "Overlap solved in: " << elapsedTime.count() << " seconds"
               << std::endl;
 
-    _writeMeshes(_meshes, files, "_no_overlap");
+    // _writeMeshes(_meshes, files, "_no_overlap");
 }
 phyanim::MeshPtr OverlapCollisionsApp::_sliceMesh(
     phyanim::HierarchicalAABBPtr tetAABB,
@@ -291,12 +292,12 @@ phyanim::MeshPtr OverlapCollisionsApp::_sliceMesh(
     double damping,
     double poissonRatio)
 {
-    phyanim::DrawableMesh* sliceMesh = nullptr;
+    phyanim::Mesh* sliceMesh = nullptr;
     auto tets = tetAABB->insidePrimitives(aabb);
     if (tets.size() > 0)
     {
-        sliceMesh = new phyanim::DrawableMesh(stiffness, density, damping,
-                                              poissonRatio);
+        sliceMesh =
+            new phyanim::Mesh(stiffness, density, damping, poissonRatio);
         sliceMesh->tetrahedra = tets;
         sliceMesh->tetsToNodes();
         sliceMesh->tetsToTriangles();
@@ -343,6 +344,8 @@ void OverlapCollisionsApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
+        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (action == GLFW_PRESS)
@@ -359,8 +362,6 @@ void OverlapCollisionsApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _middleButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {
@@ -372,8 +373,6 @@ void OverlapCollisionsApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _rightButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {

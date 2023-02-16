@@ -1,19 +1,21 @@
+#ifdef PHYANIM_USES_OPENMP
+
 // clang-format off
 #include <GL/glew.h>
 // clang-format on
 
 #include "GLFWApp.h"
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <thread>
 
 namespace examples
 {
 GLFWApp::GLFWApp(int argc, char** argv)
     : _scene(nullptr)
-    , _width(20000)
-    , _height(20000)
+    , _width(1000)
+    , _height(1000)
     , _mouseX(0.0)
     , _mouseY(0.0)
     , _leftButtonPressed(false)
@@ -70,12 +72,6 @@ void GLFWApp::_renderLoop()
 
 void GLFWApp::_actionLoop()
 {
-    phyanim::AxisAlignedBoundingBox limits;
-
-    std::cout << std::fixed << std::setprecision(2);
-    double progress = 0.0;
-    std::cout << "\rLoading files " << progress << "%" << std::flush;
-
     std::vector<std::string> files;
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -89,77 +85,52 @@ void GLFWApp::_actionLoop()
             files.push_back(_args[i]);
         }
     }
+    _loadMeshes(files);
+    std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
+}
 
-    phyanim::Meshes meshes;
+void GLFWApp::_actionThread(GLFWApp* app) { app->_actionLoop(); }
+
+void GLFWApp::_loadMeshes(std::vector<std::string>& files,
+                          double stiffnes,
+                          double density,
+                          double damping,
+                          double poissonRatio)
+{
+    std::cout << std::fixed << std::setprecision(2);
+    double progress = 0.0;
+    std::cout << "\rLoading files " << progress << "%" << std::flush;
 
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
     for (uint32_t i = 0; i < files.size(); ++i)
     {
-        auto mesh = new phyanim::DrawableMesh();
+        auto mesh = new phyanim::Mesh(stiffnes, density, damping, poissonRatio);
         mesh->load(files[i]);
+        auto renderMesh = generateMesh(mesh->nodes, mesh->surfaceTriangles);
         mesh->boundingBox =
             new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
 #pragma omp critical
         {
-            limits.unite(*mesh->boundingBox);
-            meshes.push_back(mesh);
-            _scene->addMesh(mesh);
-            _setCameraPos(limits);
+            _limits.unite(*mesh->boundingBox);
+            _meshes.push_back(mesh);
+            _scene->meshes.push_back(renderMesh);
+            _setCameraPos(_limits);
             progress += 100.0f / files.size();
             std::cout << "\rLoading files " << progress << "%" << std::flush;
         }
     }
     std::cout << std::endl;
     _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(meshes, _bbFactor);
+        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+    _sortAABBs(_aabbs);
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
+    _collisionId = 0;
 }
 
-void GLFWApp::_actionThread(GLFWApp* app) { app->_actionLoop(); }
-
-void GLFWApp::_loadMeshes(std::vector<std::string> files)
-{
-    _meshes.resize(files.size());
-    double progress = 0.0;
-    std::cout << std::fixed << std::setprecision(2);
-    std::cout << "\rLoading files " << progress << "%" << std::flush;
-    auto startTime = std::chrono::steady_clock::now();
-
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint32_t i = 0; i < files.size(); ++i)
-    {
-        phyanim::DrawableMesh* mesh =
-            new phyanim::DrawableMesh(50.0, 1.0, 1.0, 0.3);
-        mesh->load(files[i]);
-        mesh->boundingBox =
-            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
-        _meshes[i] = mesh;
-#pragma omp critical
-        {
-            _limits.unite(*mesh->boundingBox);
-            progress += 100.0f / files.size();
-            std::cout << "\rLoading files " << progress << "%" << std::flush;
-        }
-    }
-
-    uint32_t numTriangles = 0;
-    for (auto mesh : _meshes) numTriangles += mesh->surfaceTriangles.size();
-
-    std::cout << std::endl;
-    auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
-    std::cout << "Files loaded in: " << elapsedTime.count()
-              << " seconds. With: " << numTriangles << " triangles."
-              << std::endl;
-    _setCameraPos(_limits);
-}
-
-void GLFWApp::_writeMeshes(phyanim::Meshes meshes,
-                           std::vector<std::string> files,
+void GLFWApp::_writeMeshes(phyanim::Meshes& meshes,
+                           std::vector<std::string>& files,
                            std::string extension)
 {
     double progress = 0.0;
@@ -210,9 +181,7 @@ void GLFWApp::_setAnim(bool anim)
 void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
 {
     phyanim::Vec3 cameraPos = limits.center();
-    // float distance = (limits.upperLimit() - limits.center()).norm();
-    // distance /= sin((45.0f)/180.0f*M_PI);
-    float distance = limits.upperLimit().z() - limits.center().z();
+    float distance = limits.radius();
     _scene->cameraPosition(cameraPos);
     _scene->cameraDistance(distance);
 }
@@ -237,7 +206,7 @@ void GLFWApp::_initGLFW()
     }
 
     glfwMakeContextCurrent(_window);
-    // glfwSwapInterval(0);
+    glfwSwapInterval(0);
 
     glewExperimental = GL_TRUE;
     glewInit();
@@ -372,24 +341,23 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
+        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (action == GLFW_PRESS)
             {
                 _leftButtonPressed = true;
 
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
-
                 uint32_t pickedId = _scene->picking(_mouseX, _mouseY);
 
                 for (uint32_t id = 0; id < _scene->meshes.size(); ++id)
                 {
-                    auto mesh = _scene->meshes[id];
-                    phyanim::Vec3 color(0.4, 0.4, 0.8);
+                    phyanim::Vec3 color(0, 0.8, 0.8);
                     if (id + 1 == pickedId)
                         color = phyanim::Vec3(0.8, 0.4, 0.4);
-                    dynamic_cast<phyanim::DrawableMesh*>(mesh)->updateColor(
-                        color);
+                    setColor(_scene->meshes[id], _meshes[id]->nodes.size(),
+                             color);
                 }
             }
             else if (action == GLFW_RELEASE)
@@ -402,8 +370,6 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _middleButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {
@@ -415,8 +381,6 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _rightButtonPressed = true;
-
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
             }
             else if (action == GLFW_RELEASE)
             {
@@ -449,10 +413,10 @@ void GLFWApp::_mousePositionCallback(GLFWwindow* window,
                           diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
+            _scene->displaceCamera(dxyz);
         }
         if (_middleButtonPressed)
         {
-            _scene->displaceCamera(dxyz);
         }
         if (_rightButtonPressed)
         {
@@ -477,3 +441,5 @@ void GLFWApp::_mouseScrollCallback(GLFWwindow* window,
 }
 
 }  // namespace examples
+
+#endif

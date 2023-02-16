@@ -106,18 +106,23 @@ Scene::~Scene()
     delete _program;
 }
 
-void Scene::addMesh(phyanim::DrawableMesh* mesh)
-{
-    _meshesMutex.lock();
-    meshes.push_back(mesh);
-    _meshesMutex.unlock();
-}
-
 void Scene::render()
 {
     ++_framesCount;
     glClearColor(_background.x(), _background.y(), _background.z(), 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    switch (_renderMode)
+    {
+    case SOLID:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glEnable(GL_CULL_FACE);
+        break;
+    case WIREFRAME:
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_CULL_FACE);
+        break;
+    }
 
     _loadSky();
 
@@ -129,12 +134,10 @@ void Scene::render()
     glUniformMatrix4fv(_program->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
     glUniformMatrix4fv(_program->viewmodelIndex, 1, GL_FALSE, view.data());
-    _meshesMutex.lock();
     for (auto mesh : meshes)
     {
-        mesh->render();
+        if (mesh) mesh->render();
     }
-    _meshesMutex.unlock();
     auto currentTime = std::chrono::steady_clock::now();
     double elapsed_seconds =
         (std::chrono::duration<double>(currentTime - _previousTime)).count();
@@ -149,11 +152,8 @@ void Scene::render()
 
 uint32_t Scene::picking(uint32_t x, uint32_t y)
 {
-    if (_renderMode == WIREFRAME)
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glCullFace(GL_FRONT);
-    }
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -161,15 +161,13 @@ uint32_t Scene::picking(uint32_t x, uint32_t y)
     Eigen::Matrix4f projView = _camera->projectionViewMatrix().cast<float>();
     glUniformMatrix4fv(_pickingProgram->projviewmodelIndex, 1, GL_FALSE,
                        projView.data());
-    _meshesMutex.lock();
     for (uint32_t id = 0; id < meshes.size(); ++id)
     {
         auto mesh = meshes[id];
         float* idColor = _idToColor4f(id + 1);
         glUniform4fv(_pickingProgram->pickingColor, 1, idColor);
-        mesh->render();
+        if (mesh) mesh->render();
     }
-    _meshesMutex.unlock();
 
     glFlush();
     glFinish();
@@ -181,11 +179,6 @@ uint32_t Scene::picking(uint32_t x, uint32_t y)
     uint32_t pickedId = (float)data[0] + (float)data[1] * (float)256 +
                         (float)data[2] * 256 * 256;
 
-    if (_renderMode == WIREFRAME)
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glCullFace(GL_FRONT_AND_BACK);
-    }
     return pickedId;
 }
 
@@ -242,11 +235,9 @@ void Scene::changeRenderMode()
     {
     case SOLID:
         _renderMode = WIREFRAME;
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         break;
     case WIREFRAME:
         _renderMode = SOLID;
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         break;
     }
 }

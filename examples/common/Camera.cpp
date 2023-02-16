@@ -75,13 +75,14 @@ void Camera::_makeViewMat()
     _viewMat = phyanim::Mat4::Identity();
     _viewMat.block<3, 3>(0, 0) = inv;
     _viewMat.block<3, 1>(0, 3) =
-        -inv * (_position + _rotation * phyanim::Vec3(0.0, 0.0, 1.0) * _distance);
+        -inv *
+        (_position + _rotation * phyanim::Vec3(0.0, 0.0, 1.0) * _distance);
 }
 
 void Camera::_makeProjectionMat()
 {
     double nearPlane = 0.01;
-    double farPlane = 1000.0;
+    double farPlane = 10000.0;
     double nf = 1.0 / (nearPlane - farPlane);
     double f = 1.0 / tan(_fov);
 
