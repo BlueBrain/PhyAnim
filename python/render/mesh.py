@@ -386,10 +386,10 @@ class QuadMesh(Mesh):
                      vec3(1, -1, 0), vec3(1, 1, 0.0)]
         normals = [vec3(0, 0, 1), vec3(0, 0, 1),
                    vec3(0, 0, 1), vec3(0, 0, 1)]
-        # colors = [vec3(0.9, 0.9, 0.9), vec3(1, 1, 1),
-        #           vec3(1, 1, 1), vec3(0.9, 0.9, 0.9)]
-        colors = [vec3(0.2, 0.2, 0.2), vec3(0.1, 0.2, 0.2),
-                  vec3(0.1, 0.2, 0.2), vec3(0.2, 0.2, 0.2)]
+        colors = [vec3(0.9, 0.9, 0.9), vec3(1, 1, 1),
+                  vec3(1, 1, 1), vec3(0.9, 0.9, 0.9)]
+        # colors = [vec3(0.2, 0.2, 0.2), vec3(0.1, 0.2, 0.2),
+        #           vec3(0.1, 0.2, 0.2), vec3(0.2, 0.2, 0.2)]
         Mesh.__init__(self, lines, triangles, quads,
                       positions, normals, colors)
 

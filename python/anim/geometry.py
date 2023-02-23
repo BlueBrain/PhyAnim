@@ -245,9 +245,10 @@ class Morphology:
             self.soma_nodes.append(node)
             self.soma_center += point
         self.soma_center /= len(morpho.soma.points)
+        self.soma_radius = 0.0
         for node in self.soma_nodes:
-            self.soma_radius = max(self.soma_radius, distance(
-                self.soma_center, node.position))
+            self.soma_radius += distance(self.soma_center, node.position)
+        self.soma_radius /= len(self.soma_nodes)
         for sec in morpho.root_sections:
             section = Section()
             self.root_sections.append(section)

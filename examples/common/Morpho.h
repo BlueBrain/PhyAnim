@@ -14,7 +14,9 @@ typedef std::vector<Section*> Sections;
 class Morpho
 {
 public:
-    Morpho(std::string path, phyanim::Mat4 mat = phyanim::Mat4::Identity());
+    Morpho(std::string path,
+           phyanim::Mat4 mat = phyanim::Mat4::Identity(),
+           bool loadNeurites = true);
 
     ~Morpho(){};
 
@@ -22,9 +24,11 @@ public:
 
     void cutout(phyanim::AxisAlignedBoundingBox& aabb);
 
-    // phyanim::Nodes somaNodes;
-
     phyanim::Nodes nodes;
+
+    phyanim::Nodes somaNodes;
+
+    phyanim::NodePtr soma;
 
     Sections sections;
 

@@ -287,11 +287,10 @@ void HierarchicalAABB::_collidingPrimitives(HierarchicalAABBPtr aabb0,
                 {
                     for (auto prim1 : aabb1->_primitives)
                     {
+                        if (prim0 == prim1) continue;
                         if (prim0->areLimitsColliding(prim1))
-                        {
                             primitivesPairs.push_back(
                                 std::make_pair(prim0, prim1));
-                        }
                     }
                 }
             }

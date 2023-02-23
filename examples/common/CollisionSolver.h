@@ -33,8 +33,8 @@ public:
 #endif
         for (uint32_t i = 0; i < size; ++i)
         {
-            _system->clearCollision(edgesSet[i]);
             _system->clearForce(nodesSet[i]);
+            _system->clearCollision(nodesSet[i]);
         }
         if (!phyanim::CollisionDetection::computeCollisions(aabbs, ksc))
             return true;
@@ -45,6 +45,35 @@ public:
         {
             _system->step(nodesSet[i], edgesSet[i], limits, ks, kd);
             aabbs[i]->update();
+        }
+        return false;
+    };
+
+    bool solve(phyanim::HierarchicalAABBs& aabbs,
+               phyanim::Edges& edges,
+               phyanim::Nodes& nodes,
+               phyanim::AxisAlignedBoundingBox& limits,
+               double ks,
+               double ksc,
+               double kd)
+    {
+        uint32_t size = aabbs.size();
+        _system->clearCollision(nodes);
+        _system->clearForce(nodes);
+
+        if (!phyanim::CollisionDetection::computeCollisions(aabbs, ksc))
+            return true;
+        {
+            std::cout << "#" << std::flush;
+
+            _system->step(nodes, edges, limits, ks, kd);
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+            for (uint32_t i = 0; i < size; ++i)
+            {
+                aabbs[i]->update();
+            }
         }
         return false;
     };

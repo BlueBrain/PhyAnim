@@ -33,7 +33,7 @@ class MorphoRenderIndex(App):
 
 
     
-    def add_models(self, sonata_file, population_name, lines=False, num = 10):
+    def add_models(self, sonata_file, population_name, gids, lines=False):
         program = ShaderProgram(
             [("shaders/lines.vert", ShaderType.VERTEX),
              ("shaders/lines.frag", ShaderType.FRAGMENT)], GL_LINES)
@@ -47,7 +47,6 @@ class MorphoRenderIndex(App):
                 ("shaders/quads_tess.tese", ShaderType.TESS_EVALUATION),
                 ("shaders/quads_tess.frag", ShaderType.FRAGMENT)], GL_PATCHES)
 
-        gids = range(0,num)
         
         morpho_models = get_morpho_model(sonata_file, population_name, gids)
         
@@ -85,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument("population_name", help="Population name")
   
     parser.add_argument('-lines', action='store_true', help="generate morphology meshes as lines")
-    parser.add_argument('-n', type=int, default=10)
+    parser.add_argument('ids', metavar='ids', nargs='+', type=int)
     parser.add_argument('-min_x', type=float, default=0)
     parser.add_argument('-min_y', type=float, default=0)
     parser.add_argument('-min_z', type=float, default=0)
@@ -99,7 +98,7 @@ if __name__ == "__main__":
     app.min = vec3(args.min_x, args.min_y, args.min_z)
     app.max = vec3(args.max_x, args.max_y, args.max_z)
     app.set_background()
-    p = threading.Thread(target=app.add_models, args=(args.sonata_file, args.population_name, args.lines,args.n))
+    p = threading.Thread(target=app.add_models, args=(args.sonata_file, args.population_name, args.ids, args.lines))
     p.start()
     app.scene.distance = 500.0
     app.scene.level = 5

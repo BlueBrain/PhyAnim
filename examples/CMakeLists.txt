@@ -2,29 +2,29 @@
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION
   ${CMAKE_BINARY_DIR}/data)
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/multi_index.py DESTINATION
-  ${CMAKE_BINARY_DIR}/)
-
-
+file(GLOB  PYTHON_FILES "*.py")
+file(COPY ${PYTHON_FILES} DESTINATION
+  ${CMAKE_BINARY_DIR})
 
 add_compile_definitions(DATAPATH="${CMAKE_BINARY_DIR}/data")
 
-add_subdirectory(phyanimCheckCollisions)
-add_subdirectory(phyanimFormatConverter)
-add_subdirectory(phyanimTetrahedralizeMesh)
-add_subdirectory(phyanimOverlap)
-add_subdirectory(test)
+add_subdirectory(appCheckCollisions)
+add_subdirectory(appFormatConverter)
+add_subdirectory(appTetrahedralizeMesh)
+add_subdirectory(appOverlap)
+add_subdirectory(appTest)
 
 if(GLFW3_FOUND)
-  add_subdirectory(phyanimRenderMesh)
-  add_subdirectory(phyanimAnimMesh)
-  add_subdirectory(phyanimMoveMesh)
-  add_subdirectory(phyanimRenderMorpho)
-  add_subdirectory(phyanimOverlapCircuit)
+  add_subdirectory(appCollidingSomas)
+  add_subdirectory(appRenderMesh)
+  add_subdirectory(appAnimMesh)
+  add_subdirectory(appMoveMesh)
+  add_subdirectory(appRenderMorpho)
+  add_subdirectory(appOverlapCircuit)
   
-  add_subdirectory(phyanimSceneGenerator)
+  add_subdirectory(appSceneGenerator)
 
-  add_subdirectory(phyanimOverlapCollisions)
-  add_subdirectory(phyanimSomaGenerator)
-  add_subdirectory(phyanimDemo)
+  add_subdirectory(appOverlapCollisions)
+  add_subdirectory(appSomaGenerator)
+  add_subdirectory(appDemo)
 endif()

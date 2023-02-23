@@ -9,7 +9,8 @@ namespace examples
 typedef enum
 {
     SOFT = 0,
-    CONTRAST
+    CONTRAST,
+    SCALE
 } PaletteType;
 
 class ColorPalette
@@ -38,6 +39,14 @@ public:
             _addColor((uint8_t)0x87, (uint8_t)0xe9, (uint8_t)0x11);
             _addColor((uint8_t)0xe1, (uint8_t)0x18, (uint8_t)0x45);
             break;
+        case SCALE:
+            _addColor((uint8_t)0x00, (uint8_t)0x00, (uint8_t)0x00);
+            _addColor((uint8_t)0x05, (uint8_t)0x0a, (uint8_t)0x30);
+            _addColor((uint8_t)0x00, (uint8_t)0x0c, (uint8_t)0x66);
+            _addColor((uint8_t)0x00, (uint8_t)0x00, (uint8_t)0xff);
+            _addColor((uint8_t)0x7e, (uint8_t)0xc8, (uint8_t)0xe3);
+            _addColor((uint8_t)0xff, (uint8_t)0xff, (uint8_t)0xff);
+            break;
         }
     };
 
@@ -46,6 +55,13 @@ public:
         if (_colors.size() <= 0) return phyanim::Vec3::Zero();
 
         return _colors[id % _colors.size()];
+    };
+
+    phyanim::Vec3 color(double f)
+    {
+        if (_colors.size() <= 0) return phyanim::Vec3::Zero();
+
+        return _colors[(uint32_t)(f * (_colors.size() + 1)) % _colors.size()];
     };
 
     phyanim::Vec3 collisionColor() { return phyanim::Vec3(0.8f, .0f, .0f); };

@@ -74,7 +74,11 @@ void AnimSystem::clearForce(Nodes& nodes)
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-    for (uint32_t i = 0; i < size; ++i) nodes[i]->force = Vec3::Zero();
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        nodes[i]->force = Vec3::Zero();
+        if (!nodes[i]->collide) nodes[i]->velocity = Vec3::Zero();
+    }
 }
 
 void AnimSystem::clearCollision(Nodes& nodes)
