@@ -58,6 +58,12 @@ public:
     bool collide;
 };
 
+void clearForce(Nodes& nodes);
+
+void clearCollision(Nodes& nodes);
+
+void clearVelocityIfNoColl(Nodes& nodes);
+
 }  // namespace phyanim
 
 #endif

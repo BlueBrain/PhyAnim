@@ -20,11 +20,6 @@ public:
 
     void preprocessMesh(Meshes meshes);
 
-    void clearForce(Nodes& nodes);
-
-    void clearCollision(Nodes& nodes);
-    void clearCollision(Edges& edges);
-
 protected:
     virtual void _step(Mesh* mesh) = 0;
 

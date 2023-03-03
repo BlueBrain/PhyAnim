@@ -287,10 +287,16 @@ void HierarchicalAABB::_collidingPrimitives(HierarchicalAABBPtr aabb0,
                 {
                     for (auto prim1 : aabb1->_primitives)
                     {
-                        if (prim0 == prim1) continue;
-                        if (prim0->areLimitsColliding(prim1))
-                            primitivesPairs.push_back(
-                                std::make_pair(prim0, prim1));
+                        // if (prim0 == prim1) continue;
+
+                        // bool shared = false;
+                        // for (auto node0 : prim0->nodes())
+                        //     for (auto node1 : prim1->nodes())
+                        //         shared |= (node0 == node1);
+                        // if (shared) continue;
+
+                        // if (prim0->areLimitsColliding(prim1))
+                        primitivesPairs.push_back(std::make_pair(prim0, prim1));
                     }
                 }
             }

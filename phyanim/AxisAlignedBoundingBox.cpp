@@ -155,7 +155,7 @@ void AxisAlignedBoundingBox::resize(double resizeFactor)
 
 void AxisAlignedBoundingBox::fixOutNodes(Nodes& nodes)
 {
-    for (auto node : nodes) node->fix = !isColliding(*node);
+    for (auto node : nodes) node->fix = !isInside(node->position);
 }
 
 void AxisAlignedBoundingBox::delimit(Nodes& nodes)
@@ -169,6 +169,29 @@ void AxisAlignedBoundingBox::delimit(Nodes& nodes)
     {
         auto node = nodes[i];
         if (!node->fix && !node->isSoma)
+        {
+            Vec3& pos = node->position;
+            if (pos.x() < _lowerLimit.x()) pos.x() = _lowerLimit.x();
+            if (pos.y() < _lowerLimit.y()) pos.y() = _lowerLimit.y();
+            if (pos.z() < _lowerLimit.z()) pos.z() = _lowerLimit.z();
+            if (pos.x() > _upperLimit.x()) pos.x() = _upperLimit.x();
+            if (pos.y() > _upperLimit.y()) pos.y() = _upperLimit.y();
+            if (pos.z() > _upperLimit.z()) pos.z() = _upperLimit.z();
+        }
+    }
+}
+
+void AxisAlignedBoundingBox::delimitIfCollide(Nodes& nodes)
+{
+    uint32_t size = nodes.size();
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        auto node = nodes[i];
+        if (!node->fix && !node->isSoma && node->collide)
         {
             Vec3& pos = node->position;
             if (pos.x() < _lowerLimit.x()) pos.x() = _lowerLimit.x();

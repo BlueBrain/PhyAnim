@@ -67,38 +67,6 @@ void AnimSystem::step(Meshes meshes)
         _step(mesh);
     }
 }
-
-void AnimSystem::clearForce(Nodes& nodes)
-{
-    uint32_t size = nodes.size();
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint32_t i = 0; i < size; ++i)
-    {
-        nodes[i]->force = Vec3::Zero();
-        if (!nodes[i]->collide) nodes[i]->velocity = Vec3::Zero();
-    }
-}
-
-void AnimSystem::clearCollision(Nodes& nodes)
-{
-    uint32_t size = nodes.size();
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint32_t i = 0; i < size; ++i) nodes[i]->collide = false;
-}
-
-void AnimSystem::clearCollision(Edges& edges)
-{
-    for (auto edge : edges)
-    {
-        edge->node0->collide = false;
-        edge->node1->collide = false;
-    }
-}
-
 void AnimSystem::_addGravity(Nodes& nodes)
 {
     if (gravity)

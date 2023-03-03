@@ -112,6 +112,46 @@ void resample(Edges& edges)
     edges.insert(edges.end(), newEdges.begin(), newEdges.end());
 }
 
+void resample(Edges& edges, double len)
+{
+    phyanim::Edges newEdges;
+    for (auto edge : edges)
+    {
+        auto r0 = edge->node0->radius;
+        auto r1 = edge->node1->radius;
+        auto pos0 = edge->node0->position;
+        auto pos1 = edge->node1->position;
+
+        auto dist = (pos1 - pos0).norm();
+        uint32_t numSides = floor(dist / len);
+
+        if (numSides > 1)
+        {
+            double tInc = 1.0 / numSides;
+
+            auto prevNode = edge->node0;
+            for (uint32_t i = 1; i < numSides; ++i)
+            {
+                double t = tInc * i;
+                phyanim::Vec3 pos(pos0 * (1.0 - t) + pos1 * t);
+                double r = r0 * (1.0 - t) + r1 * t;
+                auto node = new phyanim::Node(pos, 0, r, phyanim::Vec3::Zero(),
+                                              phyanim::Vec3::Zero(), r);
+                newEdges.push_back(new phyanim::Edge(prevNode, node));
+                prevNode = node;
+            }
+            newEdges.push_back(new phyanim::Edge(prevNode, edge->node1));
+            delete edge;
+        }
+        else
+        {
+            newEdges.push_back(edge);
+        }
+    }
+    edges.clear();
+    edges.insert(edges.end(), newEdges.begin(), newEdges.end());
+}
+
 void removeOutEdges(Edges& edges, AxisAlignedBoundingBox& limits)
 {
     for (uint32_t i = 0; i < edges.size(); ++i)
@@ -119,7 +159,7 @@ void removeOutEdges(Edges& edges, AxisAlignedBoundingBox& limits)
         auto node0 = edges[i]->node0;
         auto node1 = edges[i]->node1;
         if (!node0->isSoma && !node1->isSoma &&
-            (!limits.isInside(node0->position) &&
+            (!limits.isInside(node0->position) ||
              !limits.isInside(node1->position)))
         {
             edges.erase(edges.begin() + i);

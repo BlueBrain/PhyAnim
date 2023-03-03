@@ -55,6 +55,7 @@ public:
 
     void fixOutNodes(Nodes& nodes);
     void delimit(Nodes& nodes);
+    void delimitIfCollide(Nodes& nodes);
 
 protected:
     void _clear();

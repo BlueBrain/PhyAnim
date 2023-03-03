@@ -65,6 +65,8 @@ Nodes uniqueNodes(Edges& edges);
 
 void resample(Edges& edges);
 
+void resample(Edges& edges, double len);
+
 void removeOutEdges(Edges& edges, AxisAlignedBoundingBox& limits);
 
 }  // namespace phyanim

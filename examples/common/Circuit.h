@@ -88,7 +88,7 @@ public:
         uint32_t num = morphoPaths.size();
         std::vector<Morpho*> morphos(num);
         uint32_t loaded = 0;
-        std::cout << std::setprecision(4) << std::fixed;
+        // std::cout << std::setprecision(4) << std::fixed;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -139,7 +139,7 @@ public:
         uint32_t num = morphoPaths.size();
         std::vector<Morpho*> morphos(num);
         uint32_t loaded = 0;
-        std::cout << std::setprecision(4) << std::fixed;
+        // std::cout << std::setprecision(4) << std::fixed;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif

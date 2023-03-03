@@ -14,14 +14,15 @@ public:
     OverlapCircuitApp(int argc, char** argv);
 
 protected:
-    bool _solveCollisions(phyanim::HierarchicalAABBs& aabbs,
-                          std::vector<phyanim::Edges>& edgesSet,
-                          std::vector<phyanim::Nodes>& nodesSet,
-                          phyanim::AxisAlignedBoundingBox& limits,
-                          double ks,
-                          double ksc,
-                          double kd,
-                          uint32_t numIters = 1000);
+    uint32_t _solveCollisions(phyanim::HierarchicalAABBs& aabbs,
+                              std::vector<phyanim::Edges>& edgesSet,
+                              std::vector<phyanim::Nodes>& nodesSet,
+                              phyanim::AxisAlignedBoundingBox& limits,
+                              double ks,
+                              double ksc,
+                              double kd,
+                              uint32_t& totalIters, 
+                              uint32_t numIters = 1000);
 
     void _actionLoop();
 

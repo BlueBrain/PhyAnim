@@ -107,8 +107,8 @@ Morpho::Morpho(std::string path, phyanim::Mat4 mat, bool loadNeurites)
     soma = new phyanim::Node(center, 0, radius, phyanim::Vec3::Zero(),
                              phyanim::Vec3::Zero(), radius);
     soma->isSoma = true;
-    nodes.push_back(soma);
-    edges.push_back(new phyanim::Edge(soma, soma));
+    // nodes.push_back(soma);
+    // edges.push_back(new phyanim::Edge(soma, soma));
 
     aabb = new phyanim::HierarchicalAABB(edges);
 #endif

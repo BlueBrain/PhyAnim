@@ -5,10 +5,10 @@
 namespace phyanim
 {
 
-bool CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
-                                           double stiffness)
+uint32_t CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
+                                               double stiffness)
 {
-    bool detectedCollision = false;
+    uint32_t numCollisions = 0;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
@@ -18,14 +18,42 @@ bool CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
         for (unsigned int j = i + 1; j < aabbs.size(); ++j)
         {
             auto aabb1 = aabbs[j];
-            bool colliding = _computeCollision(aabb0, aabb1, stiffness);
+            uint32_t num = _computeCollision(aabb0, aabb1, stiffness);
+#ifdef PHYANIM_USES_OPENMP
 #pragma omp critical
+#endif
             {
-                detectedCollision |= colliding;
+                numCollisions += num;
             }
         }
     }
-    return detectedCollision;
+    return numCollisions;
+}  // namespace phyanim
+
+uint32_t CollisionDetection::computeSelfCollisions(HierarchicalAABBs& aabbs,
+                                                   double stiffness)
+{
+    uint32_t numCollisions = 0;
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (unsigned int i = 0; i < aabbs.size(); ++i)
+    {
+        uint32_t num = _computeCollision(aabbs[i], aabbs[i], stiffness);
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp critical
+#endif
+        {
+            numCollisions += num;
+        }
+    }
+    return numCollisions;
+}
+
+uint32_t CollisionDetection::computeCollisions(HierarchicalAABBPtr aabb,
+                                               double stiffness)
+{
+    return _computeCollision(aabb, aabb, stiffness);
 }
 
 bool CollisionDetection::computeCollisions(Meshes& meshes, double stiffness)
@@ -159,19 +187,39 @@ AxisAlignedBoundingBoxes CollisionDetection::collisionBoundingBoxes(
     return collisionBoundingBoxes(aabbs, sizeFactor);
 }
 
-bool CollisionDetection::_computeCollision(HierarchicalAABBPtr aabb0,
-                                           HierarchicalAABBPtr aabb1,
-                                           double stiffness)
+uint32_t CollisionDetection::_computeCollision(HierarchicalAABBPtr aabb0,
+                                               HierarchicalAABBPtr aabb1,
+                                               double stiffness)
 {
-    bool detectedCollision = false;
+    uint32_t numCollisions = 0;
     auto pairs = aabb0->collidingPrimitives(aabb1);
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
     for (unsigned int i = 0; i < pairs.size(); i++)
     {
         auto pair = pairs[i];
-        detectedCollision |=
-            _checkCollision(pair.first, pair.second, stiffness);
+
+        if (!pair.first->areLimitsColliding(pair.second)) continue;
+        // if (pair.first == pair.second) continue;
+        // bool shared = false;
+        // for (auto node0 : pair.first->nodes())
+        //     for (auto node1 : pair.second->nodes()) shared |= (node0 ==
+        //     node1);
+        // if (shared) continue;
+        uint32_t num = 0;
+        if (_checkCollision(pair.first, pair.second, stiffness))
+            // ++numCollisions;
+            num = 1;
+        // #ifdef PHYANIM_USES_OPENMP
+        // #pragma omp critical
+        // #endif
+        {
+            numCollisions += num;
+        }
     }
-    return detectedCollision;
+    return numCollisions;
 }
 
 bool CollisionDetection::_checkCollision(PrimitivePtr p0,
@@ -179,19 +227,19 @@ bool CollisionDetection::_checkCollision(PrimitivePtr p0,
                                          double stiffness,
                                          bool setForces)
 {
-    auto t0 = dynamic_cast<TrianglePtr>(p0);
-    auto t1 = dynamic_cast<TrianglePtr>(p1);
-    if (t0 && t1)
-    {
-        return _checkCollision(t0, t1, stiffness, setForces);
-    }
-    else
+    // auto t0 = dynamic_cast<TrianglePtr>(p0);
+    // auto t1 = dynamic_cast<TrianglePtr>(p1);
+    // if (t0 && t1)
+    // {
+    //     return _checkCollision(t0, t1, stiffness, setForces);
+    // }
+    // else
     {
         auto e0 = dynamic_cast<Edge*>(p0);
         auto e1 = dynamic_cast<Edge*>(p1);
         return _checkCollision(e0, e1, stiffness, setForces);
     }
-    return false;
+    // return false;
 }
 
 bool CollisionDetection::_checkCollision(TrianglePtr t0,
@@ -356,6 +404,7 @@ bool CollisionDetection::_checkCollision(Edge* e0,
     Vec3 dir = (p1 - p0);
     double dist = (dir.norm() - (r0 + r1));
     if (dist >= 0.0) return false;
+    if (dist > -0.1) dist = -0.1;
 
     dir.normalize();
     auto f = dir * stiffness * dist;

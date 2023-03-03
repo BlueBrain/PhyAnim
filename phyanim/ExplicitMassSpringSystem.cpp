@@ -27,17 +27,23 @@ void ExplicitMassSpringSystem::step(Nodes& nodes,
         Vec3 d = edge->node1->position - edge->node0->position;
         double r = edge->resLength;
         double l = d.norm();
-        Vec3 v = edge->node1->velocity - edge->node0->velocity;
+        // Vec3 v = edge->node1->velocity - edge->node0->velocity;
         Vec3 f0 = Vec3::Zero();
-        if (l > 0.0 && r > 0.0)
-            f0 = (ks * (l / r - 1.0) + kd * (v.dot(d) / (l * r))) * d / l;
+        if (l > 0.0 && r > 0.0) f0 = (ks * (l / r - 1.0)) * d / l;
+
+        // f0 = (ks * (l / r - 1.0) + kd * (v.dot(d) / (l * r))) * d / l;
 
         edge->node0->force += f0;
         edge->node1->force += -f0;
     }
 
     _update(nodes);
+
+    // _updateIfCollide(nodes);
+
     limits.delimit(nodes);
+
+    // limits.delimitIfCollide(nodes);
 }
 
 void ExplicitMassSpringSystem::_step(Mesh* mesh)
