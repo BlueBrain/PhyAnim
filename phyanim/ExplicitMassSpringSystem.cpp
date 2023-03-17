@@ -18,9 +18,6 @@ void ExplicitMassSpringSystem::step(Nodes& nodes,
 {
     _addGravity(nodes);
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (uint32_t i = 0; i < edges.size(); ++i)
     {
         auto edge = edges[i];
@@ -66,9 +63,6 @@ void ExplicitMassSpringSystem::_step(Mesh* mesh)
         edge->node1->force += -f0;
     }
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (unsigned int i = 0; i < mesh->nodes.size(); i++)
     {
         auto node = mesh->nodes[i];

@@ -162,9 +162,6 @@ void AxisAlignedBoundingBox::delimit(Nodes& nodes)
 {
     uint32_t size = nodes.size();
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (uint32_t i = 0; i < size; ++i)
     {
         auto node = nodes[i];
@@ -185,9 +182,6 @@ void AxisAlignedBoundingBox::delimitIfCollide(Nodes& nodes)
 {
     uint32_t size = nodes.size();
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (uint32_t i = 0; i < size; ++i)
     {
         auto node = nodes[i];

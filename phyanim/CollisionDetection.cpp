@@ -18,13 +18,7 @@ uint32_t CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
         for (unsigned int j = i + 1; j < aabbs.size(); ++j)
         {
             auto aabb1 = aabbs[j];
-            uint32_t num = _computeCollision(aabb0, aabb1, stiffness);
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp critical
-#endif
-            {
-                numCollisions += num;
-            }
+            numCollisions += _computeCollision(aabb0, aabb1, stiffness);
         }
     }
     return numCollisions;
@@ -39,13 +33,7 @@ uint32_t CollisionDetection::computeSelfCollisions(HierarchicalAABBs& aabbs,
 #endif
     for (unsigned int i = 0; i < aabbs.size(); ++i)
     {
-        uint32_t num = _computeCollision(aabbs[i], aabbs[i], stiffness);
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp critical
-#endif
-        {
-            numCollisions += num;
-        }
+        numCollisions += _computeCollision(aabbs[i], aabbs[i], stiffness);
     }
     return numCollisions;
 }
@@ -72,9 +60,7 @@ void CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
 
         Vec3 lowerLimit = aabb.lowerLimit();
         Vec3 upperLimit = aabb.upperLimit();
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
+
         for (unsigned int i = 0; i < nodes.size(); i++)
         {
             auto node = nodes[i];

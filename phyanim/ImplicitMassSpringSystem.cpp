@@ -116,9 +116,6 @@ void ImplicitMassSpringSystem::_step(Mesh* mesh)
 
     vIncVec = A.colPivHouseholderQr().solve(b);
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (uint64_t i = 0; i < n; ++i)
     {
         auto node = nodes[i];

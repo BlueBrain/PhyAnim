@@ -108,35 +108,6 @@ public:
         return collisions;
     };
 
-    uint32_t solve(phyanim::HierarchicalAABBs& aabbs,
-                   phyanim::Edges& edges,
-                   phyanim::Nodes& nodes,
-                   phyanim::AxisAlignedBoundingBox& limits,
-                   double ks,
-                   double ksc,
-                   double kd)
-    {
-        clearCollision(nodes);
-        clearForce(nodes);
-
-        uint32_t collisions =
-            phyanim::CollisionDetection::computeCollisions(aabbs, ksc);
-
-        if (collisions == 0) return 0;
-
-        _system->step(nodes, edges, limits, ks, kd);
-
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-        for (uint32_t i = 0; i < aabbs.size(); ++i)
-        {
-            aabbs[i]->update();
-        }
-
-        return collisions;
-    };
-
 private:
     phyanim::ExplicitMassSpringSystem* _system;
 };
