@@ -13,6 +13,8 @@ add_subdirectory(appFormatConverter)
 add_subdirectory(appTetrahedralizeMesh)
 add_subdirectory(appOverlap)
 add_subdirectory(appTest)
+add_subdirectory(appOverlapCircuit)
+
 
 if(GLFW3_FOUND)
   add_subdirectory(appCollidingSomas)
@@ -20,7 +22,8 @@ if(GLFW3_FOUND)
   add_subdirectory(appAnimMesh)
   add_subdirectory(appMoveMesh)
   add_subdirectory(appRenderMorpho)
-  add_subdirectory(appOverlapCircuit)
+  add_subdirectory(appOverlapCircuitViz)
+
   
   add_subdirectory(appSceneGenerator)
 

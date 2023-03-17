@@ -194,30 +194,13 @@ uint32_t CollisionDetection::_computeCollision(HierarchicalAABBPtr aabb0,
     uint32_t numCollisions = 0;
     auto pairs = aabb0->collidingPrimitives(aabb1);
 
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
     for (unsigned int i = 0; i < pairs.size(); i++)
     {
         auto pair = pairs[i];
 
         if (!pair.first->areLimitsColliding(pair.second)) continue;
-        // if (pair.first == pair.second) continue;
-        // bool shared = false;
-        // for (auto node0 : pair.first->nodes())
-        //     for (auto node1 : pair.second->nodes()) shared |= (node0 ==
-        //     node1);
-        // if (shared) continue;
-        uint32_t num = 0;
         if (_checkCollision(pair.first, pair.second, stiffness))
-            // ++numCollisions;
-            num = 1;
-        // #ifdef PHYANIM_USES_OPENMP
-        // #pragma omp critical
-        // #endif
-        {
-            numCollisions += num;
-        }
+            ++numCollisions;
     }
     return numCollisions;
 }
