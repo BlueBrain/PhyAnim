@@ -11,11 +11,22 @@ namespace examples
 typedef phyanim::Nodes Section;
 typedef std::vector<Section*> Sections;
 
+enum RadiusFunc
+{
+    MIN_NEURITES,
+    MAX_NEURITES,
+    MEAN_NEURITES,
+    MIN_SOMAS,
+    MAX_SOMAS,
+    MEAN_SOMAS
+};
+
 class Morpho
 {
 public:
     Morpho(std::string path,
            phyanim::Mat4 mat = phyanim::Mat4::Identity(),
+           RadiusFunc radiusFunc = RadiusFunc::MAX_NEURITES,
            bool loadNeurites = true);
 
     ~Morpho(){};

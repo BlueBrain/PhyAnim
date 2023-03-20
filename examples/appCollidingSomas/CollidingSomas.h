@@ -18,6 +18,9 @@ public:
 protected:
     void _actionLoop();
 
+    void _setMeshes(std::vector<phyanim::Edges>& edgesSet,
+                    std::vector<double> factor);
+
     void _mouseButtonCallback(GLFWwindow* window,
                               int button,
                               int action,

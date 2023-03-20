@@ -65,6 +65,7 @@ public:
     std::vector<Morpho*> getNeurons(
         bbp::sonata::Selection::Values ids,
         phyanim::AxisAlignedBoundingBox* aabb = nullptr,
+        RadiusFunc radiusFunc = RadiusFunc::MAX_NEURITES,
         bool loadNeurites = true)
     {
         auto selection = bbp::sonata::Selection::fromValues(ids);
@@ -101,7 +102,7 @@ public:
             phyanim::Mat4 model = phyanim::Mat4::Identity();
             model.block<3, 3>(0, 0) = rot.toRotationMatrix();
             model.block<3, 1>(0, 3) = pos;
-            morphos[i] = new Morpho(path, model, loadNeurites);
+            morphos[i] = new Morpho(path, model, radiusFunc, loadNeurites);
             if (aabb) morphos[i]->cutout(*aabb);
 #pragma omp critical
             {

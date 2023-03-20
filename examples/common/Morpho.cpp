@@ -12,7 +12,10 @@
 namespace examples
 {
 
-Morpho::Morpho(std::string path, phyanim::Mat4 mat, bool loadNeurites)
+Morpho::Morpho(std::string path,
+               phyanim::Mat4 mat,
+               RadiusFunc radiusFunc,
+               bool loadNeurites)
     : color(0.2, 0.8, 0.2)
     , collColor(1.0, 0.0, 0.0)
     , fixColor(0.2, 0.2, 0.2)
@@ -100,13 +103,70 @@ Morpho::Morpho(std::string path, phyanim::Mat4 mat, bool loadNeurites)
     phyanim::Vec4 center4(c[0], c[1], c[2], 1);
     center4 = mat * center4;
     phyanim::Vec3 center = center4.head<3>();
+
     double radius = 0.0;
-    for (auto node : somaNodes) radius += (node->position - center).norm();
-    radius /= somaNodes.size();
+
+    switch (radiusFunc)
+    {
+    case MIN_NEURITES:
+        radius = std::numeric_limits<double>::max();
+        for (auto section : morpho.rootSections())
+        {
+            auto p = section.points()[0];
+            phyanim::Vec4 position(p[0], p[1], p[2], 1);
+            position = mat * position;
+            auto dist = (position.block<3, 1>(0, 0) - center).norm();
+            if (dist < radius) radius = dist;
+        }
+        break;
+    case MAX_NEURITES:
+        for (auto section : morpho.rootSections())
+        {
+            auto p = section.points()[0];
+            phyanim::Vec4 position(p[0], p[1], p[2], 1);
+            position = mat * position;
+            auto dist = (position.block<3, 1>(0, 0) - center).norm();
+            if (dist > radius) radius = dist;
+        }
+        break;
+    case MEAN_NEURITES:
+        for (auto section : morpho.rootSections())
+        {
+            auto p = section.points()[0];
+            phyanim::Vec4 position(p[0], p[1], p[2], 1);
+            position = mat * position;
+            radius += (position.block<3, 1>(0, 0) - center).norm();
+        }
+        radius /= morpho.rootSections().size();
+        break;
+    case MIN_SOMAS:
+        radius = std::numeric_limits<double>::max();
+        for (auto node : somaNodes)
+        {
+            auto dist = (node->position - center).norm();
+            if (dist < radius) radius = dist;
+        }
+        break;
+    case MAX_SOMAS:
+        for (auto node : somaNodes)
+        {
+            auto dist = (node->position - center).norm();
+            if (dist > radius) radius = dist;
+        }
+        break;
+    case MEAN_SOMAS:
+        for (auto node : somaNodes)
+        {
+            radius += (node->position - center).norm();
+        }
+        radius /= somaNodes.size();
+        break;
+    }
 
     soma = new phyanim::Node(center, 0, radius, phyanim::Vec3::Zero(),
                              phyanim::Vec3::Zero(), radius);
     soma->isSoma = true;
+
     // nodes.push_back(soma);
     // edges.push_back(new phyanim::Edge(soma, soma));
 

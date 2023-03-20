@@ -30,6 +30,7 @@ void CollidingSomas::_actionLoop()
     double kd = 0.1;
     double ksc = 1.0;
     uint32_t num = 100;
+    RadiusFunc radiusFunc = RadiusFunc::MIN_NEURITES;
 
     _limits.lowerLimit(phyanim::Vec3(-1000, -1000, -1000));
     _limits.upperLimit(phyanim::Vec3(1000, 1000, 1000));
@@ -91,18 +92,28 @@ void CollidingSomas::_actionLoop()
             ++i;
             pop = _args[i];
         }
+        else if (_args[i].compare("-minNeurites") == 0)
+            radiusFunc = RadiusFunc::MIN_NEURITES;
+        else if (_args[i].compare("-maxNeurites") == 0)
+            radiusFunc = RadiusFunc::MAX_NEURITES;
+        else if (_args[i].compare("-meanNeurites") == 0)
+            radiusFunc = RadiusFunc::MEAN_NEURITES;
+        else if (_args[i].compare("-minSomas") == 0)
+            radiusFunc = RadiusFunc::MIN_SOMAS;
+        else if (_args[i].compare("-maxSomas") == 0)
+            radiusFunc = RadiusFunc::MAX_SOMAS;
+        else if (_args[i].compare("-meanSomas") == 0)
+            radiusFunc = RadiusFunc::MEAN_SOMAS;
         else if (_args[i].find(".json") != std::string::npos)
             circuitPath = _args[i];
         else
             ids.push_back(std::stoul(_args[i]));
-
-        // std::cerr << "Unknown file format: " << _args[i] << std::endl;
     }
 
     _setCameraPos(_limits);
     Circuit circuit(circuitPath, pop);
     std::vector<Morpho*> morphologies =
-        circuit.getNeurons(ids, &_limits, false);
+        circuit.getNeurons(ids, &_limits, radiusFunc, false);
 
     std::cout << morphologies.size() << " morphologies loaded" << std::endl;
 
@@ -124,7 +135,11 @@ void CollidingSomas::_actionLoop()
 
     uint32_t size = morphologies.size();
     std::vector<double> factor(size);
+    std::vector<phyanim::Edges> edgesSet(size);
     // Check soma collisions
+
+    uint32_t numCollisions = 0;
+
     for (uint32_t i = 0; i < size; ++i)
     {
         auto soma0 = morphologies[i]->soma;
@@ -135,50 +150,17 @@ void CollidingSomas::_actionLoop()
                           (soma1->radius + soma0->radius);
             if (dist < 1.0)
             {
+                ++numCollisions;
                 double f = 1.0 - dist;
                 factor[i] = std::max(factor[i], f);
                 factor[j] = std::max(factor[j], f);
             }
         }
+        edgesSet[i].push_back(new phyanim::Edge(soma0, soma0));
     }
 
-    _scene->meshes.resize(size);
-#ifdef PHYANIM_USES_OPENMP
-#pragma omp parallel for
-#endif
-    for (uint32_t i = 0; i < size; ++i)
-    {
-        _scene->meshes[i] =
-            generateMesh(morphologies[i]->edges, _palette->color(factor[i]));
-    }
-
-    std::cout << size << " meshes generated" << std::endl;
-    //     _scene->meshes[0] =
-    //         generateMesh(edges, _palette->color(0) * 0.5, _palette->color(0),
-    //                      _palette->color(0) * 0.2);
-
-    //     _solver = new CollisionSolver(dt);
-    //
-    //     phyanim::Nodes nodes;
-    //     phyanim::Edges edges;
-    //     phyanim::HierarchicalAABBs aabbs;
-    //
-    //     auto prevNode = new phyanim::Node(phyanim::Vec3(0, 0, 0), 0, 0.1);
-    //     for (uint32_t i = 1; i < 10; ++i)
-    //     {
-    //         auto node = new phyanim::Node(phyanim::Vec3(i, 0, 0), 0, 0.1);
-    //         edges.push_back(new phyanim::Edge(prevNode, node));
-    //         prevNode = node;
-    //     }
-    //     nodes = phyanim::uniqueNodes(edges);
-    //     aabbs.push_back(new phyanim::HierarchicalAABB(edges));
-    //
-    //     _setCameraPos(*aabbs[0]);
-    //
-    //     _scene->meshes.resize(1);
-    //     _scene->meshes[0] =
-    //         generateMesh(edges, _palette->color(0) * 0.5, _palette->color(0),
-    //                      _palette->color(0) * 0.2);
+    _setMeshes(edgesSet, factor);
+    std::cout << "Number of somas colliding: " << numCollisions << std::endl;
 
     while (true)
     {
@@ -198,6 +180,24 @@ void CollidingSomas::_actionLoop()
     //                            _palette->color(0), _palette->color(0) * 0.2);
     //         }
     //     }
+}
+
+void CollidingSomas::_setMeshes(std::vector<phyanim::Edges>& edgesSet,
+                                std::vector<double> factor)
+{
+    for (auto mesh : _scene->meshes)
+        if (mesh) delete mesh;
+    _scene->meshes.clear();
+    _scene->meshes.resize(edgesSet.size());
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < edgesSet.size(); ++i)
+    {
+        _scene->meshes[i] =
+            generateMesh(edgesSet[i], _palette->color(factor[i]));
+    }
 }
 
 void CollidingSomas::_mouseButtonCallback(GLFWwindow* window,
