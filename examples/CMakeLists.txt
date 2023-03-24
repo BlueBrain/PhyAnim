@@ -14,10 +14,12 @@ add_subdirectory(appTetrahedralizeMesh)
 add_subdirectory(appOverlap)
 add_subdirectory(appTest)
 add_subdirectory(appOverlapCircuit)
+add_subdirectory(appCollidingSomas)
+
 
 
 if(GLFW3_FOUND)
-  add_subdirectory(appCollidingSomas)
+  add_subdirectory(appCollidingSomasViz)
   add_subdirectory(appRenderMesh)
   add_subdirectory(appAnimMesh)
   add_subdirectory(appMoveMesh)

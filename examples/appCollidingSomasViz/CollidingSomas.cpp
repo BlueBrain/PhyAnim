@@ -20,16 +20,11 @@ namespace examples
 {
 CollidingSomas::CollidingSomas(int argc, char** argv) : GLFWApp(argc, argv)
 {
-    _palette = new ColorPalette(SCALE);
+    _palette = new ColorPalette(CONTRAST);
 }
 
 void CollidingSomas::_actionLoop()
 {
-    double dt = 0.001;
-    double ks = 1000.0;
-    double kd = 0.1;
-    double ksc = 1.0;
-    uint32_t num = 100;
     RadiusFunc radiusFunc = RadiusFunc::MIN_NEURITES;
 
     _limits.lowerLimit(phyanim::Vec3(-1000, -1000, -1000));
@@ -42,32 +37,7 @@ void CollidingSomas::_actionLoop()
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
         size_t extensionPos;
-        if (_args[i].compare("-dt") == 0)
-        {
-            ++i;
-            dt = std::stod(_args[i]);
-        }
-        else if (_args[i].compare("-ks") == 0)
-        {
-            ++i;
-            ks = std::stod(_args[i]);
-        }
-        else if (_args[i].compare("-ksc") == 0)
-        {
-            ++i;
-            ksc = std::stod(_args[i]);
-        }
-        else if (_args[i].compare("-kd") == 0)
-        {
-            ++i;
-            kd = std::stod(_args[i]);
-        }
-        else if (_args[i].compare("-n") == 0)
-        {
-            ++i;
-            num = std::stoi(_args[i]);
-        }
-        else if (_args[i].compare("-l") == 0)
+        if (_args[i].compare("-l") == 0)
         {
             ++i;
             double x = std::stod(_args[i]);
@@ -109,11 +79,12 @@ void CollidingSomas::_actionLoop()
         else
             ids.push_back(std::stoul(_args[i]));
     }
+    _solver = new CollisionSolver(0.001);
 
     _setCameraPos(_limits);
     Circuit circuit(circuitPath, pop);
     std::vector<Morpho*> morphologies =
-        circuit.getNeurons(ids, &_limits, radiusFunc, false);
+        circuit.getNeurons(ids, nullptr, radiusFunc, false);
 
     std::cout << morphologies.size() << " morphologies loaded" << std::endl;
 
@@ -136,54 +107,91 @@ void CollidingSomas::_actionLoop()
     uint32_t size = morphologies.size();
     std::vector<double> factor(size);
     std::vector<phyanim::Edges> edgesSet(size);
+    std::vector<phyanim::Nodes> nodesSet(size);
+    phyanim::HierarchicalAABBs aabbs(size);
     // Check soma collisions
 
-    uint32_t numCollisions = 0;
-
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
     for (uint32_t i = 0; i < size; ++i)
     {
         auto soma0 = morphologies[i]->soma;
-        for (uint32_t j = i + 1; j < size; ++j)
+        for (auto node : morphologies[i]->sectionNodes)
         {
-            auto soma1 = morphologies[j]->soma;
-            double dist = (soma1->position - soma0->position).norm() /
-                          (soma1->radius + soma0->radius);
-            if (dist < 1.0)
-            {
-                ++numCollisions;
-                double f = 1.0 - dist;
-                factor[i] = std::max(factor[i], f);
-                factor[j] = std::max(factor[j], f);
-            }
+            auto nodeCenter = new phyanim::Node(
+                soma0->position, 0, node->radius, phyanim::Vec3::Zero(),
+                phyanim::Vec3::Zero(), node->radius);
+            edgesSet[i].push_back(new phyanim::Edge(nodeCenter, node));
         }
         edgesSet[i].push_back(new phyanim::Edge(soma0, soma0));
+        nodesSet[i] = phyanim::uniqueNodes(edgesSet[i]);
+        aabbs[i] = new phyanim::HierarchicalAABB(edgesSet[i]);
     }
 
-    _setMeshes(edgesSet, factor);
-    std::cout << "Number of somas colliding: " << numCollisions << std::endl;
+    _setMeshes(edgesSet);
 
-    while (true)
-    {
-        if (_anim) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    //
-    //     while (true)
-    //     {
-    //         if (_anim)
-    //         {
-    //             std::cout << "*" << std::flush;
-    //             _solver->solve(aabbs, edges, nodes, *aabbs[0], ks, ksc, kd);
-    //
-    //             updateGeometry(_scene->meshes[0], edges, _palette->color(0) *
-    //             0.2,
-    //                            _palette->color(0), _palette->color(0) * 0.2);
-    //         }
-    //     }
+    _solveCollisions(aabbs, edgesSet, nodesSet);
 }
 
-void CollidingSomas::_setMeshes(std::vector<phyanim::Edges>& edgesSet,
-                                std::vector<double> factor)
+uint32_t CollidingSomas::_solveCollisions(phyanim::HierarchicalAABBs& aabbs,
+                                          std::vector<phyanim::Edges>& edgesSet,
+                                          std::vector<phyanim::Nodes>& nodesSet)
+{
+    uint32_t numCollisions = 1;
+    uint32_t iter = 0;
+    double ksc = 1000.0;
+
+    auto startTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime;
+
+    while (numCollisions > 0)
+    {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+        for (uint32_t i = 0; i < nodesSet.size(); ++i)
+        {
+            phyanim::clearCollision(nodesSet[i]);
+            phyanim::clearForce(nodesSet[i]);
+        }
+        numCollisions =
+            phyanim::CollisionDetection::computeCollisions(aabbs, ksc);
+
+        _solver->animSomas(aabbs, nodesSet);
+
+        if (iter % 100 == 0 | numCollisions == 0)
+        {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+            for (uint32_t i = 0; i < aabbs.size(); ++i)
+            {
+                updateGeometry(_scene->meshes[i], edgesSet[i],
+                               _palette->color(i) * 0.3, _palette->color(i),
+                               _palette->color(i) * 0.2);
+            }
+            elapsedTime = std::chrono::steady_clock::now() - startTime;
+            std::cout << "Iter: " << iter << "  Collisions: " << numCollisions
+                      << "  Time: " << elapsedTime.count() << " seconds."
+                      << std::endl;
+        }
+
+        ++iter;
+    }
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < aabbs.size(); ++i)
+    {
+        updateGeometry(_scene->meshes[i], edgesSet[i], _palette->color(i) * 0.3,
+                       _palette->color(i), _palette->color(i) * 0.2);
+    }
+
+    return iter;
+}
+
+void CollidingSomas::_setMeshes(std::vector<phyanim::Edges>& edgesSet)
 {
     for (auto mesh : _scene->meshes)
         if (mesh) delete mesh;
@@ -196,7 +204,8 @@ void CollidingSomas::_setMeshes(std::vector<phyanim::Edges>& edgesSet,
     for (uint32_t i = 0; i < edgesSet.size(); ++i)
     {
         _scene->meshes[i] =
-            generateMesh(edgesSet[i], _palette->color(factor[i]));
+            generateMesh(edgesSet[i], _palette->color(i) * 0.3,
+                         _palette->color(i), _palette->color(i) * 0.2);
     }
 }
 

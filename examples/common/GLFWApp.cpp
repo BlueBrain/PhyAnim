@@ -206,7 +206,7 @@ void GLFWApp::_initGLFW()
     }
 
     glfwMakeContextCurrent(_window);
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 
     glewExperimental = GL_TRUE;
     glewInit();

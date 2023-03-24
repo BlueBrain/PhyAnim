@@ -87,6 +87,18 @@ Morpho::Morpho(std::string path,
         sections.clear();
     }
 
+    for (auto section : morpho.rootSections())
+    {
+        auto p = section.points()[0];
+        phyanim::Vec4 pos4(p[0], p[1], p[2], 1);
+        pos4 = mat * pos4;
+        phyanim::Vec3 pos = pos4.head<3>();
+        double radius = section.diameters()[0];
+        sectionNodes.push_back(
+            new phyanim::Node(pos, 0, radius, phyanim::Vec3::Zero(),
+                              phyanim::Vec3::Zero(), radius));
+    }
+
     for (uint32_t i = 0; i < morpho.soma().points().size(); ++i)
     {
         auto p = morpho.soma().points()[i];
@@ -110,33 +122,22 @@ Morpho::Morpho(std::string path,
     {
     case MIN_NEURITES:
         radius = std::numeric_limits<double>::max();
-        for (auto section : morpho.rootSections())
+        for (auto node : sectionNodes)
         {
-            auto p = section.points()[0];
-            phyanim::Vec4 position(p[0], p[1], p[2], 1);
-            position = mat * position;
-            auto dist = (position.block<3, 1>(0, 0) - center).norm();
+            auto dist = (node->position - center).norm();
             if (dist < radius) radius = dist;
         }
         break;
     case MAX_NEURITES:
-        for (auto section : morpho.rootSections())
+        for (auto node : sectionNodes)
         {
-            auto p = section.points()[0];
-            phyanim::Vec4 position(p[0], p[1], p[2], 1);
-            position = mat * position;
-            auto dist = (position.block<3, 1>(0, 0) - center).norm();
+            auto dist = (node->position - center).norm();
             if (dist > radius) radius = dist;
         }
         break;
     case MEAN_NEURITES:
-        for (auto section : morpho.rootSections())
-        {
-            auto p = section.points()[0];
-            phyanim::Vec4 position(p[0], p[1], p[2], 1);
-            position = mat * position;
-            radius += (position.block<3, 1>(0, 0) - center).norm();
-        }
+        for (auto node : sectionNodes)
+            radius += (node->position - center).norm();
         radius /= morpho.rootSections().size();
         break;
     case MIN_SOMAS:
@@ -155,10 +156,7 @@ Morpho::Morpho(std::string path,
         }
         break;
     case MEAN_SOMAS:
-        for (auto node : somaNodes)
-        {
-            radius += (node->position - center).norm();
-        }
+        for (auto node : somaNodes) radius += (node->position - center).norm();
         radius /= somaNodes.size();
         break;
     }

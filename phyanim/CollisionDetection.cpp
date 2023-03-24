@@ -8,19 +8,25 @@ namespace phyanim
 uint32_t CollisionDetection::computeCollisions(HierarchicalAABBs& aabbs,
                                                double stiffness)
 {
-    uint32_t numCollisions = 0;
+    uint32_t size = aabbs.size();
+    std::vector<uint32_t> collisions(size * size);
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
-    for (unsigned int i = 0; i < aabbs.size(); ++i)
+    for (unsigned int i = 0; i < size; ++i)
     {
         auto aabb0 = aabbs[i];
-        for (unsigned int j = i + 1; j < aabbs.size(); ++j)
+        for (unsigned int j = i + 1; j < size; ++j)
         {
             auto aabb1 = aabbs[j];
-            numCollisions += _computeCollision(aabb0, aabb1, stiffness);
+            collisions[i * size + j] =
+                _computeCollision(aabb0, aabb1, stiffness);
         }
     }
+
+    uint32_t numCollisions = 0;
+    for (auto collision : collisions) numCollisions += collision;
+
     return numCollisions;
 }  // namespace phyanim
 

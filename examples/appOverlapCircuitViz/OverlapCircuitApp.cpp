@@ -100,12 +100,85 @@ void OverlapCircuitApp::_actionLoop()
     _setMeshes(edgesSet);
 
     uint32_t totalIters = 0;
-    uint32_t cols = _solver->solveCollisions(morphoAABBs, edgesSet, nodesSet,
-                                             _limits, totalIters);
+    uint32_t cols =
+        _solveCollisions(morphoAABBs, edgesSet, nodesSet, _limits, totalIters);
 
-    _setMeshes(edgesSet);
     _setCameraPos(_limits);
 }
+
+uint32_t OverlapCircuitApp::_solveCollisions(
+    phyanim::HierarchicalAABBs& aabbs,
+    std::vector<phyanim::Edges>& edgesSet,
+    std::vector<phyanim::Nodes>& nodesSet,
+    phyanim::AxisAlignedBoundingBox& limits,
+    uint32_t& totalIters)
+{
+    phyanim::Edges edges;
+    for (uint32_t i = 0; i < edgesSet.size(); ++i)
+        edges.insert(edges.end(), edgesSet[i].begin(), edgesSet[i].end());
+    phyanim::Nodes nodes = phyanim::uniqueNodes(edges);
+
+    std::cout << "Simulation with " << edges.size() << " springs and "
+              << nodes.size() << " nodes" << std::endl;
+
+    auto startTime = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsedTime;
+    uint32_t collisions = 1;
+    double ks = 1000.0;
+    double ksLimit = 0.01;
+    uint32_t numIters = 1000;
+
+    while (collisions > 0)
+    {
+        for (uint32_t iter = 0; iter < numIters; ++iter)
+        {
+            collisions = _solver->anim(aabbs, edgesSet, nodesSet, limits, ks,
+                                       100.0, 0.0);
+
+            if (totalIters % 100 == 0)
+            {
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+                for (uint32_t i = 0; i < edgesSet.size(); ++i)
+                {
+                    updateGeometry(_scene->meshes[i], edgesSet[i],
+                                   _palette->color(i) * 0.5, _palette->color(i),
+                                   _palette->color(i) * 0.2);
+                }
+                elapsedTime = std::chrono::steady_clock::now() - startTime;
+                std::cout << "Iter: " << totalIters
+                          << "  Collisions: " << collisions
+                          << "  Stiffness: " << ks
+                          << "  Time: " << elapsedTime.count() << " seconds."
+                          << std::endl;
+            }
+            totalIters++;
+            if (collisions == 0) break;
+        }
+
+        ks *= 0.75;
+        numIters *= 0.75;
+        if (numIters < 100) numIters = 100;
+        if (ks < 0.01) break;
+    }
+
+#ifdef PHYANIM_USES_OPENMP
+#pragma omp parallel for
+#endif
+    for (uint32_t i = 0; i < edgesSet.size(); ++i)
+    {
+        updateGeometry(_scene->meshes[i], edgesSet[i], _palette->color(i) * 0.5,
+                       _palette->color(i), _palette->color(i) * 0.2);
+    }
+
+    elapsedTime = std::chrono::steady_clock::now() - startTime;
+    std::cout << "Iter: " << totalIters << "  Collisions: " << collisions
+              << "  Stiffness: " << ks << "  Time: " << elapsedTime.count()
+              << " seconds." << std::endl;
+
+    return collisions;
+};
 
 void OverlapCircuitApp::_setMeshes(std::vector<phyanim::Edges>& edgesSet)
 {

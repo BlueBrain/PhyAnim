@@ -16,6 +16,12 @@ public:
 protected:
     void _actionLoop();
 
+    uint32_t _solveCollisions(phyanim::HierarchicalAABBs& aabbs,
+                              std::vector<phyanim::Edges>& edgesSet,
+                              std::vector<phyanim::Nodes>& nodesSet,
+                              phyanim::AxisAlignedBoundingBox& limits,
+                              uint32_t& totalIters);
+
     void _setMeshes(std::vector<phyanim::Edges>& edgesSet);
 
     void _mouseButtonCallback(GLFWwindow* window,

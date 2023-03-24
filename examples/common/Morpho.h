@@ -41,6 +41,8 @@ public:
 
     phyanim::NodePtr soma;
 
+    phyanim::Nodes sectionNodes;
+
     Sections sections;
 
     phyanim::HierarchicalAABBPtr aabb;
