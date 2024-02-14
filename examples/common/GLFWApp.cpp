@@ -42,7 +42,7 @@ GLFWApp::GLFWApp(int argc, char** argv)
             _args.push_back(std::string(argv[i]));
     }
     _initGLFW();
-    _scene = new Scene(_width, _height);
+    _scene = new graphics::Scene(_width, _height);
 }
 
 GLFWApp::~GLFWApp()
@@ -92,13 +92,13 @@ void GLFWApp::_actionLoop()
 void GLFWApp::_actionThread(GLFWApp* app) { app->_actionLoop(); }
 
 void GLFWApp::_loadMeshes(std::vector<std::string>& files,
-                          double stiffnes,
-                          double density,
-                          double damping,
-                          double poissonRatio)
+                          float stiffnes,
+                          float density,
+                          float damping,
+                          float poissonRatio)
 {
     std::cout << std::fixed << std::setprecision(2);
-    double progress = 0.0;
+    float progress = 0.0;
     std::cout << "\rLoading files " << progress << "%" << std::flush;
 
 #ifdef PHYANIM_USES_OPENMP
@@ -106,11 +106,13 @@ void GLFWApp::_loadMeshes(std::vector<std::string>& files,
 #endif
     for (uint32_t i = 0; i < files.size(); ++i)
     {
-        auto mesh = new phyanim::Mesh(stiffnes, density, damping, poissonRatio);
+        auto mesh =
+            new geometry::Mesh(stiffnes, density, damping, poissonRatio);
         mesh->load(files[i]);
-        auto renderMesh = generateMesh(mesh->nodes, mesh->surfaceTriangles);
+        auto renderMesh =
+            graphics::generateMesh(mesh->nodes, mesh->surfaceTriangles);
         mesh->boundingBox =
-            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+            new geometry::HierarchicalAABB(mesh->surfaceTriangles);
 #pragma omp critical
         {
             _limits.unite(*mesh->boundingBox);
@@ -123,17 +125,17 @@ void GLFWApp::_loadMeshes(std::vector<std::string>& files,
     }
     std::cout << std::endl;
     _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+        anim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
     _sortAABBs(_aabbs);
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     _collisionId = 0;
 }
 
-void GLFWApp::_writeMeshes(phyanim::Meshes& meshes,
+void GLFWApp::_writeMeshes(geometry::Meshes& meshes,
                            std::vector<std::string>& files,
                            std::string extension)
 {
-    double progress = 0.0;
+    float progress = 0.0;
     std::cout << std::fixed << std::setprecision(2);
     std::cout << "\rSaving files " << progress << "%" << std::flush;
     auto startTime = std::chrono::steady_clock::now();
@@ -158,7 +160,7 @@ void GLFWApp::_writeMeshes(phyanim::Meshes& meshes,
     }
     std::cout << std::endl;
     auto endTime = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsedTime = endTime - startTime;
+    std::chrono::duration<float> elapsedTime = endTime - startTime;
     std::cout << "Files saved in: " << elapsedTime.count() << " seconds"
               << std::endl;
 }
@@ -178,9 +180,9 @@ void GLFWApp::_setAnim(bool anim)
     _animMutex.unlock();
 }
 
-void GLFWApp::_setCameraPos(phyanim::AxisAlignedBoundingBox limits)
+void GLFWApp::_setCameraPos(geometry::AxisAlignedBoundingBox limits)
 {
-    phyanim::Vec3 cameraPos = limits.center();
+    geometry::Vec3 cameraPos = limits.center();
     float distance = limits.radius();
     _scene->cameraPosition(cameraPos);
     _scene->cameraDistance(distance);
@@ -206,10 +208,10 @@ void GLFWApp::_initGLFW()
     }
 
     glfwMakeContextCurrent(_window);
-    glfwSwapInterval(1);
 
     glewExperimental = GL_TRUE;
     glewInit();
+    glfwSwapInterval(1);
 
     auto version = glGetString(GL_VERSION);
 
@@ -239,7 +241,7 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        phyanim::Vec3 dxyz(0.0, 0.0, 0.0);
+        geometry::Vec3 dxyz(0.0, 0.0, 0.0);
         bool cameraDisplaced = false;
 
         if (action == GLFW_PRESS)
@@ -286,19 +288,19 @@ void GLFWApp::_keyCallback(GLFWwindow* window,
         switch (key)
         {
         case 'W':
-            dxyz += phyanim::Vec3(0.0, 0.0, -1.0);
+            dxyz += geometry::Vec3(0.0, 0.0, -1.0);
             cameraDisplaced = true;
             break;
         case 'S':
-            dxyz += phyanim::Vec3(0.0, 0.0, 1.0);
+            dxyz += geometry::Vec3(0.0, 0.0, 1.0);
             cameraDisplaced = true;
             break;
         case 'A':
-            dxyz += phyanim::Vec3(-1.0, 0.0, 0.0);
+            dxyz += geometry::Vec3(-1.0, 0.0, 0.0);
             cameraDisplaced = true;
             break;
         case 'D':
-            dxyz += phyanim::Vec3(1.0, 0.0, 0.0);
+            dxyz += geometry::Vec3(1.0, 0.0, 0.0);
             cameraDisplaced = true;
             break;
         }
@@ -341,7 +343,10 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+        _mouseX = mouseX;
+        _mouseY = mouseY;
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
@@ -353,9 +358,9 @@ void GLFWApp::_mouseButtonCallback(GLFWwindow* window,
 
                 for (uint32_t id = 0; id < _scene->meshes.size(); ++id)
                 {
-                    phyanim::Vec3 color(0, 0.8, 0.8);
+                    geometry::Vec3 color(0, 0.8, 0.8);
                     if (id + 1 == pickedId)
-                        color = phyanim::Vec3(0.8, 0.4, 0.4);
+                        color = geometry::Vec3(0.8, 0.4, 0.4);
                     setColor(_scene->meshes[id], _meshes[id]->nodes.size(),
                              color);
                 }
@@ -398,19 +403,17 @@ void GLFWApp::_wrapperMousePositionCallback(GLFWwindow* window,
     app->_mousePositionCallback(window, xpos, ypos);
 }
 
-void GLFWApp::_mousePositionCallback(GLFWwindow* window,
-                                     double xpos,
-                                     double ypos)
+void GLFWApp::_mousePositionCallback(GLFWwindow* window, float xpos, float ypos)
 {
     if (_scene)
     {
-        double diffX = xpos - _mouseX;
-        double diffY = ypos - _mouseY;
+        float diffX = xpos - _mouseX;
+        float diffY = ypos - _mouseY;
         _mouseX = xpos;
         _mouseY = ypos;
-        phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
-                          diffY * _scene->cameraDistance() * 0.001f, 0.0);
+        geometry::Vec3 dxyz =
+            geometry::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
+                           diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             _scene->displaceCamera(dxyz);
@@ -434,8 +437,8 @@ void GLFWApp::_wrapperMouseScrollCallback(GLFWwindow* window,
 }
 
 void GLFWApp::_mouseScrollCallback(GLFWwindow* window,
-                                   double xoffset,
-                                   double yoffset)
+                                   float xoffset,
+                                   float yoffset)
 {
     if (_scene) _scene->cameraZoom(-yoffset);
 }

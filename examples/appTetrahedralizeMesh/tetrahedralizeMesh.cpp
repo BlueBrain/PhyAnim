@@ -1,13 +1,15 @@
 #include <iostream>
 // #include <cstdio>
-#include <Phyanim.h>
-#include <igl/copyleft/tetgen/tetrahedralize.h>
 // #include <igl/readOBJ.h>
+// #include <igl/writeOFF.h>
+#include <igl/copyleft/tetgen/tetrahedralize.h>
 #include <igl/readOFF.h>
 #include <igl/readPLY.h>
-#include <igl/writeOFF.h>
+#include <phyanim/Phyanim.h>
 
 #include <fstream>
+
+using namespace phyanim;
 
 void tetrahedralizeMesh(const std::string& file)
 {
@@ -34,16 +36,16 @@ void tetrahedralizeMesh(const std::string& file)
     {
         outFile = file.substr(0, extPos);
 
-        auto mesh = new phyanim::Mesh();
+        auto mesh = new geometry::Mesh();
         mesh->load(file);
 
         uint32_t size = mesh->nodes.size();
         sourceVertices = Eigen::MatrixXd(size, 3);
         for (uint32_t i = 0; i < size; ++i)
         {
-            sourceVertices(i, 0) = mesh->nodes[i]->position.x();
-            sourceVertices(i, 1) = mesh->nodes[i]->position.y();
-            sourceVertices(i, 2) = mesh->nodes[i]->position.z();
+            sourceVertices(i, 0) = mesh->nodes[i]->position.x;
+            sourceVertices(i, 1) = mesh->nodes[i]->position.y;
+            sourceVertices(i, 2) = mesh->nodes[i]->position.z;
         }
 
         size = mesh->triangles.size();
@@ -51,7 +53,7 @@ void tetrahedralizeMesh(const std::string& file)
         for (uint32_t i = 0; i < size; ++i)
         {
             auto triangle =
-                dynamic_cast<phyanim::Triangle*>(mesh->triangles[i]);
+                dynamic_cast<geometry::Triangle*>(mesh->triangles[i]);
             sourceFacets(i, 0) = triangle->node0->id;
             sourceFacets(i, 1) = triangle->node1->id;
             sourceFacets(i, 2) = triangle->node2->id;

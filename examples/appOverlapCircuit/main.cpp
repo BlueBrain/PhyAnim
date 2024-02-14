@@ -11,12 +11,15 @@ int main(int argc, char* argv[])
 {
     std::string circuitPath;
 
-    auto limits = new phyanim::AxisAlignedBoundingBox();
-    limits->lowerLimit(phyanim::Vec3(-1000, -1000, -1000));
-    limits->upperLimit(phyanim::Vec3(1000, 1000, 1000));
+    auto limits = new phyanim::geometry::AxisAlignedBoundingBox();
+    limits->lowerLimit(phyanim::geometry::Vec3(-1000, -1000, -1000));
+    limits->upperLimit(phyanim::geometry::Vec3(1000, 1000, 1000));
 
     bbp::sonata::Selection::Values ids;
     std::string pop = "All";
+
+    float threshold = 1.0f;
+    float dt = 0.0001f;
 
     for (uint32_t i = 1; i < argc; ++i)
     {
@@ -27,27 +30,32 @@ int main(int argc, char* argv[])
         if (arg.compare("-l") == 0)
         {
             ++i;
-            double x = std::atof(argv[i]);
+            float x = std::atof(argv[i]);
             ++i;
-            double y = std::atof(argv[i]);
+            float y = std::atof(argv[i]);
             ++i;
-            double z = std::atof(argv[i]);
-            limits->lowerLimit(phyanim::Vec3(x, y, z));
+            float z = std::atof(argv[i]);
+            limits->lowerLimit(phyanim::geometry::Vec3(x, y, z));
         }
         else if (arg.compare("-u") == 0)
         {
             ++i;
-            double x = std::atof(argv[i]);
+            float x = std::atof(argv[i]);
             ++i;
-            double y = std::atof(argv[i]);
+            float y = std::atof(argv[i]);
             ++i;
-            double z = std::atof(argv[i]);
-            limits->upperLimit(phyanim::Vec3(x, y, z));
+            float z = std::atof(argv[i]);
+            limits->upperLimit(phyanim::geometry::Vec3(x, y, z));
         }
         else if (arg.compare("-p") == 0)
         {
             ++i;
             pop = std::string(argv[i]);
+        }
+        else if (arg.compare("-t") == 0)
+        {
+            ++i;
+            threshold = std::atof(argv[i]);
         }
         else if (arg.find(".json") != std::string::npos)
             circuitPath = arg;
@@ -56,19 +64,18 @@ int main(int argc, char* argv[])
 
         // std::cerr << "Unknown file format: " << _args[i] << std::endl;
     }
-    std::cout << "Number of morphologies to load: " << ids.size() << std::endl;
-
-    auto solver = new examples::CollisionSolver(0.001);
+    auto solver = new examples::CollisionSolver(dt);
 
     examples::Circuit circuit(circuitPath, pop);
+    std::cout << "Number of morphologies to load: " << ids.size() << std::endl;
     std::vector<examples::Morpho*> morphologies =
         circuit.getNeurons(ids, limits);
     uint32_t size = morphologies.size();
     std::cout << "Number of morphologies loaded: " << size << std::endl;
 
-    phyanim::HierarchicalAABBs morphoAABBs(size);
-    std::vector<phyanim::Edges> edgesSet(size);
-    std::vector<phyanim::Nodes> nodesSet(size);
+    phyanim::geometry::HierarchicalAABBs morphoAABBs(size);
+    std::vector<phyanim::geometry::Edges> edgesSet(size);
+    std::vector<phyanim::geometry::Nodes> nodesSet(size);
 
     // uint32_t sizeEdges = 0;
     // uint32_t sizeNodes = 0;
@@ -78,10 +85,10 @@ int main(int argc, char* argv[])
     for (uint32_t i = 0; i < size; ++i)
     {
         edgesSet[i] = morphologies[i]->edges;
-        resample(edgesSet[i], 0.15);
-        removeOutEdges(edgesSet[i], *limits);
-        nodesSet[i] = uniqueNodes(edgesSet[i]);
-        morphoAABBs[i] = new phyanim::HierarchicalAABB(edgesSet[i]);
+        phyanim::geometry::resample(edgesSet[i], 0.15);
+        phyanim::geometry::removeOutEdges(edgesSet[i], *limits);
+        nodesSet[i] = phyanim::geometry::uniqueNodes(edgesSet[i]);
+        morphoAABBs[i] = new phyanim::geometry::HierarchicalAABB(edgesSet[i]);
         // #ifdef PHYANIM_USES_OPENMP
         // #pragma omp critical
         // #endif
@@ -99,10 +106,10 @@ int main(int argc, char* argv[])
 
     uint32_t totalIters = 0;
     uint32_t cols = solver->solveCollisions(morphoAABBs, edgesSet, nodesSet,
-                                            *limits, totalIters);
+                                            *limits, totalIters, threshold);
 
     // auto endTime = std::chrono::steady_clock::now();
-    // std::chrono::duration<double> elapsedTime = endTime - startTime;
+    // std::chrono::duration<float> elapsedTime = endTime - startTime;
 
     // std::cout << cols << " collisions in " << totalIters << " iters and "
     //           << elapsedTime.count() << " seconds." << std::endl;

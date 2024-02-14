@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <iostream>
 
+using namespace phyanim;
+
 int main(int argc, char* argv[])
 {
     examples::DemoApp app(argc, argv);
@@ -22,7 +24,7 @@ DemoApp::DemoApp(int argc, char** argv)
 
 void DemoApp::_actionLoop()
 {
-    _bbFactor = 2;
+    _bbFactor = 1;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -57,18 +59,21 @@ void DemoApp::_actionLoop()
             std::cerr << "Unknown file format: " << _args[i] << std::endl;
     }
 
-    _loadMeshes(_fileNames);
-
     std::string texPath(DATAPATH);
     texPath.append("/img/skyCells/");
     _scene->setSky(texPath);
 
+    _loadMeshes(_fileNames);
     _checkCollisions();
     _coloredMeshes();
 }
 
 void DemoApp::_checkCollisions()
 {
+    _aabbs =
+        anim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+    _sortAABBs(_aabbs);
+
     for (auto mesh : _meshes)
         for (auto node : mesh->nodes) node->collide = false;
 
@@ -83,8 +88,8 @@ void DemoApp::_coloredMeshes()
     for (uint32_t meshId = 0; meshId < _meshes.size(); ++meshId)
     {
         auto mesh = _meshes[meshId];
-        phyanim::Vec3 color = _palette.color(meshId);
-        phyanim::Vec3 collColor = _palette.collisionColor();
+        geometry::Vec3 color = _palette.color(meshId);
+        geometry::Vec3 collColor = _palette.collisionColor();
         if (mesh == _animMesh)
         {
             color *= 1.5f;
@@ -92,15 +97,15 @@ void DemoApp::_coloredMeshes()
         }
 
         uint64_t nodeSize = mesh->nodes.size();
-        std::vector<double> colors(nodeSize * 3);
+        std::vector<float> colors(nodeSize * 3);
         for (uint64_t i = 0; i < nodeSize; ++i)
         {
             auto node = mesh->nodes[i];
-            phyanim::Vec3 nodeColor = color;
+            geometry::Vec3 nodeColor = color;
             if (node->collide) nodeColor = collColor;
-            colors[i * 3] = nodeColor.x();
-            colors[i * 3 + 1] = nodeColor.y();
-            colors[i * 3 + 2] = nodeColor.z();
+            colors[i * 3] = nodeColor.x;
+            colors[i * 3 + 1] = nodeColor.y;
+            colors[i * 3 + 2] = nodeColor.z;
         }
         _scene->meshes[meshId]->uploadColors(colors);
     }
@@ -139,7 +144,10 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
             if (action == GLFW_PRESS)
             {
                 _leftButtonPressed = true;
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+                _mouseX = mouseX;
+                _mouseY = mouseY;
                 uint32_t pickedId = _scene->picking(_mouseX, _mouseY);
                 if (pickedId != 0)
                 {
@@ -154,17 +162,12 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
                 if (_animMesh)
                 {
                     _animMesh->boundingBox->update();
-                    _aabbs =
-                        phyanim::CollisionDetection::collisionBoundingBoxes(
-                            _meshes, _bbFactor);
-                    _sortAABBs(_aabbs);
+                    _checkCollisions();
+                    _coloredMeshes();
                     std::cout << "Number of collisions: " << _aabbs.size()
                               << std::endl;
-                    _checkCollisions();
                     _animMesh = nullptr;
                     _renderMesh = nullptr;
-
-                    _coloredMeshes();
                 }
             }
         }
@@ -174,7 +177,10 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
             {
                 _middleButtonPressed = true;
 
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+                _mouseX = mouseX;
+                _mouseY = mouseY;
             }
             else if (action == GLFW_RELEASE)
             {
@@ -187,7 +193,10 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
             {
                 _rightButtonPressed = true;
 
-                glfwGetCursorPos(window, &_mouseX, &_mouseY);
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+                _mouseX = mouseX;
+                _mouseY = mouseY;
             }
             else if (action == GLFW_RELEASE)
             {
@@ -197,24 +206,22 @@ void DemoApp::_mouseButtonCallback(GLFWwindow* window,
     }
 }
 
-void DemoApp::_mousePositionCallback(GLFWwindow* window,
-                                     double xpos,
-                                     double ypos)
+void DemoApp::_mousePositionCallback(GLFWwindow* window, float xpos, float ypos)
 {
     if (_scene)
     {
-        double diffX = xpos - _mouseX;
-        double diffY = ypos - _mouseY;
+        float diffX = xpos - _mouseX;
+        float diffY = ypos - _mouseY;
         _mouseX = xpos;
         _mouseY = ypos;
-        phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
-                          diffY * _scene->cameraDistance() * 0.001f, 0.0);
+        geometry::Vec3 dxyz =
+            geometry::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
+                           diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             if (_animMesh)
             {
-                dxyz = _scene->cameraRotation() * dxyz;
+                dxyz = dxyz * _scene->cameraRotation();
                 for (auto node : _animMesh->nodes) node->position -= dxyz;
                 setGeometry(_renderMesh, _animMesh->nodes);
             }

@@ -2,7 +2,7 @@
 #define __EXAMPLES_SOMA_APP__
 
 #include "../common/GLFWApp.h"
-#include "SomaGenerator.h"
+// #include "SomaGenerator.h"
 
 namespace examples
 {

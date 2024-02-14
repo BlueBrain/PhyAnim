@@ -1,11 +1,8 @@
 #include "AnimMeshApp.h"
 
-#include <ExplicitFEMSystem.h>
-#include <ExplicitMassSpringSystem.h>
-#include <ImplicitFEMSystem.h>
-#include <ImplicitMassSpringSystem.h>
-
 #include <iostream>
+
+using namespace phyanim;
 
 int main(int argc, char* argv[])
 {
@@ -19,20 +16,20 @@ namespace examples
 {
 void AnimMeshApp::_actionLoop()
 {
-    double stiffness = 1000.0;
-    double poisson = 0.3;
-    double collisionStiffness = 200.0;
-    double dt = 0.01;
-    double damping = 1.0;
-    double density = 1.0;
+    float stiffness = 1000.0;
+    float poisson = 0.3;
+    float collisionStiffness = 200.0;
+    float dt = 0.01;
+    float damping = 1.0;
+    float density = 1.0;
 
-    phyanim::AnimSystem* animSys = new phyanim::ImplicitFEMSystem(dt);
+    anim::AnimSystem* animSys = new anim::ImplicitFEMSystem(dt);
 
-    phyanim::AxisAlignedBoundingBox limits;
+    geometry::AxisAlignedBoundingBox limits;
 
     for (uint64_t i = 0; i < _args.size(); ++i)
     {
-        auto mesh = new phyanim::Mesh(stiffness, density, damping, poisson);
+        auto mesh = new geometry::Mesh(stiffness, density, damping, poisson);
         std::string file = _args[i];
 
         if (file.find(".node") != std::string::npos)
@@ -50,17 +47,17 @@ void AnimMeshApp::_actionLoop()
 
         _meshes.push_back(mesh);
         mesh->boundingBox =
-            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+            new geometry::HierarchicalAABB(mesh->surfaceTriangles);
         limits.unite(*mesh->boundingBox);
         _setCameraPos(limits);
 
         _scene->meshes.push_back(
-            generateMesh(mesh->nodes, mesh->surfaceTriangles));
+            graphics::generateMesh(mesh->nodes, mesh->surfaceTriangles));
     }
 
     animSys->preprocessMesh(_meshes);
 
-    phyanim::Vec3 halfSides = limits.upperLimit() - limits.center();
+    geometry::Vec3 halfSides = limits.upperLimit() - limits.center();
     limits.lowerLimit(limits.lowerLimit() - halfSides);
     limits.upperLimit(limits.upperLimit() + halfSides);
 
@@ -70,14 +67,14 @@ void AnimMeshApp::_actionLoop()
         {
             for (auto mesh : _meshes) mesh->nodesForceZero();
 
-            phyanim::CollisionDetection::computeCollisions(_meshes,
-                                                           collisionStiffness);
+            anim::CollisionDetection::computeCollisions(_meshes,
+                                                        collisionStiffness);
 
             animSys->step(_meshes);
 
             for (auto mesh : _meshes) mesh->boundingBox->update();
 
-            phyanim::CollisionDetection::computeCollisions(_meshes, limits);
+            anim::CollisionDetection::computeCollisions(_meshes, limits);
 
             for (uint32_t i = 0; i < _meshes.size(); ++i)
             {

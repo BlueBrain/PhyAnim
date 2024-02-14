@@ -1,14 +1,13 @@
 #ifndef __EXAMPLES_MORPHO_H
 #define __EXAMPLES_MORPHO_H
 
-#include <Phyanim.h>
+#include <phyanim/Phyanim.h>
 
-#include "Mesh.h"
+using namespace phyanim;
 
 namespace examples
 {
-
-typedef phyanim::Nodes Section;
+typedef geometry::Nodes Section;
 typedef std::vector<Section*> Sections;
 
 enum RadiusFunc
@@ -25,7 +24,7 @@ class Morpho
 {
 public:
     Morpho(std::string path,
-           phyanim::Mat4 mat = phyanim::Mat4::Identity(),
+           geometry::Mat4 mat = geometry::Mat4(1.0f),
            RadiusFunc radiusFunc = RadiusFunc::MAX_NEURITES,
            bool loadNeurites = true);
 
@@ -33,27 +32,27 @@ public:
 
     void print();
 
-    void cutout(phyanim::AxisAlignedBoundingBox& aabb);
+    void cutout(geometry::AxisAlignedBoundingBox& aabb);
 
-    phyanim::Nodes nodes;
+    geometry::Nodes nodes;
 
-    phyanim::Nodes somaNodes;
+    geometry::Nodes somaNodes;
 
-    phyanim::NodePtr soma;
+    geometry::NodePtr soma;
 
-    phyanim::Nodes sectionNodes;
+    geometry::Nodes sectionNodes;
 
     Sections sections;
 
-    phyanim::HierarchicalAABBPtr aabb;
+    geometry::HierarchicalAABBPtr aabb;
 
-    phyanim::Edges edges;
+    geometry::Edges edges;
 
-    phyanim::Vec3 color;
+    geometry::Vec3 color;
 
-    phyanim::Vec3 collColor;
+    geometry::Vec3 collColor;
 
-    phyanim::Vec3 fixColor;
+    geometry::Vec3 fixColor;
 };
 
 }  // namespace examples

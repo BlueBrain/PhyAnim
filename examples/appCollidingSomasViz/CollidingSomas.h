@@ -2,9 +2,10 @@
 #define __EXAMPLES_COLLIDING_SOMAS__
 
 #include "../common/CollisionSolver.h"
-#include "../common/ColorPalette.h"
 #include "../common/GLFWApp.h"
 #include "../common/Morpho.h"
+
+using namespace phyanim;
 
 namespace examples
 {
@@ -18,11 +19,11 @@ public:
 protected:
     void _actionLoop();
 
-    void _setMeshes(std::vector<phyanim::Edges>& edgesSet);
+    void _setMeshes(std::vector<geometry::Edges>& edgesSet);
 
-    uint32_t _solveCollisions(phyanim::HierarchicalAABBs& aabbs,
-                              std::vector<phyanim::Edges>& edgesSet,
-                              std::vector<phyanim::Nodes>& nodesSet);
+    uint32_t _solveCollisions(geometry::HierarchicalAABBs& aabbs,
+                              std::vector<geometry::Edges>& edgesSet,
+                              std::vector<geometry::Nodes>& nodesSet);
 
     void _mouseButtonCallback(GLFWwindow* window,
                               int button,
@@ -30,9 +31,12 @@ protected:
                               int mods);
 
 private:
-    ColorPalette* _palette;
+    graphics::ColorPalette* _palette;
 
     CollisionSolver* _solver;
+
+    float _dt;
+    float _ksc;
 };
 
 }  // namespace examples

@@ -3,7 +3,6 @@
 
 #include <bbp/sonata/config.h>
 
-// #include <spatial_index/multi_index.hpp>
 #include <iomanip>
 #include <iostream>
 
@@ -46,7 +45,7 @@ public:
     ~Circuit(){};
 
     Morpho* getNeuron(uint32_t id,
-                      phyanim::AxisAlignedBoundingBox* aabb = nullptr)
+                      geometry::AxisAlignedBoundingBox* aabb = nullptr)
     {
         bbp::sonata::Selection::Values ids;
         ids.push_back(id);
@@ -64,7 +63,7 @@ public:
 
     std::vector<Morpho*> getNeurons(
         bbp::sonata::Selection::Values ids,
-        phyanim::AxisAlignedBoundingBox* aabb = nullptr,
+        geometry::AxisAlignedBoundingBox* aabb = nullptr,
         RadiusFunc radiusFunc = RadiusFunc::MAX_NEURITES,
         bool loadNeurites = true)
     {
@@ -73,18 +72,18 @@ public:
         auto population = config.getNodePopulation(_population);
         auto morphoPaths =
             population.getAttribute<std::string>("morphology", selection);
-        auto xs = population.getAttribute<double>("x", selection);
-        auto ys = population.getAttribute<double>("y", selection);
-        auto zs = population.getAttribute<double>("z", selection);
+        auto xs = population.getAttribute<float>("x", selection);
+        auto ys = population.getAttribute<float>("y", selection);
+        auto zs = population.getAttribute<float>("z", selection);
 
         auto rot_xs =
-            population.getAttribute<double>("orientation_x", selection);
+            population.getAttribute<float>("orientation_x", selection);
         auto rot_ys =
-            population.getAttribute<double>("orientation_y", selection);
+            population.getAttribute<float>("orientation_y", selection);
         auto rot_zs =
-            population.getAttribute<double>("orientation_z", selection);
+            population.getAttribute<float>("orientation_z", selection);
         auto rot_ws =
-            population.getAttribute<double>("orientation_w", selection);
+            population.getAttribute<float>("orientation_w", selection);
 
         uint32_t num = morphoPaths.size();
         std::vector<Morpho*> morphos(num);
@@ -96,19 +95,19 @@ public:
         for (uint32_t i = 0; i < num; ++i)
         {
             std::string path = _morphoDir + morphoPaths[i] + _morphoExt;
-            phyanim::Vec3 pos(xs[i], ys[i], zs[i]);
-            Eigen::Quaterniond rot(rot_ws[i], rot_xs[i], rot_ys[i], rot_zs[i]);
-            rot.normalize();
-            phyanim::Mat4 model = phyanim::Mat4::Identity();
-            model.block<3, 3>(0, 0) = rot.toRotationMatrix();
-            model.block<3, 1>(0, 3) = pos;
+            geometry::Vec3 pos(xs[i], ys[i], zs[i]);
+            glm::quat rot(rot_ws[i], rot_xs[i], rot_ys[i], rot_zs[i]);
+            geometry::Mat4 model(1);
+            model = glm::translate(model, pos) *
+                    geometry::Mat4(glm::normalize(rot));
+
             morphos[i] = new Morpho(path, model, radiusFunc, loadNeurites);
             if (aabb) morphos[i]->cutout(*aabb);
 #pragma omp critical
             {
                 loaded++;
                 std::cout << "\r\e[K" << std::flush;
-                std::cout << "\rLoading " << (double)(loaded * 100.0 / num)
+                std::cout << "\rLoading " << (float)(loaded * 100.0 / num)
                           << "%" << std::flush;
             }
         }
@@ -117,25 +116,25 @@ public:
     };
 
     void collidingSomas(bbp::sonata::Selection::Values ids,
-                        phyanim::AxisAlignedBoundingBox* aabb)
+                        geometry::AxisAlignedBoundingBox* aabb)
     {
         auto selection = bbp::sonata::Selection::fromValues(ids);
         auto config = bbp::sonata::CircuitConfig::fromFile(_circuit);
         auto population = config.getNodePopulation(_population);
         auto morphoPaths =
             population.getAttribute<std::string>("morphology", selection);
-        auto xs = population.getAttribute<double>("x", selection);
-        auto ys = population.getAttribute<double>("y", selection);
-        auto zs = population.getAttribute<double>("z", selection);
+        auto xs = population.getAttribute<float>("x", selection);
+        auto ys = population.getAttribute<float>("y", selection);
+        auto zs = population.getAttribute<float>("z", selection);
 
         auto rot_xs =
-            population.getAttribute<double>("orientation_x", selection);
+            population.getAttribute<float>("orientation_x", selection);
         auto rot_ys =
-            population.getAttribute<double>("orientation_y", selection);
+            population.getAttribute<float>("orientation_y", selection);
         auto rot_zs =
-            population.getAttribute<double>("orientation_z", selection);
+            population.getAttribute<float>("orientation_z", selection);
         auto rot_ws =
-            population.getAttribute<double>("orientation_w", selection);
+            population.getAttribute<float>("orientation_w", selection);
 
         uint32_t num = morphoPaths.size();
         std::vector<Morpho*> morphos(num);
@@ -147,12 +146,12 @@ public:
         for (uint32_t i = 0; i < num; ++i)
         {
             std::string path = _morphoDir + morphoPaths[i] + _morphoExt;
-            phyanim::Vec3 pos(xs[i], ys[i], zs[i]);
-            Eigen::Quaterniond rot(rot_ws[i], rot_xs[i], rot_ys[i], rot_zs[i]);
-            rot.normalize();
-            phyanim::Mat4 model = phyanim::Mat4::Identity();
-            model.block<3, 3>(0, 0) = rot.toRotationMatrix();
-            model.block<3, 1>(0, 3) = pos;
+            geometry::Vec3 pos(xs[i], ys[i], zs[i]);
+            glm::quat rot(rot_ws[i], rot_xs[i], rot_ys[i], rot_zs[i]);
+            geometry::Mat4 model(1);
+            model = glm::translate(model, pos) *
+                    geometry::Mat4(glm::normalize(rot));
+
             morphos[i] = new Morpho(path, model);
             if (aabb) morphos[i]->cutout(*aabb);
             bool isColliding = aabb->isColliding(*morphos[i]->soma);
@@ -164,7 +163,7 @@ public:
                               << " radius: " << morphos[i]->soma->radius
                               << std::endl;
                 std::cout << "\r\e[K" << std::flush;
-                std::cout << "\rLoading " << (double)(loaded * 100.0 / num)
+                std::cout << "\rLoading " << (float)(loaded * 100.0 / num)
                           << "%" << std::flush;
             }
         }

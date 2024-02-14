@@ -26,11 +26,11 @@ protected:
                               int action,
                               int mods);
 
-    void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
+    void _mousePositionCallback(GLFWwindow* window, float xpos, float ypos);
 
     std::vector<std::string> _fileNames;
-    phyanim::Mesh* _animMesh;
-    Mesh* _renderMesh;
+    phyanim::geometry::Mesh* _animMesh;
+    phyanim::graphics::Mesh* _renderMesh;
 };
 
 }  // namespace examples

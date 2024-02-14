@@ -1,45 +1,17 @@
 #ifndef __EXAMPLES_ICOSPHERE__
 #define __EXAMPLES_ICOSPHERE__
 
-#include <Mesh.h>
-
-#include "Tet.h"
+#include <phyanim/Phyanim.h>
 
 namespace examples
 {
-class Icosphere
+class Icosphere : public phyanim::geometry::Mesh
 {
 public:
-    Icosphere(phyanim::Vec3 pos = phyanim::Vec3::Zero(), double radius = 1.0f);
+    Icosphere(phyanim::geometry::Vec3 pos = phyanim::geometry::Vec3(),
+              float radius = 1.0f);
 
     virtual ~Icosphere(){};
-
-    phyanim::Mesh* mesh();
-
-    std::vector<Spring*> springs(double stiffness = 100.0);
-
-    std::vector<Spring*> surfaceSprings(double stiffness = 100.0);
-
-    Tets tets();
-
-    std::vector<Node*> nodes;
-
-    std::vector<Node*> surfaceNodes;
-
-    std::vector<Triangle*> triangles;
-
-private:
-    phyanim::Mesh* _mesh;
-
-    void _insert(Spring* spring, UniqueSprings& springs);
-
-    static const uint16_t _verticesSize;
-
-    static const double _vertices[];
-
-    static const uint16_t _indicesSize;
-
-    static const uint16_t _indices[];
 };
 
 }  // namespace examples

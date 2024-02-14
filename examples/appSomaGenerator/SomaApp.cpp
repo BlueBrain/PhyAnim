@@ -3,8 +3,8 @@
 #include <chrono>
 #include <iostream>
 
-#include "Icosphere.h"
-#include "SWCReader.h"
+#include "../common/Morpho.h"
+#include "SomaGenerator.h"
 
 int main(int argc, char* argv[])
 {
@@ -20,11 +20,11 @@ SomaApp::SomaApp(int argc, char** argv) : GLFWApp(argc, argv), _anim(false) {}
 
 void SomaApp::_actionLoop()
 {
-    double dt = 0.01;
-    double stiffness = 10000;
-    double poissonRatio = 0.2;
-    double alphaSoma = 0.75;
-    uint32_t iters = 201;
+    float dt = 0.01;
+    float stiffness = 1000.0f;
+    float poissonRatio = 0.2;
+    float alphaSoma = 0.75;
+    uint32_t iters = 100;
     uint32_t iter = 0;
     bool offline = false;
     std::string file("data/a_s.swc");
@@ -75,73 +75,71 @@ void SomaApp::_actionLoop()
         }
     }
 
-    SWCReader reader(file);
+    auto morpho = examples::Morpho(file, phyanim::geometry::Mat4(1.0f),
+                                   examples::RadiusFunc::MIN_NEURITES);
 
-    std::cout << "Soma center " << reader.soma.position << std::endl;
+    if (morpho.sectionNodes.empty()) throw std::runtime_error("Empty neurites");
+    phyanim::geometry::Vec3 center;
+    float radius = std::numeric_limits<float>::max();
+    for (auto node : morpho.sectionNodes) center += node->position;
+    center /= morpho.sectionNodes.size();
+    for (auto node : morpho.sectionNodes)
+    {
+        float dist = glm::distance(center, node->position);
+        radius = std::min(radius, dist);
+    }
+    std::cout << "Soma center " << center.x << ", " << center.y << ", "
+              << center.z << std::endl;
+    std::cout << "Soma radius " << radius << std::endl;
+    for (auto neurite : morpho.sectionNodes)
+    {
+        auto p = neurite->position;
+        std::cout << "---Neurite pos: " << p.x << ", " << p.y << ", " << p.z
+                  << " radius: " << neurite->radius * 0.5 << std::endl;
+    }
 
-    std::cout << "Soma radius " << reader.soma.radius << std::endl;
+    SomaGenerator generator(center, radius * alphaSoma, morpho.sectionNodes, dt,
+                            stiffness, poissonRatio);
 
-    std::chrono::time_point<std::chrono::steady_clock> startTime =
-        std::chrono::steady_clock::now();
-    auto somaGen = new SomaGenerator(reader.neurites, reader.soma, dt,
-                                     stiffness, poissonRatio, alphaSoma);
+    _meshes.push_back(generator.animMesh);
+    _scene->meshes.push_back(generator.renderMesh);
+
+    geometry::AxisAlignedBoundingBox limits(
+        generator.animMesh->surfaceTriangles);
+    limits.resize(2.0f);
+    _setCameraPos(limits);
 
     std::cout << "dt: " << dt << std::endl;
     std::cout << "stiffness: " << stiffness << std::endl;
     std::cout << "poissonRatio: " << poissonRatio << std::endl;
     std::cout << "alphaSoma: " << alphaSoma << std::endl;
-    phyanim::Mesh* mesh = somaGen->animMesh();
-    _meshes.push_back(mesh);
-    phyanim::AxisAlignedBoundingBox limits;
-    limits.unite(phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
-    phyanim::Vec3 center = limits.center();
-    phyanim::Vec3 axis = (limits.upperLimit() - center) * 2.0;
 
-    limits.upperLimit(center + axis);
-    limits.lowerLimit(center - axis);
-    _scene->meshes.push_back(somaGen->renderMesh());
-    _setCameraPos(limits);
+    std::cout << "Progress: " << iter / iters << "%" << std::flush;
 
     _anim = true;
-
+    bool anim = _anim;
     while (true)
     {
-        _animMutex.lock();
-        bool anim = _anim;
-        _animMutex.unlock();
-        if (_anim)
+        if (anim)
         {
             ++iter;
-            if (iter < iters)
+            if (iter <= iters)
             {
                 float alpha = (float)iter / iters;
-                somaGen->pull(alpha);
-                somaGen->anim(!offline);
-                if (iter == 1 || iter == 50 || iter == 100 || iter == 150 ||
-                    iter == 200)
-                {
-                    std::string outFile("out_");
-                    outFile.append(std::to_string(iter));
-                    outFile.append(".obj");
-                    mesh->write(outFile);
-                }
+                generator.pull(alpha);
+                generator.anim(true);
+                std::cout << "\33[2K\rProgress: " << iter * 100.0f / iters
+                          << "%" << std::flush;
+                if (iter == iters) std::cout << std::endl;
             }
             else
             {
-                somaGen->anim(true);
-                if (iter == iters)
-                {
-                    _anim = false;
-                    auto endTime = std::chrono::steady_clock::now();
-                    std::chrono::duration<double> elapsedTime =
-                        endTime - startTime;
-                    std::cout << iters
-                              << " irations in: " << elapsedTime.count()
-                              << " seconds" << std::endl;
-                }
-                std::cout << "Iteration: " << iter << std::endl;
+                generator.anim(true);
             }
         }
+        _animMutex.lock();
+        anim = _anim;
+        _animMutex.unlock();
     }
 }
 

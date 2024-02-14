@@ -2,7 +2,6 @@
 #define __EXAMPLES_OVERLAP_CIRCUIT_APP__
 
 #include "../common/CollisionSolver.h"
-#include "../common/ColorPalette.h"
 #include "../common/GLFWApp.h"
 #include "../common/Morpho.h"
 
@@ -16,13 +15,13 @@ public:
 protected:
     void _actionLoop();
 
-    uint32_t _solveCollisions(phyanim::HierarchicalAABBs& aabbs,
-                              std::vector<phyanim::Edges>& edgesSet,
-                              std::vector<phyanim::Nodes>& nodesSet,
-                              phyanim::AxisAlignedBoundingBox& limits,
+    uint32_t _solveCollisions(phyanim::geometry::HierarchicalAABBs& aabbs,
+                              std::vector<phyanim::geometry::Edges>& edgesSet,
+                              std::vector<phyanim::geometry::Nodes>& nodesSet,
+                              phyanim::geometry::AxisAlignedBoundingBox& limits,
                               uint32_t& totalIters);
 
-    void _setMeshes(std::vector<phyanim::Edges>& edgesSet);
+    void _setMeshes(std::vector<phyanim::geometry::Edges>& edgesSet);
 
     void _mouseButtonCallback(GLFWwindow* window,
                               int button,
@@ -30,9 +29,15 @@ protected:
                               int mods);
 
 private:
-    ColorPalette* _palette;
+    phyanim::graphics::ColorPalette* _palette;
 
     CollisionSolver* _solver;
+
+    float _threshold;
+    float _ks;
+    float _ksc;
+    float _ksLimit;
+    float _dt;
 };
 
 }  // namespace examples

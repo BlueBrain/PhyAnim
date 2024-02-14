@@ -1,7 +1,6 @@
 set(APP_NAME appAnimMesh)
 
-file(GLOB ${APP_NAME}_SOURCE_FILES "*.cpp"
-  "${PROJECT_SOURCE_DIR}/examples/common/*.cpp")
+file(GLOB ${APP_NAME}_SOURCE_FILES "*.cpp" "../common/*.cpp")
 file(GLOB ${APP_NAME}_HEADER_FILES "*.h")
 
 add_executable(${APP_NAME} ${${APP_NAME}_SOURCE_FILES} 

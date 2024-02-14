@@ -1,25 +1,21 @@
 #ifndef __EXAMPLES_SOMA_GENERATOR__
 #define __EXAMPLES_SOMA_GENERATOR__
 
-#include "../common/Mesh.h"
 #include "Icosphere.h"
-#include "Sample.h"
-#include "StiffnessMatrix.h"
+
+using namespace phyanim;
 
 namespace examples
 {
-typedef std::pair<phyanim::Vec3, double> NeuriteStart;
-typedef std::vector<NeuriteStart> NeuriteStarts;
-
 class SomaGenerator
 {
 public:
-    SomaGenerator(Samples starts,
-                  Sample soma,
-                  double dt = 0.01,
-                  double stiffness = 1000.0,
-                  double poissonRatio = 0.49,
-                  double alphaSoma = 0.75);
+    SomaGenerator(geometry::Vec3 center,
+                  float radius,
+                  geometry::Nodes starts,
+                  float dt = 0.01,
+                  float stiffness = 1000.0,
+                  float poissonRatio = 0.49);
 
     ~SomaGenerator(){};
 
@@ -27,32 +23,25 @@ public:
 
     void pull(float alpha);
 
-    phyanim::Mesh* animMesh() { return _animMesh; };
-    Mesh* renderMesh() { return _renderMesh; };
+    geometry::MeshPtr animMesh;
+    graphics::Mesh* renderMesh;
 
 private:
-    void _addVec3ToVec(uint64_t id,
-                       const phyanim::Vec3& value,
-                       Eigen::VectorXd& vec);
-
     void _computeStartsNodes();
 
-    void _fixCenterNodes(double radialDist = 0.5);
+    void _fixCenterNodes(float radialDist = 0.5);
 
     void _updateNodes();
 
-    Icosphere* _ico;
-    phyanim::Mesh* _animMesh;
-    Mesh* _renderMesh;
-    std::vector<Node*> _nodes;
-    Tets _tets;
-    StiffnessMatrix _kMat;
+    geometry::Vec3 _center;
+    float _radius;
 
-    Samples _starts;
-    std::vector<phyanim::Vec3> _positions;
-    std::vector<Nodes> _startsNodes;
-    Sample _soma;
-    double _dt;
+    geometry::Nodes _starts;
+    std::vector<geometry::Nodes> _startsNodes;
+    std::vector<geometry::Vec3> _targets;
+    float _dt;
+
+    anim::ImplicitFEMSystem* _sys;
 };
 
 }  // namespace examples

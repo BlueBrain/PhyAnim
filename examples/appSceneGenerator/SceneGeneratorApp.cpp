@@ -5,6 +5,8 @@
 
 #include "../common/SceneGenerator.h"
 
+using namespace phyanim;
+
 int main(int argc, char* argv[])
 {
     examples::SceneGeneratorApp app(argc, argv);
@@ -26,9 +28,9 @@ void SceneGeneratorApp::_actionLoop()
 {
     uint32_t numOutMeshes = 10;
     _bbFactor = 15.0;
-    double limitFactor = 1.0;
+    float limitFactor = 1.0;
     uint32_t maxCollisions = 5;
-    double maxCollisionRadius = 4.0;
+    float maxCollisionRadius = 4.0;
 
     std::vector<std::string> files;
 
@@ -65,11 +67,11 @@ void SceneGeneratorApp::_actionLoop()
             std::cerr << "Unknown file format: " << _args[i] << std::endl;
     }
 
-    phyanim::Meshes meshes;
-    phyanim::AxisAlignedBoundingBox limits;
+    geometry::Meshes meshes;
+    geometry::AxisAlignedBoundingBox limits;
 
     std::cout << std::fixed << std::setprecision(2);
-    double progress = 0.0;
+    float progress = 0.0;
     std::cout << "\rLoading files " << progress << "%" << std::flush;
 
 #ifdef PHYANIM_USES_OPENMP
@@ -77,7 +79,7 @@ void SceneGeneratorApp::_actionLoop()
 #endif
     for (uint64_t i = 0; i < files.size(); ++i)
     {
-        phyanim::Mesh* mesh = new phyanim::Mesh();
+        geometry::Mesh* mesh = new geometry::Mesh();
         mesh->load(files[i]);
 #pragma omp critical
         {
@@ -85,7 +87,7 @@ void SceneGeneratorApp::_actionLoop()
             {
                 meshes.push_back(mesh);
                 limits.unite(
-                    phyanim::AxisAlignedBoundingBox(mesh->surfaceTriangles));
+                    geometry::AxisAlignedBoundingBox(mesh->surfaceTriangles));
             }
 
             progress += 100.0f / files.size();
@@ -95,8 +97,8 @@ void SceneGeneratorApp::_actionLoop()
     std::cout << std::endl;
 
     _setCameraPos(limits);
-    phyanim::Vec3 center = limits.center();
-    phyanim::Vec3 axis = (limits.upperLimit() - center) * limitFactor;
+    geometry::Vec3 center = limits.center();
+    geometry::Vec3 axis = (limits.upperLimit() - center) * limitFactor;
     limits.lowerLimit(center - axis);
     limits.upperLimit(center + axis);
 
@@ -106,10 +108,10 @@ void SceneGeneratorApp::_actionLoop()
     for (auto mesh : _meshes)
     {
         mesh->boundingBox =
-            new phyanim::HierarchicalAABB(mesh->surfaceTriangles);
+            new geometry::HierarchicalAABB(mesh->surfaceTriangles);
 
         _scene->meshes.push_back(
-            generateMesh(mesh->nodes, mesh->surfaceTriangles));
+            graphics::generateMesh(mesh->nodes, mesh->surfaceTriangles));
         limits.unite(*mesh->boundingBox);
     }
 
@@ -120,11 +122,11 @@ void SceneGeneratorApp::_actionLoop()
     }
     meshes.clear();
 
-    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0);
+    anim::CollisionDetection::computeCollisions(_meshes, 0.0);
     _coloredMeshes();
 
     _aabbs =
-        phyanim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
+        anim::CollisionDetection::collisionBoundingBoxes(_meshes, _bbFactor);
     _sortAABBs(_aabbs);
     std::cout << "Number of collisions: " << _aabbs.size() << std::endl;
     _collisionId = 0;
@@ -137,19 +139,19 @@ void SceneGeneratorApp::_actionLoop()
 
 void SceneGeneratorApp::_coloredMeshes()
 {
-    phyanim::Vec3 baseColor(0.4, 0.4, 0.8);
-    phyanim::Vec3 baseSelectedColor(0.0, 0.0, 1.0);
+    geometry::Vec3 baseColor(0.4, 0.4, 0.8);
+    geometry::Vec3 baseSelectedColor(0.0, 0.0, 1.0);
 
-    phyanim::Vec3 collisionColor(1.0, 0.0, 0.0);
-    phyanim::Vec3 collisionSelectedColor(1.0, 0.0, 0.0);
+    geometry::Vec3 collisionColor(1.0, 0.0, 0.0);
+    geometry::Vec3 collisionSelectedColor(1.0, 0.0, 0.0);
 
     for (uint32_t i = 0; i < _meshes.size(); ++i)
     {
         auto animMesh = _meshes[i];
         auto renderMesh = _scene->meshes[i];
 
-        phyanim::Vec3 color = baseColor;
-        phyanim::Vec3 collColor = collisionColor;
+        geometry::Vec3 color = baseColor;
+        geometry::Vec3 collColor = collisionColor;
         if (animMesh == _animMesh)
         {
             color = baseSelectedColor;
@@ -173,7 +175,7 @@ void SceneGeneratorApp::_keyCallback(GLFWwindow* window,
             switch (key)
             {
             case GLFW_KEY_ENTER:
-                double progress = 0.0;
+                float progress = 0.0;
                 std::cout << "\rSaving files " << progress << "%" << std::flush;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
@@ -203,7 +205,10 @@ void SceneGeneratorApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+        _mouseX = mouseX;
+        _mouseY = mouseY;
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
@@ -228,8 +233,7 @@ void SceneGeneratorApp::_mouseButtonCallback(GLFWwindow* window,
                 if (_animMesh)
                 {
                     _animMesh->boundingBox->update();
-                    phyanim::CollisionDetection::computeCollisions(_meshes,
-                                                                   0.0);
+                    anim::CollisionDetection::computeCollisions(_meshes, 0.0);
                     _sortAABBs(_aabbs);
                     _animMesh = nullptr;
                     _renderMesh = nullptr;
@@ -263,23 +267,23 @@ void SceneGeneratorApp::_mouseButtonCallback(GLFWwindow* window,
 }
 
 void SceneGeneratorApp::_mousePositionCallback(GLFWwindow* window,
-                                               double xpos,
-                                               double ypos)
+                                               float xpos,
+                                               float ypos)
 {
     if (_scene)
     {
-        double diffX = xpos - _mouseX;
-        double diffY = ypos - _mouseY;
+        float diffX = xpos - _mouseX;
+        float diffY = ypos - _mouseY;
         _mouseX = xpos;
         _mouseY = ypos;
-        phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.1f,
-                          diffY * _scene->cameraDistance() * 0.1f, 0.0);
+        geometry::Vec3 dxyz =
+            geometry::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
+                           diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             if (_animMesh)
             {
-                dxyz = _scene->cameraRotation() * dxyz;
+                dxyz = dxyz * _scene->cameraRotation();
                 for (auto node : _animMesh->nodes) node->position -= dxyz;
                 setGeometry(_renderMesh, _animMesh->nodes);
             }

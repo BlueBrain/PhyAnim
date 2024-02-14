@@ -36,7 +36,7 @@ void RenderMorphoApp::_actionLoop()
     for (uint32_t i = 0; i < files.size(); ++i)
     {
         auto morpho = new Morpho(files[i]);
-        auto mesh = generateMesh(morpho->edges);
+        auto mesh = graphics::generateMesh(morpho->edges);
 
 #pragma omp critical
         {
@@ -47,15 +47,12 @@ void RenderMorphoApp::_actionLoop()
         }
     }
 
-    // _setCameraPos(_limits);
+    // auto prevTime = std::chrono::steady_clock::now();
+    // uint32_t iters = 0;
 
-    phyanim::ExplicitMassSpringSystem system(0.001);
-    auto prevTime = std::chrono::steady_clock::now();
-    uint32_t iters = 0;
-
-    uint32_t numSprings = 0;
-    for (uint32_t i = 0; i < _morphologies.size(); ++i)
-        numSprings += _morphologies[i]->edges.size();
+    // uint32_t numSprings = 0;
+    // for (uint32_t i = 0; i < _morphologies.size(); ++i)
+    //     numSprings += _morphologies[i]->edges.size();
 }
 
 void RenderMorphoApp::_mouseButtonCallback(GLFWwindow* window,
@@ -65,7 +62,10 @@ void RenderMorphoApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+        _mouseX = mouseX;
+        _mouseY = mouseY;
 
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {

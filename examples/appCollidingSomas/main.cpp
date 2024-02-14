@@ -5,7 +5,8 @@
 
 #include "../common/Circuit.h"
 #include "../common/CollisionSolver.h"
-#include "../common/Morpho.h"
+
+using namespace phyanim;
 
 int main(int argc, char* argv[])
 {
@@ -14,6 +15,9 @@ int main(int argc, char* argv[])
     std::string circuitPath;
     bbp::sonata::Selection::Values ids;
     std::string pop = "All";
+
+    float dt = 0.001f;
+    float ksc = 10.0f;
 
     for (uint32_t i = 1; i < argc; ++i)
     {
@@ -40,10 +44,20 @@ int main(int argc, char* argv[])
             radiusFunc = examples::RadiusFunc::MEAN_SOMAS;
         else if (arg.find(".json") != std::string::npos)
             circuitPath = arg;
+        else if (arg.compare("-dt") == 0)
+        {
+            ++i;
+            dt = std::stof(argv[i]);
+        }
+        else if (arg.compare("-ksc") == 0)
+        {
+            ++i;
+            ksc = std::stof(argv[i]);
+        }
         else
             ids.push_back(std::stoul(arg));
     }
-    auto solver = new examples::CollisionSolver(0.001);
+    auto solver = new examples::CollisionSolver(dt);
     examples::Circuit circuit(circuitPath, pop);
     std::vector<examples::Morpho*> morphologies =
         circuit.getNeurons(ids, nullptr, radiusFunc, false);
@@ -62,10 +76,10 @@ int main(int argc, char* argv[])
     }
 
     uint32_t size = morphologies.size();
-    std::vector<double> factor(size);
-    std::vector<phyanim::Edges> edgesSet(size);
-    std::vector<phyanim::Nodes> nodesSet(size);
-    phyanim::HierarchicalAABBs aabbs(size);
+    std::vector<float> factor(size);
+    std::vector<geometry::Edges> edgesSet(size);
+    std::vector<geometry::Nodes> nodesSet(size);
+    geometry::HierarchicalAABBs aabbs(size);
 
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
@@ -75,15 +89,15 @@ int main(int argc, char* argv[])
         auto soma0 = morphologies[i]->soma;
         for (auto node : morphologies[i]->sectionNodes)
         {
-            auto nodeCenter = new phyanim::Node(
-                soma0->position, 0, node->radius, phyanim::Vec3::Zero(),
-                phyanim::Vec3::Zero(), node->radius);
-            edgesSet[i].push_back(new phyanim::Edge(nodeCenter, node));
+            auto nodeCenter = new geometry::Node(
+                soma0->position, 0, node->radius, geometry::Vec3(),
+                geometry::Vec3(), node->radius);
+            edgesSet[i].push_back(new geometry::Edge(nodeCenter, node));
         }
-        edgesSet[i].push_back(new phyanim::Edge(soma0, soma0));
-        nodesSet[i] = phyanim::uniqueNodes(edgesSet[i]);
-        aabbs[i] = new phyanim::HierarchicalAABB(edgesSet[i]);
+        edgesSet[i].push_back(new geometry::Edge(soma0, soma0));
+        nodesSet[i] = geometry::uniqueNodes(edgesSet[i]);
+        aabbs[i] = new geometry::HierarchicalAABB(edgesSet[i]);
     }
 
-    solver->solveSomasCollisions(aabbs, edgesSet, nodesSet);
+    solver->solveSomasCollisions(aabbs, edgesSet, nodesSet, ksc);
 }

@@ -1,9 +1,8 @@
-if(MorphIO_FOUND)
+if(MorphIO_FOUND AND sonata_FOUND)
   set(APP_NAME appCollidingSomasViz)
 
-  file(GLOB ${APP_NAME}_SOURCE_FILES "*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../common/*.cpp")
-  file(GLOB ${APP_NAME}_HEADER_FILES "*.h")
+file(GLOB ${APP_NAME}_SOURCE_FILES "*.cpp" "../common/*.cpp")
+file(GLOB ${APP_NAME}_HEADER_FILES "*.h")
 
   add_executable(${APP_NAME} ${${APP_NAME}_SOURCE_FILES} 
     ${${APP_NAME}_HEADER_FILES})

@@ -1,7 +1,8 @@
 #include "MoveMeshApp.h"
 
-#include <iomanip>
 #include <iostream>
+
+using namespace phyanim;
 
 int main(int argc, char* argv[])
 {
@@ -22,7 +23,7 @@ MoveMeshApp::MoveMeshApp(int argc, char** argv)
 
 void MoveMeshApp::_actionLoop()
 {
-    _bbFactor = 15;
+    _bbFactor = 1;
 
     for (uint32_t i = 0; i < _args.size(); ++i)
     {
@@ -42,35 +43,37 @@ void MoveMeshApp::_actionLoop()
 
     _loadMeshes(_fileNames);
 
-    for (auto aabb : _aabbs)
-        std::cout << "radius: " << aabb->radius() << std::endl;
+    // for (auto aabb : _aabbs)
+    //     std::cout << "radius: " << aabb->radius() << std::endl;
 
-    phyanim::CollisionDetection::computeCollisions(_meshes, 0.0);
+    anim::CollisionDetection::computeCollisions(_meshes, 0.0f);
     _colorMeshes();
     if (_aabbs.size() > 0)
     {
-        std::cout << "Collision id: " << _collisionId
-                  << " radius: " << _aabbs[0]->radius() << std::endl;
-        _setCameraPos(*_aabbs[0]);
+        std::cout << "Collision id: " << _collisionId << std::endl;
+        //   << " radius: " << _aabbs[0]->radius() << std::endl;
+        auto limit = *_aabbs[0];
+        limit.resize(2.0f);
+        _setCameraPos(limit);
     }
 }
 
 void MoveMeshApp::_colorMeshes()
 {
-    phyanim::Vec3 baseColor(0, 0.8, 0.8);
-    phyanim::Vec3 baseSelectedColor(0.0, 0.2, 0.8);
+    geometry::Vec3 baseColor(0, 0.8, 0.8);
+    geometry::Vec3 baseSelectedColor(0.0, 0.2, 0.8);
 
-    phyanim::Vec3 collisionColor(0.8, 0.2, 0.0);
-    phyanim::Vec3 collisionSelectedColor(0.8, 0.2, 0.0);
+    geometry::Vec3 collisionColor(0.8, 0.2, 0.0);
+    geometry::Vec3 collisionSelectedColor(0.8, 0.2, 0.0);
 
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
     for (uint32_t i = 0; i < _meshes.size(); ++i)
     {
-        phyanim::Vec3 color = baseColor;
-        phyanim::Vec3 collColor = collisionColor;
-        phyanim::MeshPtr mesh = _meshes[i];
+        geometry::Vec3 color = baseColor;
+        geometry::Vec3 collColor = collisionColor;
+        geometry::MeshPtr mesh = _meshes[i];
         if (mesh == _animMesh)
         {
             color = baseSelectedColor;
@@ -78,15 +81,15 @@ void MoveMeshApp::_colorMeshes()
         }
 
         uint64_t nodeSize = mesh->nodes.size();
-        std::vector<double> colors(nodeSize * 3);
+        std::vector<float> colors(nodeSize * 3);
 
         for (uint64_t j = 0; j < nodeSize; ++j)
         {
-            phyanim::Vec3 nodeColor = color;
+            geometry::Vec3 nodeColor = color;
             if (mesh->nodes[j]->collide) nodeColor = collColor;
-            colors[j * 3] = nodeColor.x();
-            colors[j * 3 + 1] = nodeColor.y();
-            colors[j * 3 + 2] = nodeColor.z();
+            colors[j * 3] = nodeColor.x;
+            colors[j * 3 + 1] = nodeColor.y;
+            colors[j * 3 + 2] = nodeColor.z;
         }
         _scene->meshes[i]->uploadColors(colors);
     }
@@ -120,7 +123,10 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
 {
     if (_scene)
     {
-        glfwGetCursorPos(window, &_mouseX, &_mouseY);
+        double mouseX, mouseY;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
+        _mouseX = mouseX;
+        _mouseY - mouseY;
         if (button == GLFW_MOUSE_BUTTON_LEFT)
         {
             if (action == GLFW_PRESS)
@@ -140,14 +146,14 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
                 if (_animMesh)
                 {
                     _animMesh->boundingBox->update();
-                    _aabbs =
-                        phyanim::CollisionDetection::collisionBoundingBoxes(
-                            _meshes, _bbFactor);
+                    for (auto mesh : _meshes)
+                        geometry::clearCollision(mesh->nodes);
+                    _aabbs = anim::CollisionDetection::collisionBoundingBoxes(
+                        _meshes, _bbFactor);
                     _sortAABBs(_aabbs);
                     std::cout << "Number of collisions: " << _aabbs.size()
                               << std::endl;
-                    phyanim::CollisionDetection::computeCollisions(_meshes,
-                                                                   0.0);
+                    anim::CollisionDetection::computeCollisions(_meshes, 0.0);
                     _animMesh = nullptr;
                     _renderMesh = nullptr;
                     _colorMeshes();
@@ -180,23 +186,23 @@ void MoveMeshApp::_mouseButtonCallback(GLFWwindow* window,
 }
 
 void MoveMeshApp::_mousePositionCallback(GLFWwindow* window,
-                                         double xpos,
-                                         double ypos)
+                                         float xpos,
+                                         float ypos)
 {
     if (_scene)
     {
-        double diffX = xpos - _mouseX;
-        double diffY = ypos - _mouseY;
+        float diffX = xpos - _mouseX;
+        float diffY = ypos - _mouseY;
         _mouseX = xpos;
         _mouseY = ypos;
-        phyanim::Vec3 dxyz =
-            phyanim::Vec3(-diffX * _scene->cameraDistance() * 0.01f,
-                          diffY * _scene->cameraDistance() * 0.01f, 0.0);
+        geometry::Vec3 dxyz =
+            geometry::Vec3(-diffX * _scene->cameraDistance() * 0.001f,
+                           diffY * _scene->cameraDistance() * 0.001f, 0.0);
         if (_leftButtonPressed)
         {
             if (_animMesh)
             {
-                dxyz = _scene->cameraRotation() * dxyz;
+                dxyz = dxyz * _scene->cameraRotation();
                 for (auto node : _animMesh->nodes) node->position -= dxyz;
                 setGeometry(_renderMesh, _animMesh->nodes);
             }

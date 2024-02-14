@@ -3,52 +3,55 @@
 
 // #include <spatial_index/multi_index.hpp>
 
-#include <Phyanim.h>
+#include <phyanim/Phyanim.h>
 
 #include <chrono>
 
+using namespace phyanim;
+
 namespace examples
 {
-
 class CollisionSolver
 {
 public:
-    CollisionSolver(double dt) : _dt(dt)
+    CollisionSolver(float dt) : _dt(dt)
     {
-        _system = new phyanim::ExplicitMassSpringSystem(_dt);
+        _system = new anim::ExplicitMassSpringSystem(_dt);
         _system->gravity = false;
         _system->inertia = false;
     };
 
     ~CollisionSolver(){};
 
-    uint32_t solveCollisions(phyanim::HierarchicalAABBs& aabbs,
-                             std::vector<phyanim::Edges>& edgesSet,
-                             std::vector<phyanim::Nodes>& nodesSet,
-                             phyanim::AxisAlignedBoundingBox& limits,
-                             uint32_t& totalIters)
+    uint32_t solveCollisions(geometry::HierarchicalAABBs& aabbs,
+                             std::vector<geometry::Edges>& edgesSet,
+                             std::vector<geometry::Nodes>& nodesSet,
+                             geometry::AxisAlignedBoundingBox& limits,
+                             uint32_t& totalIters,
+                             float threshold)
     {
-        phyanim::Edges edges;
+        geometry::Edges edges;
         for (uint32_t i = 0; i < edgesSet.size(); ++i)
             edges.insert(edges.end(), edgesSet[i].begin(), edgesSet[i].end());
-        phyanim::Nodes nodes = phyanim::uniqueNodes(edges);
+        geometry::Nodes nodes = geometry::uniqueNodes(edges);
 
         std::cout << "Simulation with " << edges.size() << " springs and "
                   << nodes.size() << " nodes" << std::endl;
 
         auto startTime = std::chrono::steady_clock::now();
-        std::chrono::duration<double> elapsedTime;
+        std::chrono::duration<float> elapsedTime;
         uint32_t collisions = 1;
-        double ks = 1000.0;
-        double ksLimit = 0.01;
+        float ks = 1000.0f;
+        float ksc = 100.0f;
+        float ksLimit = 0.0001f;
         uint32_t numIters = 1000;
 
         while (collisions > 0)
         {
             for (uint32_t iter = 0; iter < numIters; ++iter)
             {
-                collisions =
-                    anim(aabbs, edgesSet, nodesSet, limits, ks, 100.0, 0.0);
+                collisions = anim(aabbs, edgesSet, nodesSet, limits, ks, ksc,
+                                  0.0, threshold);
                 if (totalIters % 100 == 0)
                 {
                     elapsedTime = std::chrono::steady_clock::now() - startTime;
@@ -65,24 +68,26 @@ public:
             ks *= 0.75;
             numIters *= 0.75;
             if (numIters < 100) numIters = 100;
-            if (ks < 0.000001) break;
+            if (ks < ksLimit) break;
         }
 
         elapsedTime = std::chrono::steady_clock::now() - startTime;
-        std::cout << "Iter: " << totalIters << "  Collisions: " << collisions
-                  << "  Stiffness: " << ks << "  Time: " << elapsedTime.count()
-                  << " seconds." << std::endl;
+        std::cout << "Final result -> Iter: " << totalIters
+                  << "  Collisions: " << collisions << "  Stiffness: " << ks
+                  << "  Time: " << elapsedTime.count() << " seconds."
+                  << std::endl;
 
         return collisions;
     };
 
-    uint32_t anim(phyanim::HierarchicalAABBs& aabbs,
-                  std::vector<phyanim::Edges>& edgesSet,
-                  std::vector<phyanim::Nodes>& nodesSet,
-                  phyanim::AxisAlignedBoundingBox& limits,
-                  double ks,
-                  double ksc,
-                  double kd)
+    uint32_t anim(geometry::HierarchicalAABBs& aabbs,
+                  std::vector<geometry::Edges>& edgesSet,
+                  std::vector<geometry::Nodes>& nodesSet,
+                  geometry::AxisAlignedBoundingBox& limits,
+                  float ks,
+                  float ksc,
+                  float kd,
+                  float threshold)
     {
         uint32_t size = edgesSet.size();
 #ifdef PHYANIM_USES_OPENMP
@@ -95,7 +100,7 @@ public:
         }
 
         uint32_t collisions =
-            phyanim::CollisionDetection::computeCollisions(aabbs, ksc);
+            anim::CollisionDetection::computeCollisions(aabbs, ksc, threshold);
         if (collisions == 0) return 0;
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
@@ -108,16 +113,16 @@ public:
         return collisions;
     };
 
-    uint32_t solveSomasCollisions(phyanim::HierarchicalAABBs& aabbs,
-                                  std::vector<phyanim::Edges>& edgesSet,
-                                  std::vector<phyanim::Nodes>& nodesSet)
+    uint32_t solveSomasCollisions(geometry::HierarchicalAABBs& aabbs,
+                                  std::vector<geometry::Edges>& edgesSet,
+                                  std::vector<geometry::Nodes>& nodesSet,
+                                  float ksc)
     {
         uint32_t numCollisions = 1;
         uint32_t iter = 0;
-        double ksc = 1000.0;
 
         auto startTime = std::chrono::steady_clock::now();
-        std::chrono::duration<double> elapsedTime;
+        std::chrono::duration<float> elapsedTime;
 
         while (numCollisions > 0)
         {
@@ -126,12 +131,12 @@ public:
 #endif
             for (uint32_t i = 0; i < nodesSet.size(); ++i)
             {
-                phyanim::clearCollision(nodesSet[i]);
-                phyanim::clearForce(nodesSet[i]);
+                geometry::clearCollision(nodesSet[i]);
+                geometry::clearForce(nodesSet[i]);
             }
 
             numCollisions =
-                phyanim::CollisionDetection::computeCollisions(aabbs, ksc);
+                anim::CollisionDetection::computeCollisions(aabbs, ksc);
 
             animSomas(aabbs, nodesSet);
 
@@ -148,21 +153,21 @@ public:
         return iter;
     }
 
-    void animSomas(phyanim::HierarchicalAABBs& aabbs,
-                   std::vector<phyanim::Nodes>& nodesSet)
+    void animSomas(geometry::HierarchicalAABBs& aabbs,
+                   std::vector<geometry::Nodes>& nodesSet)
     {
 #ifdef PHYANIM_USES_OPENMP
 #pragma omp parallel for
 #endif
         for (uint32_t i = 0; i < nodesSet.size(); ++i)
         {
-            phyanim::Vec3 force = phyanim::Vec3::Zero();
+            geometry::Vec3 force = geometry::Vec3();
             for (auto node : nodesSet[i])
             {
                 force += node->force;
             }
 
-            phyanim::Vec3 displace = force * _dt * _dt;
+            geometry::Vec3 displace = force * _dt;
 
             for (auto node : nodesSet[i])
             {
@@ -174,9 +179,9 @@ public:
     }
 
 private:
-    phyanim::ExplicitMassSpringSystem* _system;
+    anim::ExplicitMassSpringSystem* _system;
 
-    double _dt;
+    float _dt;
 };
 
 }  // namespace examples

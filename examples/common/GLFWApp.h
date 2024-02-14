@@ -4,8 +4,9 @@
 #ifdef PHYANIM_USES_GLFW3
 
 #include <GLFW/glfw3.h>
+#include <phyanim/Phyanim.h>
 
-#include "Scene.h"
+using namespace phyanim;
 
 namespace examples
 {
@@ -26,19 +27,19 @@ protected:
     static void _actionThread(GLFWApp* app);
 
     void _loadMeshes(std::vector<std::string>& files,
-                     double stiffnes = 1000.0,
-                     double density = 1.0,
-                     double damping = 1.0,
-                     double poissonRatio = 0.49);
+                     float stiffnes = 1000.0,
+                     float density = 1.0,
+                     float damping = 1.0,
+                     float poissonRatio = 0.49);
 
-    void _writeMeshes(phyanim::Meshes& meshes,
+    void _writeMeshes(geometry::Meshes& meshes,
                       std::vector<std::string>& files,
                       std::string extension = "");
 
-    void _sortAABBs(phyanim::AxisAlignedBoundingBoxes& aabbs)
+    void _sortAABBs(geometry::AxisAlignedBoundingBoxes& aabbs)
     {
-        auto cmp = [](phyanim::AxisAlignedBoundingBoxPtr a,
-                      phyanim::AxisAlignedBoundingBoxPtr b) {
+        auto cmp = [](geometry::AxisAlignedBoundingBoxPtr a,
+                      geometry::AxisAlignedBoundingBoxPtr b) {
             return a->radius() > b->radius();
         };
         std::sort(aabbs.begin(), aabbs.end(), cmp);
@@ -48,7 +49,7 @@ protected:
 
     void _setAnim(bool anim);
 
-    void _setCameraPos(phyanim::AxisAlignedBoundingBox limits);
+    void _setCameraPos(geometry::AxisAlignedBoundingBox limits);
 
     virtual void _keyCallback(GLFWwindow* window,
                               int key,
@@ -64,12 +65,12 @@ protected:
                                       int mods);
 
     virtual void _mousePositionCallback(GLFWwindow* window,
-                                        double xpos,
-                                        double ypos);
+                                        float xpos,
+                                        float ypos);
 
     virtual void _mouseScrollCallback(GLFWwindow* window,
-                                      double xoffset,
-                                      double yoffset);
+                                      float xoffset,
+                                      float yoffset);
 
 private:
     void _initGLFW();
@@ -105,16 +106,16 @@ private:
 protected:
     GLFWwindow* _window;
 
-    Scene* _scene;
-    phyanim::Meshes _meshes;
+    graphics::Scene* _scene;
+    geometry::Meshes _meshes;
 
     uint32_t _width;
     uint32_t _height;
 
     std::vector<std::string> _args;
 
-    double _mouseX;
-    double _mouseY;
+    float _mouseX;
+    float _mouseY;
 
     bool _leftButtonPressed;
     bool _middleButtonPressed;
@@ -123,10 +124,10 @@ protected:
     bool _anim;
     std::mutex _animMutex;
 
-    phyanim::AxisAlignedBoundingBox _limits;
-    phyanim::AxisAlignedBoundingBoxes _aabbs;
+    geometry::AxisAlignedBoundingBox _limits;
+    geometry::AxisAlignedBoundingBoxes _aabbs;
     int32_t _collisionId;
-    double _bbFactor;
+    float _bbFactor;
 };
 
 }  // namespace examples

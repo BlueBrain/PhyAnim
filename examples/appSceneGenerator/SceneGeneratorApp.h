@@ -3,6 +3,8 @@
 
 #include "../common/GLFWApp.h"
 
+using namespace phyanim;
+
 namespace examples
 {
 class SceneGeneratorApp : public GLFWApp
@@ -26,11 +28,11 @@ protected:
                               int action,
                               int mods);
 
-    void _mousePositionCallback(GLFWwindow* window, double xpos, double ypos);
+    void _mousePositionCallback(GLFWwindow* window, float xpos, float ypos);
 
     std::vector<std::string> _fileNames;
-    phyanim::Mesh* _animMesh;
-    Mesh* _renderMesh;
+    geometry::Mesh* _animMesh;
+    graphics::Mesh* _renderMesh;
 
     std::chrono::steady_clock::time_point _pickingTime;
 };
