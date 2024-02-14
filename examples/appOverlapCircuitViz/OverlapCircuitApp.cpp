@@ -1,7 +1,5 @@
 #include "OverlapCircuitApp.h"
 
-#include <Python.h>
-
 #include <iomanip>
 #include <iostream>
 #include <thread>

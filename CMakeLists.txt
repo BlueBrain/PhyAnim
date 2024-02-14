@@ -21,7 +21,6 @@ find_package(OpenMP)
 find_package(GLFW3)
 find_package(sonata)
 find_package(MorphIO)
-find_package(Python REQUIRED Development)
 
 if(OpenMP_CXX_FOUND)
   add_definitions(-DPHYANIM_USES_OPENMP)

@@ -1,7 +1,5 @@
 #include "CollidingSomas.h"
 
-#include <Python.h>
-
 #include <iomanip>
 #include <iostream>
 #include <thread>

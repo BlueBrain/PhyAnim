@@ -19,5 +19,5 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if (MorphIO_FOUND AND sonata_FOUND)
-  target_link_libraries(phyanim PUBLIC MorphIO::morphio sonata::sonata_shared Python::Python)
+  target_link_libraries(phyanim PUBLIC MorphIO::morphio sonata::sonata_shared)
 endif()
