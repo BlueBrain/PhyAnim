@@ -1,30 +1,31 @@
-  add_executable(tetrahedralizeMesh tetrahedralizeMesh.cpp)
-  target_include_directories(tetrahedralizeMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(tetrahedralizeMesh PUBLIC igl::core igl::tetgen)
+# Data copy to build folder
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data/ DESTINATION
+  ${CMAKE_BINARY_DIR}/data)
 
-  add_executable(checkCollision checkCollision.cpp)
-  target_include_directories(checkCollision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(checkCollision PUBLIC phyanim)
+include_directories(${CMAKE_BINARY_DIR}/include)
 
-  add_executable(mesh_test mesh_test.cpp)
-  target_include_directories(mesh_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(mesh_test PUBLIC phyanim)
-  
+file(GLOB  PYTHON_FILES "*.py")
+file(COPY ${PYTHON_FILES} DESTINATION
+  ${CMAKE_BINARY_DIR})
+
+add_compile_definitions(DATAPATH="${CMAKE_BINARY_DIR}/data")
+
+add_subdirectory(appCheckCollisions)
+add_subdirectory(appFormatConverter)
+add_subdirectory(appTetrahedralizeMesh)
+add_subdirectory(appOverlapCircuit)
+add_subdirectory(appOverlapCollisions)
+add_subdirectory(appCollidingSomas)
+
 if(GLFW3_FOUND)
-  add_executable(testAnim testAnim.cpp Scene.cpp Camera.cpp RenderProgram.cpp)
-  target_include_directories(testAnim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-    				 	${GLFW3_INCLUDE_DIR})
-  target_link_libraries(testAnim PUBLIC ${GLFW3_LIBRARY} igl::tetgen phyanim)
-
-  # add_executable(overlap overlap.cpp OverlapScene.cpp Camera.cpp)
-  # target_include_directories(overlap PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-  #   ${GLFW3_INCLUDE_DIR})
-  # target_link_libraries(overlap PUBLIC ${GLFW3_LIBRARY} igl::tetgen phyanim)
-
-  
-  add_executable(renderMesh renderMesh.cpp Scene.cpp Camera.cpp RenderProgram.cpp)
-  target_include_directories(renderMesh PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-    ${GLFW3_INCLUDE_DIR})
-  target_link_libraries(renderMesh PUBLIC ${GLFW3_LIBRARY} phyanim)
-  
+  add_subdirectory(appRenderMesh)
+  add_subdirectory(appAnimMesh)
+  add_subdirectory(appMoveMesh)
+  add_subdirectory(appRenderMorpho)
+  add_subdirectory(appOverlapCircuitViz)
+  add_subdirectory(appOverlapCollisionsViz)
+  add_subdirectory(appCollidingSomasViz)
+  add_subdirectory(appSceneGenerator)
+  add_subdirectory(appSomaGenerator)
+  add_subdirectory(appDemo)
 endif()
