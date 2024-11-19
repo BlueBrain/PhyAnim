@@ -3,7 +3,7 @@
  * All rights reserved. Do not distribute without permission.
  * Responsible author: Juan Jose Garcia <juanjose.garcia@epfl.ch>
  *
- * This file is part of Brayns <https://github.com/BlueBrain/PhyAnim>
+ * This file is part of PhyAnim <https://github.com/BlueBrain/PhyAnim>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published

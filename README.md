@@ -37,7 +37,7 @@ Optionally, to build with full functionallity and examples, the following compon
 
 ### Build command
 
-Once the given dependencies are installed, Brayns can be cloned and built as follows:
+Once the given dependencies are installed, PhyAnim can be cloned and built as follows:
 
     $ git clone https://github.com/BlueBrain/PhyAnim.git
     $ cd PhyAnim && mkdir build && cd build
